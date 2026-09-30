@@ -91,6 +91,8 @@ frontend1/.packages
 frontend1/.pub-cache/
 frontend1/.pub/
 frontend1/build/
+!frontend1/build/web/
+!frontend1/build/web/**
 frontend1/coverage/
 frontend1/*.iml
 

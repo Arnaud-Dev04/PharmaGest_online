@@ -1,18 +1,7 @@
 {
-  "buildCommand": "flutter build web --release --base-href /",
   "outputDirectory": "build/web",
-  "installCommand": "which flutter || (git clone https://github.com/flutter/flutter.git -b stable /opt/flutter && export PATH=$PATH:/opt/flutter/bin)",
-  "framework": null,
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" }
-      ]
-    }
   ]
 }

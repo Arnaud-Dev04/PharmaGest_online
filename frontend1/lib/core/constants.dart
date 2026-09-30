@@ -8,16 +8,14 @@ class AppConstants {
   // ============================================================================
   // ── Backend URL ────────────────────────────────────────────────────────────
   // Local (Windows desktop) : http://127.0.0.1:8000
-  // Cloud (Render)          : https://pharmagestion.onrender.com
+  // Cloud (Render)          : https://pharmagest-pnn8.onrender.com
   static const String _localApi  = 'http://127.0.0.1:8000';
-  static const String _remoteApi = 'https://pharmagestion.onrender.com';
+  static const String _remoteApi = 'https://pharmagest-pnn8.onrender.com';
 
-  // Offline-first : utilise le local si disponible, sinon Render
-  // Pour forcer Render en prod, passer _remoteApi directement
   // ── Mode actif ─────────────────────────────────────────────────────────────
   // LOCAL  → _localApi  (backend Python sur ce PC, port 8000)
-  // CLOUD  → _remoteApi (backend Render, accès internet requis)
-  static const String apiBaseUrl = _localApi;
+  // CLOUD  → _remoteApi (backend Render Frankfurt, même région qu'Aiven)
+  static const String apiBaseUrl = _remoteApi;
 
   // ============================================================================
   // Border Radius (from tailwind.config.js)

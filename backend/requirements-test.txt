@@ -1,0 +1,17 @@
+# ── Dépendances de TEST uniquement — ne pas installer en production ───────────
+# Installation : pip install -r requirements-test.txt
+
+# Runner
+pytest>=8.3.0
+pytest-asyncio>=0.24.0    # Support des tests async FastAPI
+pytest-cov>=5.0.0         # Couverture de code
+pytest-xdist>=3.6.0       # Parallélisation des tests (-n auto)
+
+# Client HTTP pour TestClient FastAPI
+httpx>=0.27.0
+
+# Mocks
+pytest-mock>=3.14.0
+
+# Rapport HTML
+pytest-html>=4.1.1

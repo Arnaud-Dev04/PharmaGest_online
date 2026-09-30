@@ -1,0 +1,9 @@
+{
+  "error_generic": "Une erreur est survenue.",
+  "error_not_found": "Ressource non trouvée.",
+  "error_stock_insufficient": "Stock insuffisant pour ce produit.",
+  "success_sale_created": "Vente créée avec succès.",
+  "success_settings_updated": "Paramètres mis à jour.",
+  "sales_invoice_title": "Facture",
+  "report_title": "Rapport Financier"
+}

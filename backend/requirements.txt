@@ -1,0 +1,31 @@
+# FastAPI Ecosystem
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.12
+
+# Database
+sqlalchemy>=2.0.36
+PyMySQL>=1.1.0            # MySQL / MariaDB — driver pur Python, pas de compilation C
+cryptography>=42.0.0      # Requis par PyMySQL pour l'auth mysql_native_password
+alembic>=1.14.0
+
+# Security
+python-jose[cryptography]>=3.3.0
+passlib>=1.7.4
+bcrypt>=4.0.1
+slowapi>=0.1.9          # Rate limiting anti-brute-force
+
+# Environment variables
+python-dotenv>=1.0.1
+
+# Reporting
+reportlab>=4.2.0
+openpyxl>=3.1.5
+
+# Utilities — sans version fixe pour eviter la compilation Rust
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+email-validator>=2.2.0
+
+# HTTP Client
+requests>=2.31.0

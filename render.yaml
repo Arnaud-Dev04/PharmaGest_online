@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gestpharma
+    runtime: python
+    region: frankfurt
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn render_main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DB_URL_LOCAL
+        sync: false
+      - key: DB_URL_REMOTE
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "720"
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_ORIGINS
+        value: "*"

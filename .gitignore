@@ -1,0 +1,103 @@
+# ============================================================================
+# PharmaGestion - .gitignore strict pour Backend et Frontend1
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. Racine : Exclusion des exécutables, scripts temporaires et médias
+# ----------------------------------------------------------------------------
+*.bat
+*.ps1
+*.vbs
+*.exe
+*.dll
+*.so
+*.dylib
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.pdf
+*.xlsx
+*.xls
+*.doc
+*.docx
+capture-photo/
+deploy_vercel/
+frontend_build/
+_ARCHIVE/
+
+# Conservation des fichiers essentiels de documentation racine
+!README.md
+!.gitignore
+!render.yaml
+!build.sh
+
+# ----------------------------------------------------------------------------
+# 2. Python / Backend Exclusions
+# ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
+backend/*/*/*/__pycache__/
+
+# Environnements virtuels Python (Ne jamais pousser venv sur Git)
+.venv/
+venv/
+env/
+ENV/
+backend/.venv/
+backend/venv/
+backend/env/
+
+# PyInstaller / Builds
+build/
+dist/
+*.spec
+*.manifest
+backend/build/
+backend/dist/
+
+# Base de données & Données locales (Protection des données)
+*.db
+*.sqlite
+*.sqlite3
+pharmacy_local*.db
+backend/pharmacy_local*.db
+DB/
+
+# Variables d'environnement & Secrets
+.env
+.env.*
+*.env
+
+# Logs & Fichiers temporaires
+*.log
+*.tmp
+*.temp
+*.bak
+
+# ----------------------------------------------------------------------------
+# 3. Flutter / Frontend1 Exclusions
+# ----------------------------------------------------------------------------
+frontend1/.dart_tool/
+frontend1/.flutter-plugins
+frontend1/.flutter-plugins-dependencies
+frontend1/.packages
+frontend1/.pub-cache/
+frontend1/.pub/
+frontend1/build/
+frontend1/coverage/
+frontend1/*.iml
+
+# IDE & Fichiers Système
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -2,10 +2,10 @@
 Sales models: Sale and SaleItem.
 """
 
-from sqlalchemy import Column, String, Float, DateTime, Integer, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Float, DateTime, Integer, ForeignKey, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 import enum
 from datetime import datetime
 
@@ -40,7 +40,7 @@ class SaleType(str, enum.Enum):
     UNIT = "unit"           # Comprimé/Unité (Detailed)
 
 
-class Sale(Base, BaseModelMixin):
+class Sale(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Sale/Transaction header model.
     
@@ -54,8 +54,11 @@ class Sale(Base, BaseModelMixin):
         sync_status: Synchronization status for offline mode
     """
     __tablename__ = "sales"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "code", name="uq_sales_pharmacy_code"),
+    )
     
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), nullable=False)
     total_amount = Column(Float, nullable=False)
     payment_method = Column(String(20), nullable=False, default="cash")
     date = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
@@ -83,7 +86,7 @@ class Sale(Base, BaseModelMixin):
         return f"<Sale(id={self.id}, code='{self.code}', total={self.total_amount} FBu, status='{self.status}')>"
 
 
-class SaleItem(Base, BaseModelMixin):
+class SaleItem(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Sale line item model.
     

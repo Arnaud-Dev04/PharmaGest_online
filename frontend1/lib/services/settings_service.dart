@@ -50,7 +50,7 @@ class AdminService {
   }
 
   /// Get current license status
-  /// Public endpoint - no authentication required
+  /// Authenticated endpoint returning the current pharmacy's license status
   Future<Map<String, dynamic>> getLicenseStatus() async {
     try {
       final response = await _apiService.get('/license/status');

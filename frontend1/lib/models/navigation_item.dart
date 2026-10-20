@@ -17,12 +17,16 @@ class NavigationItem {
   /// Si true, visible seulement pour les super admins
   final bool superAdminOnly;
 
+  /// If true, visible only to platform administrators.
+  final bool platformAdminOnly;
+
   const NavigationItem({
     required this.name,
     required this.route,
     required this.icon,
     this.adminOnly = false,
     this.superAdminOnly = false,
+    this.platformAdminOnly = false,
   });
 
   @override
@@ -34,12 +38,20 @@ class NavigationItem {
         other.route == route &&
         other.icon == icon &&
         other.adminOnly == adminOnly &&
-        other.superAdminOnly == superAdminOnly;
+        other.superAdminOnly == superAdminOnly &&
+        other.platformAdminOnly == platformAdminOnly;
   }
 
   @override
   int get hashCode {
-    return Object.hash(name, route, icon, adminOnly, superAdminOnly);
+    return Object.hash(
+      name,
+      route,
+      icon,
+      adminOnly,
+      superAdminOnly,
+      platformAdminOnly,
+    );
   }
 }
 
@@ -57,6 +69,11 @@ class NavigationItems {
       icon: Icons.inventory_2,
     ),
     const NavigationItem(name: 'pos', route: '/pos', icon: Icons.shopping_cart),
+    const NavigationItem(
+      name: 'cashRegister',
+      route: '/cash-register',
+      icon: Icons.point_of_sale,
+    ),
     const NavigationItem(
       name: 'salesHistory',
       route: '/sales-history',
@@ -89,27 +106,47 @@ class NavigationItems {
       icon: Icons.admin_panel_settings,
       superAdminOnly: true,
     ),
+    const NavigationItem(
+      name: 'platformAdmin',
+      route: '/platform-admin',
+      icon: Icons.business_center_outlined,
+      platformAdminOnly: true,
+    ),
   ];
 
   /// Filtre les items selon le rôle de l'utilisateur
   static List<NavigationItem> filterByRole(String? userRole) {
     if (userRole == null) return [];
 
+    final isPlatformAdmin = userRole.toLowerCase() == 'platform_admin';
+    if (isPlatformAdmin) {
+      return items.where((item) => item.platformAdminOnly).toList();
+    }
+
     final isSuperAdmin = userRole.toLowerCase() == 'super_admin';
     final isAdmin = userRole.toLowerCase() == 'admin' || isSuperAdmin;
 
     if (isSuperAdmin) {
       // Super admin voit tout
-      return items;
+      return items.where((item) => !item.platformAdminOnly).toList();
     }
 
     if (isAdmin) {
       // Admin voit tout sauf super admin
-      return items.where((item) => !item.superAdminOnly).toList();
+      return items
+          .where((item) => !item.superAdminOnly && !item.platformAdminOnly)
+          .toList();
     }
 
     // Pharmacien voit seulement : POS, Stock, Sales History, Suppliers, Dashboard
-    final pharmacistAllowedRoutes = ['/pos', '/stock', '/sales-history', '/suppliers', '/dashboard'];
+    final pharmacistAllowedRoutes = [
+      '/pos',
+      '/cash-register',
+      '/stock',
+      '/sales-history',
+      '/suppliers',
+      '/dashboard',
+    ];
     return items
         .where((item) => pharmacistAllowedRoutes.contains(item.route))
         .toList();

@@ -64,8 +64,12 @@ L'application repose sur une architecture Cloud 3-tiers moderne et ultra-rapide 
 - **Variables d'environnement (Render Dashboard → Environment)** :
   - `DB_URL_LOCAL` = `mysql+pymysql://avnadmin:MOT_DE_PASSE@mysql-de9b9a6-ntakiarnaud04-3b3b.k.aivencloud.com:17450/defaultdb`
   - `DB_URL_REMOTE` = `mysql+pymysql://avnadmin:MOT_DE_PASSE@mysql-de9b9a6-ntakiarnaud04-3b3b.k.aivencloud.com:17450/defaultdb`
-  - `SECRET_KEY` = `pharma-gest-s3cur3-k3y-2026-render`
-  - `ALLOWED_ORIGINS` = `*`
+  - `SECRET_KEY` = secret privé aléatoire d’au moins 32 caractères, créé pour cet environnement et conservé uniquement dans les variables secrètes de Render. Ne pas réutiliser une clé publiée dans Git ou dans une documentation.
+  - `ENVIRONMENT` = `production`.
+  - `ALLOWED_ORIGINS` = origines exactes du frontend, séparées par des virgules (par exemple `https://votre-domaine.example`). Le joker `*` fait échouer le démarrage en production.
+  - `ADMIN_INITIAL_PASSWORD`, `PHARMACIST_INITIAL_PASSWORD` et `PLATFORM_ADMIN_PASSWORD` = facultatifs ; ne les définir que pour créer explicitement un compte bootstrap avec un secret temporaire unique.
+
+Si une clé de signature ou un mot de passe réel a déjà été publié, le révoquer et le renouveler dans le service concerné. Modifier la documentation ne révoque pas un secret précédemment exposé.
 
 ### C. Frontend (Vercel)
 - **Framework Preset** : `Other`

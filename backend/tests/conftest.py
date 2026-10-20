@@ -12,11 +12,16 @@ import pytest
 import os
 
 # ── Variables d'environnement AVANT tout import du projet ─────────────────────
-os.environ.setdefault("SECRET_KEY", "test-secret-key-pharmagestion-32chars!!")
-os.environ.setdefault("DB_URL_LOCAL", "sqlite:///:memory:")
-os.environ.setdefault("DB_URL_REMOTE", "")
-os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
-os.environ.setdefault("ALGORITHM", "HS256")
+# Tests must not inherit developer/production credentials or database URLs.
+# Assign these before importing the application, which loads dotenv and builds engines.
+os.environ["SECRET_KEY"] = "test-secret-key-pharmagestion-32chars!!"
+os.environ["DB_URL_LOCAL"] = "sqlite:///:memory:"
+os.environ["DB_URL_REMOTE"] = ""
+os.environ.pop("DB_URL", None)
+os.environ.pop("DATABASE_URL", None)
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
+os.environ["ALGORITHM"] = "HS256"
+os.environ["ENVIRONMENT"] = "test"
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -93,7 +98,18 @@ def client(db):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @pytest.fixture
-def admin_user(db) -> User:
+def pharmacy(db):
+    from app.models.pharmacy import Pharmacy
+
+    pharmacy = Pharmacy(name="Test Pharmacy", code="TEST-PHARMACY")
+    db.add(pharmacy)
+    db.commit()
+    db.refresh(pharmacy)
+    return pharmacy
+
+
+@pytest.fixture
+def admin_user(db, pharmacy) -> User:
     """Crée un utilisateur SUPER_ADMIN dans la DB de test."""
     user = User(
         username="test_admin",
@@ -101,6 +117,7 @@ def admin_user(db) -> User:
         role=UserRole.SUPER_ADMIN,
         is_active=True,
         must_change_password=False,
+        pharmacy_id=pharmacy.id,
     )
     db.add(user)
     db.commit()
@@ -109,14 +126,15 @@ def admin_user(db) -> User:
 
 
 @pytest.fixture
-def pharmacist_user(db) -> User:
+def pharmacist_user(db, pharmacy) -> User:
     """Crée un utilisateur PHARMACIEN dans la DB de test."""
     user = User(
         username="test_pharmacist",
         password_hash=hash_password("Pharma@123!"),
-        role=UserRole.PHARMACIEN,
+        role=UserRole.PHARMACIST,
         is_active=True,
         must_change_password=False,
+        pharmacy_id=pharmacy.id,
     )
     db.add(user)
     db.commit()
@@ -152,6 +170,18 @@ def admin_headers(admin_token) -> dict:
 def pharmacist_headers(pharmacist_token) -> dict:
     """Headers HTTP avec token pharmacien."""
     return {"Authorization": f"Bearer {pharmacist_token}"}
+
+
+@pytest.fixture
+def open_cash_session(client, admin_headers):
+    """Open a cashier session for tests that create cash POS sales."""
+    response = client.post(
+        "/cash-register/open",
+        json={"opening_amount": 1000},
+        headers=admin_headers,
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

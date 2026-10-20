@@ -5,6 +5,7 @@ Imports all models for easy access and ensures they are registered with SQLAlche
 
 from app.models.base import BaseModelMixin, TimestampMixin
 from app.models.user import User, UserRole
+from app.models.pharmacy import Pharmacy
 from app.models.medicine import Medicine, MedicineFamily, MedicineType
 from app.models.supplier import Supplier
 from app.models.customer import Customer
@@ -18,10 +19,13 @@ from app.models.pos_sale import POSSale, POSSaleItem
 from app.models.stock_movement import StockMovement
 from app.models.medicine_pricing import MedicinePricing
 from app.models.audit_log import DeletionLog
+from app.models.cash_register import CashRegisterSession, CashRegisterMovement
 
 __all__ = [
     # Audit
     "DeletionLog",
+    "CashRegisterSession",
+    "CashRegisterMovement",
     # Base
     "BaseModelMixin",
     "TimestampMixin",
@@ -29,6 +33,7 @@ __all__ = [
     # User
     "User",
     "UserRole",
+    "Pharmacy",
     
     # Medicine
     "Medicine",

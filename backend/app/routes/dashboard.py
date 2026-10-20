@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
+from app.core.license_guard import require_feature
 from app.schemas.dashboard import DashboardStatsResponse
 from app.services import dashboard_service
 
@@ -38,7 +39,7 @@ async def get_dashboard_stats(
     Mis en cache pendant 30s pour éviter de relancer 15+ requêtes Aiven
     à chaque clic d'onglet ou retour sur l'accueil.
     """
-    cache_key = f"{days}_{start_date}_{end_date}"
+    cache_key = f"{current_user.pharmacy_id}_{days}_{start_date}_{end_date}"
     now = time.time()
     if cache_key in _stats_cache and (now - _stats_cache[cache_key]["ts"]) < _STATS_CACHE_TTL:
         return _stats_cache[cache_key]["data"]
@@ -50,7 +51,8 @@ async def get_dashboard_stats(
 
 @router.get(
     "/cancelled-sales",
-    summary="Get detailed cancelled sales"
+    summary="Get detailed cancelled sales",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def get_cancelled_sales(
     limit: int = 50,

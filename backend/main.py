@@ -130,9 +130,14 @@ async def timing_middleware(request: Request, call_next):
 # CORS
 # =========================
 
-# ALLOWED_ORIGINS peut etre "*" (dev) ou une liste URLs separees par virgule
-_cors_env = os.environ.get("ALLOWED_ORIGINS", "*").strip()
-if _cors_env == "*":
+from app.core.cors_config import get_allowed_origins
+
+_allowed_origins = get_allowed_origins(
+    os.environ.get("ALLOWED_ORIGINS"),
+    # This entry point serves the local desktop/development app; Render uses render_main.py.
+    "development",
+)
+if _allowed_origins == ["*"]:
     # Dev : autorise toutes les origines (Flutter Web ports aleatoires)
     app.add_middleware(
         CORSMiddleware,
@@ -143,10 +148,9 @@ if _cors_env == "*":
     )
 else:
     # Production : origines explicites
-    _allowed = [o.strip() for o in _cors_env.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_allowed,
+        allow_origins=_allowed_origins,
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
@@ -203,7 +207,9 @@ from app.routes import (
     license_router,
     medicine_pricing_router,
     pos_router,
+    cash_register_router,
     sync_router,
+    platform_admin_router,
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
@@ -222,7 +228,9 @@ app.include_router(customers_router, prefix="/customers", tags=["Customers"])
 app.include_router(license_router, prefix="/license", tags=["License"])
 app.include_router(medicine_pricing_router, prefix="/pricing", tags=["Pricing"])
 app.include_router(pos_router, prefix="/pos", tags=["POS"])
+app.include_router(cash_register_router, prefix="/cash-register", tags=["Cash Register"])
 app.include_router(sync_router, prefix="/sync", tags=["Sync"])
+app.include_router(platform_admin_router, prefix="/platform", tags=["Platform Admin"])
 
 
 # =========================

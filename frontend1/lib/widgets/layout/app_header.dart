@@ -5,6 +5,7 @@ import 'package:frontend1/core/theme.dart';
 import 'package:frontend1/models/user.dart';
 import 'package:frontend1/providers/auth_provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 import 'package:frontend1/services/sync_service.dart';
 import 'package:frontend1/widgets/header/notifications_button.dart';
 import 'package:frontend1/widgets/header/theme_toggle_button.dart';
@@ -25,6 +26,7 @@ class _AppHeaderState extends State<AppHeader> {
   SyncStatus _syncStatus = SyncStatus.offline();
   bool _isSyncing = false;
   Timer? _statusTimer;
+  String? _observedLicensePlan;
 
   @override
   void initState() {
@@ -35,17 +37,39 @@ class _AppHeaderState extends State<AppHeader> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final plan = context.watch<LicenseProvider>().status?.plan;
+    if (plan == _observedLicensePlan) return;
+    _observedLicensePlan = plan;
+    if (plan == null) return;
+    if (plan == 'pro' || plan == 'enterprise') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshStatus();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _statusTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _refreshStatus() async {
+    if (context.read<AuthProvider>().user?.role == 'platform_admin') return;
+    if (!(context.read<LicenseProvider>().status?.availableFeatures.contains('cloud_sync') ?? false)) {
+      return;
+    }
     final status = await SyncService.getStatus();
     if (mounted) setState(() => _syncStatus = status);
   }
 
   Future<void> _triggerSync() async {
+    if (context.read<AuthProvider>().user?.role == 'platform_admin') return;
+    if (!(context.read<LicenseProvider>().status?.availableFeatures.contains('cloud_sync') ?? false)) {
+      return;
+    }
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     try {
@@ -122,7 +146,14 @@ class _AppHeaderState extends State<AppHeader> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final User? user = authProvider.user;
-    final isAdmin = user?.isAdmin ?? false;
+    final isPlatformAdmin = user?.role == 'platform_admin';
+    final isAdmin = (user?.isAdmin ?? false) || isPlatformAdmin;
+    final canUseCloudSync = context
+        .watch<LicenseProvider>()
+        .status
+        ?.availableFeatures
+        .contains('cloud_sync') ??
+      false;
 
     return Container(
       height: 64,
@@ -173,8 +204,9 @@ class _AppHeaderState extends State<AppHeader> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Indicateur de synchronisation cloud ──
-              Tooltip(
+              if (!isPlatformAdmin && canUseCloudSync) ...[
+                // ── Indicateur de synchronisation cloud ──
+                Tooltip(
                 message: '${_syncStatus.statusLabel}\n'
                     '${_syncStatus.pendingCount} en attente · '
                     '${_syncStatus.syncedCount} synchronisée(s)\n'
@@ -241,12 +273,13 @@ class _AppHeaderState extends State<AppHeader> {
                     ),
                   ),
                 ),
-              ),
-              SizedBox(width: AppConstants.spacingMd),
+                ),
+                SizedBox(width: AppConstants.spacingMd),
 
-              // Notifications
-              const NotificationsButton(),
-              SizedBox(width: AppConstants.spacingMd),
+                // Notifications stock/pharmacie
+                const NotificationsButton(),
+                SizedBox(width: AppConstants.spacingMd),
+              ],
 
               // Toggle thème
               const ThemeToggleButton(),

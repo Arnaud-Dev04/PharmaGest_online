@@ -15,7 +15,10 @@ class AppConstants {
   // ── Mode actif ─────────────────────────────────────────────────────────────
   // LOCAL  → _localApi  (backend Python sur ce PC, port 8000)
   // CLOUD  → _remoteApi (backend Render Frankfurt, même région qu'Aiven)
-  static const String apiBaseUrl = _remoteApi;
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: _remoteApi,
+  );
 
   // ============================================================================
   // Border Radius (from tailwind.config.js)

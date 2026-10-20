@@ -19,7 +19,9 @@ import logging
 
 from app.models.medicine import Medicine
 from app.models.batch import Batch
+from app.models.customer import Customer
 from app.models.pos_sale import POSSale, POSSaleItem
+from app.models.cash_register import CashRegisterSession
 from app.models.medicine_pricing import MedicinePricing
 from app.models.stock_movement import StockMovement
 from app.schemas.pos import (
@@ -541,7 +543,9 @@ def generate_pos_invoice_code(db: Session) -> str:
 def checkout(
     db: Session, 
     user_id: int, 
-    checkout_data: POSCheckoutRequest
+    checkout_data: POSCheckoutRequest,
+    award_loyalty_points: bool = False,
+    cash_session_uuid: str | None = None,
 ) -> POSSale:
     """
     Process POS checkout — create sale and deduct stock per batch.
@@ -566,6 +570,20 @@ def checkout(
         ValueError: If validation fails (stock, invalid batch, etc.)
     """
     try:
+        cash_session = None
+        if (checkout_data.payment_method or "cash").lower() == "cash":
+            if not cash_session_uuid:
+                raise ValueError("Une session de caisse ouverte est requise pour une vente en espèces")
+            cash_session = db.query(CashRegisterSession).filter(
+                CashRegisterSession.session_uuid == cash_session_uuid,
+                CashRegisterSession.cashier_id == user_id,
+                CashRegisterSession.pharmacy_id == db.info.get("pharmacy_id"),
+                CashRegisterSession.status == "open",
+            ).with_for_update().first()
+            if cash_session is None:
+                raise ValueError("La session de caisse est fermée ou ne vous appartient pas")
+            cash_session.sync_status = "pending"
+
         # Phase 1: Validate all allocations
         validated_items = []
         total_amount = 0.0
@@ -631,6 +649,17 @@ def checkout(
                 "line_total": line_total,
                 "base_units": expected_base_units,
             })
+
+        customer = None
+        bonus_earned = 0
+        if checkout_data.customer_id is not None:
+            customer = db.query(Customer).filter(
+                Customer.id == checkout_data.customer_id
+            ).first()
+            if customer is None:
+                raise ValueError("Client introuvable dans cette pharmacie")
+            if award_loyalty_points:
+                bonus_earned = int(total_amount / 1000)
         
         # Phase 2: Create POSSale
         invoice_code = generate_pos_invoice_code(db)
@@ -643,10 +672,11 @@ def checkout(
             date=datetime.now(),
             user_id=user_id,
             customer_id=checkout_data.customer_id,
+            cash_session_uuid=cash_session.session_uuid if cash_session else None,
             customer_name=checkout_data.customer_name,
             insurance_provider=checkout_data.insurance_provider,
             insurance_card_id=checkout_data.insurance_card_id,
-            coverage_percent=checkout_data.coverage_percent or 0.0
+            coverage_percent=checkout_data.coverage_percent or 0.0,
         )
         db.add(sale)
         db.flush()  # Get sale.id
@@ -711,6 +741,9 @@ def checkout(
             medicine.quantity -= base_units
             if medicine.quantity < 0:
                 medicine.quantity = 0  # Safety net
+
+        if customer is not None and bonus_earned > 0:
+            customer.total_points += bonus_earned
         
         # Phase 4: Commit
         db.commit()
@@ -815,7 +848,10 @@ def cancel_pos_sale(db: Session, sale_id: int, user_id: int) -> POSSale:
         raise ValueError(f"Erreur lors de l'annulation POS: {str(e)}")
 
 
-def enrich_pos_sale_response(sale: POSSale) -> dict:
+def enrich_pos_sale_response(
+    sale: POSSale,
+    loyalty_enabled: bool = False,
+) -> dict:
     """
     Build a rich response dict for a POS sale, including item details.
     """
@@ -851,7 +887,7 @@ def enrich_pos_sale_response(sale: POSSale) -> dict:
 
     # Calcul du bonus_earned : 1 point par 1000 FBu de la vente (si client fidélité)
     bonus_earned = 0.0
-    if sale.customer_id:
+    if sale.customer_id and loyalty_enabled:
         try:
             # 1 point de fidélité par tranche de 1000 FBu achetés
             bonus_earned = float(int(sale.total_amount / 1000))

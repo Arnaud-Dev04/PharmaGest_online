@@ -5,6 +5,7 @@ import 'package:frontend1/providers/cart_provider.dart';
 import 'package:frontend1/widgets/pos/payment_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/providers/inventory_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({super.key});
@@ -20,6 +21,7 @@ class _CartPanelState extends State<CartPanel> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final canDiscount = context.watch<LicenseProvider>().hasFeature('sales_discounts');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -92,7 +94,12 @@ class _CartPanelState extends State<CartPanel> {
                     padding: const EdgeInsets.all(12),
                     itemCount: cart.items.length,
                     itemBuilder: (context, index) =>
-                        _buildCartItem(cart, cart.items[index], isDark),
+                        _buildCartItem(
+                          cart,
+                          cart.items[index],
+                          isDark,
+                          canDiscount,
+                        ),
                   ),
           ),
 
@@ -233,7 +240,12 @@ class _CartPanelState extends State<CartPanel> {
     );
   }
 
-  Widget _buildCartItem(CartProvider cart, CartItem item, bool isDark) {
+  Widget _buildCartItem(
+    CartProvider cart,
+    CartItem item,
+    bool isDark,
+    bool canDiscount,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -395,50 +407,51 @@ class _CartPanelState extends State<CartPanel> {
                 const SizedBox(width: 8),
 
                 // Discount Button
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.percent,
-                        size: 16,
-                        color: item.discountPercent > 0
-                            ? AppTheme.successColor
-                            : Colors.grey,
-                      ),
-                      style: IconButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(32, 32),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: item.discountPercent > 0
-                                ? AppTheme.successColor
-                                : Colors.grey[300]!,
+                if (canDiscount)
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.percent,
+                          size: 16,
+                          color: item.discountPercent > 0
+                              ? AppTheme.successColor
+                              : Colors.grey,
+                        ),
+                        style: IconButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(32, 32),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: item.discountPercent > 0
+                                  ? AppTheme.successColor
+                                  : Colors.grey[300]!,
+                            ),
                           ),
                         ),
+                        onPressed: () {
+                          setState(() {
+                            _activeDiscountItemId =
+                                _activeDiscountItemId == item.medicine.id
+                                ? null
+                                : item.medicine.id;
+                          });
+                        },
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _activeDiscountItemId =
-                              _activeDiscountItemId == item.medicine.id
-                              ? null
-                              : item.medicine.id;
-                        });
-                      },
-                    ),
-                    if (_activeDiscountItemId == item.medicine.id)
-                      CompositedTransformTarget(
-                        link: LayerLink(),
-                        child: Container(),
-                      ),
-                  ],
-                ),
+                      if (_activeDiscountItemId == item.medicine.id)
+                        CompositedTransformTarget(
+                          link: LayerLink(),
+                          child: Container(),
+                        ),
+                    ],
+                  ),
               ],
             ),
 
             // Inline Discount Input (visible if active)
-            if (_activeDiscountItemId == item.medicine.id)
+            if (canDiscount && _activeDiscountItemId == item.medicine.id)
               Container(
                 margin: const EdgeInsets.only(top: 8),
                 padding: const EdgeInsets.all(8),

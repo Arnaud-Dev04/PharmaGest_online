@@ -2,20 +2,23 @@
 Medicine-related models: Medicine, MedicineFamily, MedicineType.
 """
 
-from sqlalchemy import Column, String, Integer, Float, Date, ForeignKey, Boolean
+from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 
 
-class MedicineFamily(Base, BaseModelMixin):
+class MedicineFamily(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Dynamic medicine family/category.
     Examples: Antibiotiques, Antipaludiques, Antidouleurs, etc.
     """
     __tablename__ = "medicine_families"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "name", name="uq_medicine_families_pharmacy_name"),
+    )
     
-    name = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False, index=True)
     
     # Relationship
     medicines = relationship("Medicine", back_populates="family")
@@ -24,14 +27,17 @@ class MedicineFamily(Base, BaseModelMixin):
         return f"<MedicineFamily(id={self.id}, name='{self.name}')>"
 
 
-class MedicineType(Base, BaseModelMixin):
+class MedicineType(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Dynamic medicine type/packaging.
     Examples: Plaquette, Flacon, Ampoule, Sachet, etc.
     """
     __tablename__ = "medicine_types"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "name", name="uq_medicine_types_pharmacy_name"),
+    )
     
-    name = Column(String(50), unique=True, nullable=False, index=True)
+    name = Column(String(50), nullable=False, index=True)
     
     # Relationship
     medicines = relationship("Medicine", back_populates="type")
@@ -40,7 +46,7 @@ class MedicineType(Base, BaseModelMixin):
         return f"<MedicineType(id={self.id}, name='{self.name}')>"
 
 
-class Medicine(Base, BaseModelMixin):
+class Medicine(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Main medicine/product model.
     
@@ -59,9 +65,12 @@ class Medicine(Base, BaseModelMixin):
         prix_*: Multi-level pricing (last registered prices)
     """
     __tablename__ = "medicines"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "code", name="uq_medicines_pharmacy_code"),
+    )
     
     # --- Identification ---
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), nullable=False)
     name = Column(String(200), nullable=False, index=True)
     code_barres = Column(String(50), nullable=True, index=True)  # EAN/UPC barcode
     dci = Column(String(200), nullable=True)  # Dénomination Commune Internationale

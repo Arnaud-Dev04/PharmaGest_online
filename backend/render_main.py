@@ -33,6 +33,8 @@ from app.routes.users import router as users_router
 from app.routes.customers import router as customers_router
 from app.routes.medicine_pricing import router as medicine_pricing_router
 from app.routes.pos import router as pos_router
+from app.routes.cash_register import router as cash_register_router
+from app.routes.platform_admin import router as platform_admin_router
 
 # Routers optionnels (peuvent ne pas exister sur Render selon la version)
 try:
@@ -140,6 +142,8 @@ app.include_router(users_router,            prefix="/users",    tags=["Users"])
 app.include_router(customers_router,        prefix="/customers",tags=["Customers"])
 app.include_router(medicine_pricing_router, prefix="/pricing",  tags=["Pricing"])
 app.include_router(pos_router,              prefix="/pos",      tags=["POS"])
+app.include_router(cash_register_router,    prefix="/cash-register", tags=["Cash Register"])
+app.include_router(platform_admin_router,   prefix="/platform", tags=["Platform Admin"])
 if _has_license and license_router:
     app.include_router(license_router,      prefix="/license",  tags=["License"])
 if _has_sync and sync_router:

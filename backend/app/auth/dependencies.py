@@ -6,16 +6,25 @@ Handles token extraction, verification, and role-based access control.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from dataclasses import dataclass
 from typing import Optional
 import time
 
 from app.database import get_local_db
+from app.models.pharmacy import Pharmacy
 from app.models.user import User, UserRole
 from app.utils.security import decode_token
 from app.schemas.auth import TokenData
 
 # OAuth2 scheme for token extraction
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+@dataclass(frozen=True)
+class PharmacyContext:
+    pharmacy_id: Optional[int]
+    is_platform_admin: bool
+    pharmacy: Optional[Pharmacy] = None
 
 # ── Cache token → user_id  (30s TTL) ─────────────────────────────────────────
 # On cache UNIQUEMENT l'user_id déduit du token, pas l'objet ORM.
@@ -46,6 +55,38 @@ credentials_exception = HTTPException(
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+
+def _set_user_pharmacy_scope(user: User, db: Session) -> None:
+    if user.role == UserRole.PLATFORM_ADMIN:
+        if user.pharmacy_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Platform administrator must not be assigned to a pharmacy",
+            )
+        db.info.update({
+            "pharmacy_scope_enabled": True,
+            "pharmacy_id": None,
+            "is_platform_admin": False,
+        })
+        return
+
+    if user.pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not assigned to a pharmacy",
+        )
+    pharmacy = db.query(Pharmacy).filter(Pharmacy.id == user.pharmacy_id).first()
+    if pharmacy is None or not pharmacy.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Pharmacy is unavailable",
+        )
+    db.info.update({
+        "pharmacy_scope_enabled": True,
+        "pharmacy_id": pharmacy.id,
+        "is_platform_admin": False,
+    })
 
 
 # ============================================================================
@@ -86,6 +127,8 @@ async def get_current_user(
         _token_to_username.pop(key, None)
         raise credentials_exception
 
+    _set_user_pharmacy_scope(user, db)
+
     return user
 
 
@@ -100,7 +143,7 @@ async def get_current_active_user(
 ) -> User:
     """
     Ensure current user is active.
-    Also checks for license expiration (unless user is Super Admin).
+    Also checks the authenticated pharmacy's license expiration.
     La vérification de licence est mise en cache 60s dans license_service.
     """
     global _verified_users
@@ -116,7 +159,7 @@ async def get_current_active_user(
         )
 
     # Check license status (résultat caché 60s dans license_service)
-    if current_user.role != UserRole.SUPER_ADMIN:
+    if current_user.role != UserRole.PLATFORM_ADMIN:
         if is_first_time:
             print("[DEBUG] get_current_active_user: Checking license...")
         license_status = license_service.get_license_status(db)
@@ -132,6 +175,57 @@ async def get_current_active_user(
         print("[DEBUG] get_current_active_user: Verification complete.")
         _verified_users.add(current_user.username)
 
+    return current_user
+
+
+async def get_current_pharmacy_context(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db),
+) -> PharmacyContext:
+    """Resolve the tenant from the authenticated database user, never from the request."""
+    if current_user.role == UserRole.PLATFORM_ADMIN:
+        if current_user.pharmacy_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Platform administrator must not be assigned to a pharmacy",
+            )
+        return PharmacyContext(pharmacy_id=None, is_platform_admin=True)
+
+    if current_user.pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not assigned to a pharmacy",
+        )
+
+    pharmacy = db.query(Pharmacy).filter(Pharmacy.id == current_user.pharmacy_id).first()
+    if pharmacy is None or not pharmacy.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Pharmacy is unavailable",
+        )
+
+    return PharmacyContext(
+        pharmacy_id=pharmacy.id,
+        is_platform_admin=False,
+        pharmacy=pharmacy,
+    )
+
+
+async def require_platform_admin(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db),
+) -> User:
+    """Restrict platform administration endpoints to platform administrators."""
+    if current_user.role != UserRole.PLATFORM_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access reserved for platform administrators",
+        )
+    db.info.update({
+        "pharmacy_scope_enabled": True,
+        "pharmacy_id": None,
+        "is_platform_admin": True,
+    })
     return current_user
 
 
@@ -202,5 +296,7 @@ async def get_super_admin_user_bypass_license(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Super Admin privileges required"
         )
+
+    _set_user_pharmacy_scope(user, db)
 
     return user

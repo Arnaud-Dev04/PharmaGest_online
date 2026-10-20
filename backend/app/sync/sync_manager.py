@@ -55,12 +55,197 @@ class SyncManager:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _configure_remote_scope(local_db: Session, remote_db: Session) -> int:
+        """Map the local pharmacy to its remote row by stable pharmacy code."""
+        from app.models.pharmacy import Pharmacy
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        if (
+            not local_db.info.get("pharmacy_scope_enabled")
+            or local_db.info.get("is_platform_admin")
+            or local_pharmacy_id is None
+        ):
+            raise ValueError("A pharmacy-scoped session is required for synchronization")
+
+        local_pharmacy = local_db.query(Pharmacy).filter(
+            Pharmacy.id == local_pharmacy_id
+        ).first()
+        if local_pharmacy is None or not local_pharmacy.is_active:
+            raise ValueError("Local pharmacy is unavailable")
+
+        remote_pharmacy = remote_db.query(Pharmacy).filter(
+            Pharmacy.code == local_pharmacy.code
+        ).first()
+        if remote_pharmacy is None or not remote_pharmacy.is_active:
+            raise ValueError("Matching active pharmacy is missing from the remote database")
+
+        remote_db.info.update({
+            "pharmacy_scope_enabled": True,
+            "pharmacy_id": remote_pharmacy.id,
+            "is_platform_admin": False,
+        })
+        return remote_pharmacy.id
+
+    @staticmethod
+    def _push_pos_sale(sale, remote_db: Session):
+        """Insert a POS sale using remote IDs resolved inside its tenant."""
+        from app.models.batch import Batch
+        from app.models.cash_register import CashRegisterSession
+        from app.models.customer import Customer
+        from app.models.medicine import Medicine
+        from app.models.pos_sale import POSSale, POSSaleItem
+        from app.models.user import User
+
+        remote_pharmacy_id = remote_db.info.get("pharmacy_id")
+        if remote_pharmacy_id is None or not remote_db.info.get("pharmacy_scope_enabled"):
+            raise ValueError("Remote pharmacy scope has not been configured")
+
+        existing_pharmacy = remote_db.connection().execute(
+            POSSale.__table__.select()
+            .with_only_columns(POSSale.__table__.c.pharmacy_id)
+            .where(POSSale.__table__.c.sale_uuid == sale.sale_uuid)
+        ).scalar_one_or_none()
+        if existing_pharmacy is not None:
+            if existing_pharmacy != remote_pharmacy_id:
+                raise ValueError("Sale UUID is already owned by another pharmacy")
+            logger.info(f"[SyncUp] Vente {sale.sale_uuid} deja presente dans cette pharmacie.")
+            return
+
+        local_user = sale.user
+        if local_user is None or local_user.pharmacy_id != sale.pharmacy_id:
+            raise ValueError("Sale user is missing or belongs to another pharmacy")
+        remote_user = remote_db.query(User).filter(
+            User.username == local_user.username,
+            User.pharmacy_id == remote_pharmacy_id,
+        ).first()
+        if remote_user is None:
+            raise ValueError(f"Remote user '{local_user.username}' is missing")
+
+        remote_cash_session_uuid = None
+        if sale.payment_method == "cash" and sale.cash_session_uuid:
+            remote_cash_session = remote_db.query(CashRegisterSession).filter(
+                CashRegisterSession.session_uuid == sale.cash_session_uuid,
+                CashRegisterSession.pharmacy_id == remote_pharmacy_id,
+                CashRegisterSession.cashier_id == remote_user.id,
+            ).first()
+            if remote_cash_session is None or remote_cash_session.status != "open":
+                raise ValueError("Open cashier session must sync before cash POS sales")
+            remote_cash_session_uuid = remote_cash_session.session_uuid
+
+        customer_id = None
+        if sale.customer_id is not None:
+            local_customer = sale.customer
+            if local_customer is None or local_customer.pharmacy_id != sale.pharmacy_id:
+                raise ValueError("Sale customer is missing or belongs to another pharmacy")
+            remote_customer = remote_db.query(Customer).filter(
+                Customer.phone == local_customer.phone,
+                Customer.pharmacy_id == remote_pharmacy_id,
+            ).first()
+            if remote_customer is None:
+                remote_customer = Customer(
+                    first_name=local_customer.first_name,
+                    last_name=local_customer.last_name,
+                    phone=local_customer.phone,
+                    total_points=local_customer.total_points,
+                    pharmacy_id=remote_pharmacy_id,
+                )
+                remote_db.add(remote_customer)
+                remote_db.flush()
+            customer_id = remote_customer.id
+
+        cancelled_by_id = None
+        if sale.cancelled_by is not None:
+            local_canceller = sale.cancelled_by_user
+            if local_canceller is None or local_canceller.pharmacy_id != sale.pharmacy_id:
+                raise ValueError("Sale cancellation user belongs to another pharmacy")
+            remote_canceller = remote_db.query(User).filter(
+                User.username == local_canceller.username,
+                User.pharmacy_id == remote_pharmacy_id,
+            ).first()
+            if remote_canceller is None:
+                raise ValueError(f"Remote user '{local_canceller.username}' is missing")
+            cancelled_by_id = remote_canceller.id
+
+        remote_items = []
+        for item in sale.items:
+            local_medicine = item.medicine
+            if local_medicine is None or local_medicine.pharmacy_id != sale.pharmacy_id:
+                raise ValueError("Sale medicine belongs to another pharmacy")
+            remote_medicine = remote_db.query(Medicine).filter(
+                Medicine.code == local_medicine.code,
+                Medicine.pharmacy_id == remote_pharmacy_id,
+            ).first()
+            if remote_medicine is None:
+                raise ValueError(f"Remote medicine '{local_medicine.code}' is missing")
+
+            remote_batch_id = None
+            if item.batch_id is not None:
+                local_batch = item.batch
+                if local_batch is None or local_batch.pharmacy_id != sale.pharmacy_id:
+                    raise ValueError("Sale batch belongs to another pharmacy")
+                remote_batch = remote_db.query(Batch).filter(
+                    Batch.batch_number == local_batch.batch_number,
+                    Batch.medicine_id == remote_medicine.id,
+                    Batch.pharmacy_id == remote_pharmacy_id,
+                ).first()
+                if remote_batch is None:
+                    raise ValueError(
+                        f"Remote batch '{local_batch.batch_number}' is missing"
+                    )
+                remote_batch_id = remote_batch.id
+
+            remote_items.append(POSSaleItem(
+                pharmacy_id=remote_pharmacy_id,
+                medicine_id=remote_medicine.id,
+                batch_id=remote_batch_id,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                sale_type=item.sale_type,
+                discount_percent=item.discount_percent,
+            ))
+
+        remote_sale = POSSale(
+            sale_uuid=sale.sale_uuid,
+            code=sale.code,
+            pharmacy_id=remote_pharmacy_id,
+            total_amount=sale.total_amount,
+            status=sale.status,
+            payment_method=sale.payment_method,
+            date=sale.date,
+            user_id=remote_user.id,
+            customer_id=customer_id,
+            customer_name=sale.customer_name,
+            cash_session_uuid=remote_cash_session_uuid,
+            customer_phone=sale.customer_phone,
+            notes=sale.notes,
+            cancelled_at=sale.cancelled_at,
+            cancelled_by=cancelled_by_id,
+            insurance_provider=sale.insurance_provider,
+            insurance_card_id=sale.insurance_card_id,
+            coverage_percent=sale.coverage_percent,
+            sync_status="synced",
+            synced_at=datetime.utcnow(),
+            items=remote_items,
+        )
+        remote_db.add(remote_sale)
+        remote_db.commit()
+        logger.info(f"[SyncUp] Vente {sale.sale_uuid} envoyee avec succes.")
+
+    @staticmethod
     def sync_up(local_db: Session) -> Dict[str, Any]:
         """
         Pousse les ventes POS locales non-synchronisees vers la DB MySQL remote.
         Retourne un rapport avec le nombre de ventes synchronisees.
         """
-        report = {"synced": 0, "errors": 0, "skipped": 0, "online": False}
+        report = {
+            "synced": 0,
+            "errors": 0,
+            "skipped": 0,
+            "online": False,
+            "cash_sessions_synced": 0,
+            "cash_movements_synced": 0,
+        }
 
         if not _remote_available():
             logger.warning("[SyncUp] DB MySQL remote non joignable -- skip.")
@@ -75,17 +260,20 @@ class SyncManager:
 
             # Ventes locales non encore envoyees vers le cloud
             pending_sales = local_db.query(POSSale).filter(
-                POSSale.sync_status.in_(["pending", "local_only"])
+                POSSale.sync_status.in_(["pending", "local_only", "error"])
             ).order_by(POSSale.date.asc()).limit(100).all()
 
             if not pending_sales:
                 logger.info("[SyncUp] Rien a synchroniser.")
-                return report
 
-            logger.info(f"[SyncUp] {len(pending_sales)} vente(s) a envoyer...")
+            if pending_sales:
+                logger.info(f"[SyncUp] {len(pending_sales)} vente(s) a envoyer...")
 
             remote_db = SessionRemote()
             try:
+                SyncManager._configure_remote_scope(local_db, remote_db)
+                cash_report = SyncManager._sync_cash_register(local_db, remote_db)
+                report.update(cash_report)
                 for sale in pending_sales:
                     try:
                         SyncManager._push_pos_sale(sale, remote_db)
@@ -95,10 +283,16 @@ class SyncManager:
                         local_db.commit()
                         report["synced"] += 1
                     except Exception as e:
+                        remote_db.rollback()
                         logger.error(f"[SyncUp] Erreur vente {sale.sale_uuid}: {e}")
                         sale.sync_status = "error"
                         local_db.commit()
                         report["errors"] += 1
+                # If a locally closed session had queued offline sales, retry its
+                # final closure after the sale rows have been uploaded.
+                cash_report = SyncManager._sync_cash_register(local_db, remote_db)
+                report["cash_sessions_synced"] += cash_report["cash_sessions_synced"]
+                report["cash_movements_synced"] += cash_report["cash_movements_synced"]
             finally:
                 remote_db.close()
 
@@ -113,53 +307,6 @@ class SyncManager:
         logger.info(f"[SyncUp] Resultat: {report}")
         return report
 
-    @staticmethod
-    def _push_pos_sale(sale, remote_db: Session):
-        """
-        Insere ou met a jour une POSSale dans la DB MySQL remote (upsert par UUID).
-        """
-        from app.models.pos_sale import POSSale, POSSaleItem
-
-        # Verifier si la vente existe deja dans la DB remote (par UUID)
-        existing = remote_db.query(POSSale).filter(
-            POSSale.sale_uuid == sale.sale_uuid
-        ).first()
-
-        if existing:
-            logger.info(f"[SyncUp] Vente {sale.sale_uuid} deja presente en remote -- skip.")
-            return
-
-        # Creer la vente dans la DB remote
-        remote_sale = POSSale(
-            sale_uuid=sale.sale_uuid,
-            code=sale.code,
-            total_amount=sale.total_amount,
-            status=sale.status,
-            payment_method=sale.payment_method,
-            date=sale.date,
-            user_id=sale.user_id,
-            customer_id=sale.customer_id,
-            sync_status="synced",
-            synced_at=datetime.utcnow(),
-        )
-        remote_db.add(remote_sale)
-        remote_db.flush()
-
-        # Creer les items associes
-        for item in sale.items:
-            remote_item = POSSaleItem(
-                sale_id=remote_sale.id,
-                medicine_id=item.medicine_id,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                total_price=item.total_price,
-                sale_type=item.sale_type,
-            )
-            remote_db.add(remote_item)
-
-        remote_db.commit()
-        logger.info(f"[SyncUp] Vente {sale.sale_uuid} envoyee avec succes.")
-
     # ------------------------------------------------------------------
     # SYNC DOWN : MySQL remote -> Local
     # ------------------------------------------------------------------
@@ -169,7 +316,11 @@ class SyncManager:
         """
         Recupere les parametres et medicaments depuis la DB MySQL remote vers la base locale.
         """
-        report = {"online": False, "settings_updated": 0, "errors": 0}
+        report = {
+            "online": False,
+            "settings_updated": 0,
+            "errors": 0,
+        }
 
         if not _remote_available():
             logger.warning("[SyncDown] DB MySQL remote non joignable -- skip.")
@@ -179,32 +330,148 @@ class SyncManager:
         remote_db = SessionRemote()
 
         try:
-            from app.models.settings import Settings
-
-            # Recuperer les Settings depuis la DB remote
-            remote_settings = remote_db.query(Settings).all()
-            for rs in remote_settings:
-                local_setting = local_db.query(Settings).filter(
-                    Settings.key == rs.key
-                ).first()
-                if local_setting:
-                    local_setting.value = rs.value
-                else:
-                    local_db.add(Settings(key=rs.key, value=rs.value))
-            local_db.commit()
-            report["settings_updated"] = len(remote_settings)
-
+            SyncManager._configure_remote_scope(local_db, remote_db)
+            report["settings_updated"] = SyncManager._sync_settings(local_db, remote_db)
         except Exception as e:
             logger.warning(f"[SyncDown] Settings sync skipped: {e}")
-
-        except Exception as e:
-            logger.error(f"[SyncDown] Erreur fatale: {e}")
             report["errors"] += 1
         finally:
             remote_db.close()
 
         logger.info(f"[SyncDown] Resultat: {report}")
         return report
+
+    @staticmethod
+    def _sync_cash_register(local_db: Session, remote_db: Session) -> Dict[str, int]:
+        """Idempotently copy this tenant's pending cashier sessions and movements first."""
+        from app.models.cash_register import CashRegisterMovement, CashRegisterSession
+        from app.models.pos_sale import POSSale
+        from app.models.user import User
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        remote_pharmacy_id = SyncManager._configure_remote_scope(local_db, remote_db)
+        report = {"cash_sessions_synced": 0, "cash_movements_synced": 0}
+
+        local_sessions = local_db.query(CashRegisterSession).filter(
+            CashRegisterSession.pharmacy_id == local_pharmacy_id,
+            CashRegisterSession.sync_status == "pending",
+        ).order_by(CashRegisterSession.opened_at.asc()).all()
+
+        pending_sale_counts = dict(
+            local_db.query(
+                POSSale.cash_session_uuid,
+                func.count(POSSale.id),
+            )
+            .filter(
+                POSSale.pharmacy_id == local_pharmacy_id,
+                POSSale.payment_method == "cash",
+                POSSale.sync_status.in_(["pending", "local_only", "error"]),
+                POSSale.cash_session_uuid.is_not(None),
+            )
+            .group_by(POSSale.cash_session_uuid)
+            .all()
+        )
+        pending_sale_counts = {session_uuid: count for session_uuid, count in pending_sale_counts.items()}
+
+        for local_session in local_sessions:
+            local_cashier = local_session.cashier
+            if local_cashier is None or local_cashier.pharmacy_id != local_pharmacy_id:
+                raise ValueError("Cash-session cashier is missing or belongs to another pharmacy")
+            remote_cashier = remote_db.query(User).filter(
+                User.username == local_cashier.username,
+                User.pharmacy_id == remote_pharmacy_id,
+            ).first()
+            if remote_cashier is None:
+                raise ValueError(f"Remote cashier '{local_cashier.username}' is missing")
+
+            pending_count = pending_sale_counts.get(local_session.session_uuid, 0)
+            remote_session = remote_db.query(CashRegisterSession).filter(
+                CashRegisterSession.session_uuid == local_session.session_uuid,
+                CashRegisterSession.pharmacy_id == remote_pharmacy_id,
+            ).first()
+            if remote_session is None:
+                remote_session = CashRegisterSession(
+                    session_uuid=local_session.session_uuid,
+                    active_key=local_session.active_key,
+                    pharmacy_id=remote_pharmacy_id,
+                    cashier_id=remote_cashier.id,
+                    opened_at=local_session.opened_at,
+                    opening_amount=local_session.opening_amount,
+                    closed_at=local_session.closed_at if pending_count == 0 else None,
+                    expected_amount=local_session.expected_amount if pending_count == 0 else None,
+                    counted_amount=local_session.counted_amount if pending_count == 0 else None,
+                    variance=local_session.variance if pending_count == 0 else None,
+                    status=local_session.status if pending_count == 0 else "open",
+                    notes=local_session.notes,
+                    sync_status="synced",
+                )
+                remote_db.add(remote_session)
+                remote_db.flush()
+            else:
+                remote_session.active_key = local_session.active_key
+                # Never close the remote drawer while any local cash sale is pending.
+                if pending_count == 0:
+                    remote_session.closed_at = local_session.closed_at
+                    remote_session.expected_amount = local_session.expected_amount
+                    remote_session.counted_amount = local_session.counted_amount
+                    remote_session.variance = local_session.variance
+                    remote_session.status = local_session.status
+                remote_session.notes = local_session.notes
+                remote_session.cashier_id = remote_cashier.id
+
+            local_movements = local_db.query(CashRegisterMovement).filter(
+                CashRegisterMovement.session_uuid == local_session.session_uuid,
+                CashRegisterMovement.pharmacy_id == local_pharmacy_id,
+            ).all()
+            for local_movement in local_movements:
+                exists = remote_db.query(CashRegisterMovement).filter(
+                    CashRegisterMovement.movement_uuid == local_movement.movement_uuid,
+                    CashRegisterMovement.pharmacy_id == remote_pharmacy_id,
+                ).first()
+                if exists:
+                    continue
+                remote_db.add(CashRegisterMovement(
+                    movement_uuid=local_movement.movement_uuid,
+                    session_uuid=remote_session.session_uuid,
+                    session_id=remote_session.id,
+                    pharmacy_id=remote_pharmacy_id,
+                    cashier_id=remote_cashier.id,
+                    movement_type=local_movement.movement_type,
+                    amount=local_movement.amount,
+                    reason=local_movement.reason,
+                    occurred_at=local_movement.occurred_at,
+                ))
+                report["cash_movements_synced"] += 1
+
+            remote_db.commit()
+            local_session.sync_status = "synced" if pending_count == 0 else "pending"
+            local_db.commit()
+            report["cash_sessions_synced"] += 1
+
+        return report
+
+    @staticmethod
+    def _sync_settings(local_db: Session, remote_db: Session) -> int:
+        """Pull settings for the matching pharmacy only."""
+        from app.models.settings import Settings
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        SyncManager._configure_remote_scope(local_db, remote_db)
+        remote_settings = remote_db.query(Settings).all()
+        for remote_setting in remote_settings:
+            local_setting = local_db.query(Settings).filter(
+                Settings.key == remote_setting.key
+            ).first()
+            if local_setting:
+                local_setting.value = remote_setting.value
+            else:
+                local_db.add(Settings(
+                    key=remote_setting.key,
+                    value=remote_setting.value,
+                    pharmacy_id=local_pharmacy_id,
+                ))
+        local_db.commit()
+        return len(remote_settings)
 
     # ------------------------------------------------------------------
     # STATUT — optimisé + cache
@@ -222,10 +489,12 @@ class SyncManager:
         """
         global _status_cache
         now = time.time()
+        cache_key = local_db.info.get("pharmacy_id")
 
         # Retourner le cache si encore valide
-        if _status_cache.get("ts") and now - _status_cache["ts"] < _STATUS_CACHE_TTL:
-            return _status_cache["data"]
+        cached_status = _status_cache.get(cache_key)
+        if cached_status and now - cached_status["ts"] < _STATUS_CACHE_TTL:
+            return cached_status["data"]
 
         try:
             from app.models.pos_sale import POSSale
@@ -260,7 +529,7 @@ class SyncManager:
         except Exception as e:
             result = {"online": False, "error": str(e)}
 
-        _status_cache = {"data": result, "ts": now}
+        _status_cache[cache_key] = {"data": result, "ts": now}
         return result
 
     # ------------------------------------------------------------------

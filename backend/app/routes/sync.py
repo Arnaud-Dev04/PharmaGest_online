@@ -14,13 +14,18 @@ import logging
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
+from app.core.license_guard import require_feature
 from app.sync.sync_manager import SyncManager
 
 router = APIRouter()
 logger = logging.getLogger("sync_routes")
 
 
-@router.post("/push", summary="Pousser les ventes locales vers la DB MySQL remote")
+@router.post(
+    "/push",
+    summary="Pousser les ventes locales vers la DB MySQL remote",
+    dependencies=[Depends(require_feature("cloud_sync"))],
+)
 async def sync_push(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
@@ -46,7 +51,11 @@ async def sync_push(
         return {"success": False, "error": str(e), "synced": 0, "online": False}
 
 
-@router.get("/pull", summary="Recuperer les mises a jour depuis la DB MySQL remote")
+@router.get(
+    "/pull",
+    summary="Recuperer les mises a jour depuis la DB MySQL remote",
+    dependencies=[Depends(require_feature("cloud_sync"))],
+)
 async def sync_pull(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),

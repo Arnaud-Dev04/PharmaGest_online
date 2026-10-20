@@ -19,12 +19,25 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final user = context.read<AuthProvider>().user;
+      if (user != null && user.role != 'platform_admin') {
+        context.read<LicenseProvider>().checkLicense(userKey: user.username);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<LicenseProvider>(
       builder: (context, licenseProvider, _) {
         // Le super_admin n'est jamais bloqué par la licence
         final auth = Provider.of<AuthProvider>(context, listen: false);
-        final isSuperAdmin = auth.user?.role == 'super_admin';
+        final isSuperAdmin = auth.user?.role == 'super_admin' ||
+          auth.user?.role == 'platform_admin';
 
         // Vérifier si on doit afficher la modal (uniquement pour admin et pharmaciens)
         final shouldShowModal =

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
+from app.core.license_guard import require_feature
 from app.services import report_service
 
 router = APIRouter()
@@ -82,7 +83,8 @@ async def preview_stock_pdf(
 
 @router.get(
     "/stock/excel",
-    summary="Download stock report (Excel)"
+    summary="Download stock report (Excel)",
+    dependencies=[Depends(require_feature("report_exports"))],
 )
 async def download_stock_excel(
     start_date: date = None,
@@ -112,7 +114,8 @@ async def download_stock_excel(
 
 @router.get(
     "/stock/word",
-    summary="Download stock report (Word)"
+    summary="Download stock report (Word)",
+    dependencies=[Depends(require_feature("report_exports"))],
 )
 async def download_stock_word(
     start_date: date = None,
@@ -146,7 +149,8 @@ async def download_stock_word(
 
 @router.get(
     "/sales/pdf",
-    summary="Download sales report (PDF)"
+    summary="Download sales report (PDF)",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def download_sales_pdf(
     start_date: date = None,
@@ -179,7 +183,8 @@ async def download_sales_pdf(
 
 @router.get(
     "/sales/pdf/preview",
-    summary="Preview sales report (PDF inline)"
+    summary="Preview sales report (PDF inline)",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def preview_sales_pdf(
     start_date: date = None,
@@ -210,7 +215,8 @@ async def preview_sales_pdf(
 
 @router.get(
     "/sales/excel",
-    summary="Download sales report (Excel)"
+    summary="Download sales report (Excel)",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def download_sales_excel(
     start_date: date,
@@ -236,7 +242,8 @@ async def download_sales_excel(
 
 @router.get(
     "/sales/word",
-    summary="Download sales report (Word)"
+    summary="Download sales report (Word)",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def download_sales_word(
     start_date: date,
@@ -266,7 +273,8 @@ async def download_sales_word(
 
 @router.get(
     "/financial/pdf",
-    summary="Download financial summary (PDF)"
+    summary="Download financial summary (PDF)",
+    dependencies=[Depends(require_feature("financial_reports"))],
 )
 async def download_financial_pdf(
     start_date: date = Query(None, description="Start date for period filter"),
@@ -299,7 +307,8 @@ async def download_financial_pdf(
 
 @router.get(
     "/financial/pdf/preview",
-    summary="Preview financial summary (PDF inline)"
+    summary="Preview financial summary (PDF inline)",
+    dependencies=[Depends(require_feature("financial_reports"))],
 )
 async def preview_financial_pdf(
     start_date: date = Query(None, description="Start date for period filter"),
@@ -335,7 +344,8 @@ async def preview_financial_pdf(
 
 @router.get(
     "/treasury/pdf",
-    summary="Download treasury tracking (PDF)"
+    summary="Download treasury tracking (PDF)",
+    dependencies=[Depends(require_feature("financial_reports"))],
 )
 async def download_treasury_pdf(
     current_user: User = Depends(get_current_active_user),
@@ -359,7 +369,8 @@ async def download_treasury_pdf(
 
 @router.get(
     "/treasury/pdf/preview",
-    summary="Preview treasury tracking (PDF inline)"
+    summary="Preview treasury tracking (PDF inline)",
+    dependencies=[Depends(require_feature("financial_reports"))],
 )
 async def preview_treasury_pdf(
     current_user: User = Depends(get_current_active_user),

@@ -3,7 +3,7 @@ Base mixin for all models.
 Provides common fields: id, created_at, updated_at.
 """
 
-from sqlalchemy import Column, Integer, DateTime
+from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.sql import func
 
 
@@ -16,6 +16,12 @@ class TimestampMixin:
     # Les datetimes sont stockees en UTC implicitement via func.now().
     created_at = Column(DateTime(timezone=False), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=False), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class PharmacyScopedMixin:
+    """Marks records owned by exactly one pharmacy tenant."""
+
+    pharmacy_id = Column(Integer, ForeignKey("pharmacies.id"), nullable=True, index=True)
 
 
 class BaseModelMixin(TimestampMixin):

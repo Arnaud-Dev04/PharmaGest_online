@@ -12,11 +12,11 @@ Types de mouvements:
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 from datetime import datetime
 
 
-class StockMovement(Base, BaseModelMixin):
+class StockMovement(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Journal des mouvements de stock.
     

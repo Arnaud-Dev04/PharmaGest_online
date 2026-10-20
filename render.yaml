@@ -19,5 +19,7 @@ services:
         value: "720"
       - key: DEBUG
         value: "False"
+      - key: ENVIRONMENT
+        value: production
       - key: ALLOWED_ORIGINS
-        value: "*"
+        sync: false

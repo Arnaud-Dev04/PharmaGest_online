@@ -19,7 +19,20 @@ import logging
 
 from app.database import get_local_db
 from app.models.user import User
-from app.auth.dependencies import get_current_active_user, get_admin_user
+from app.auth.dependencies import (
+    PharmacyContext,
+    get_current_active_user,
+    get_current_pharmacy_context,
+    get_admin_user,
+)
+from app.services.cash_register_service import validate_sale_session
+from app.core.license_guard import (
+    ensure_feature_access,
+    apply_sales_history_limit,
+    ensure_sales_record_access,
+    feature_is_available,
+    require_feature,
+)
 from app.services import pos_service
 from app.schemas.pos import (
     CartAddRequest, CartAddResponse,
@@ -87,7 +100,7 @@ async def search_products(
     Mis en cache 30s quand la recherche est vide pour éviter de recharger 1000 produits sur Aiven.
     """
     now = _pos_time.time()
-    cache_key = f"{limit}"
+    cache_key = f"{current_user.pharmacy_id}_{limit}"
     if not q.strip() and cache_key in _pos_search_cache and (now - _pos_search_cache[cache_key]["ts"]) < _POS_CACHE_TTL:
         return _pos_search_cache[cache_key]["data"]
 
@@ -113,7 +126,7 @@ async def get_top_products(
     """
     try:
         now = _pos_time.time()
-        cache_key = f"{limit}"
+        cache_key = f"{current_user.pharmacy_id}_{limit}"
         if cache_key in _pos_top_cache and (now - _pos_top_cache[cache_key]["ts"]) < _POS_CACHE_TTL:
             return _pos_top_cache[cache_key]["data"]
 
@@ -198,6 +211,7 @@ async def cart_remove(
 async def checkout(
     checkout_data: POSCheckoutRequest,
     current_user: User = Depends(get_current_active_user),
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
     db: Session = Depends(get_local_db)
 ):
     """
@@ -217,14 +231,42 @@ async def checkout(
     - 400: Insufficient stock, expired batch, or validation error
     - 404: Medicine or batch not found
     """
+    if any(item.discount_percent > 0 for item in checkout_data.items):
+        ensure_feature_access(pharmacy_context, "sales_discounts")
+    payment_method = (checkout_data.payment_method or "cash").lower()
+    cash_session = validate_sale_session(
+        db,
+        current_user,
+        checkout_data.cash_session_uuid,
+        payment_method,
+    )
+    if (
+        payment_method == "insurance"
+        or (checkout_data.coverage_percent or 0) > 0
+        or checkout_data.insurance_provider
+        or checkout_data.insurance_card_id
+    ):
+        ensure_feature_access(pharmacy_context, "insurance_sales")
+    if checkout_data.customer_id is not None:
+        ensure_feature_access(pharmacy_context, "customer_management")
+
     try:
+        loyalty_enabled = feature_is_available(
+            pharmacy_context.pharmacy.plan if pharmacy_context.pharmacy else None,
+            "customer_loyalty",
+        )
         sale = pos_service.checkout(
             db=db,
             user_id=current_user.id,
-            checkout_data=checkout_data
+            checkout_data=checkout_data,
+            award_loyalty_points=loyalty_enabled,
+            cash_session_uuid=cash_session.session_uuid if cash_session else None,
         )
         invalidate_pos_cache()
-        return pos_service.enrich_pos_sale_response(sale)
+        return pos_service.enrich_pos_sale_response(
+            sale,
+            loyalty_enabled=loyalty_enabled,
+        )
         
     except ValueError as e:
         raise HTTPException(
@@ -261,6 +303,7 @@ async def checkout(
 async def get_pos_sale(
     sale_id: int,
     current_user: User = Depends(get_current_active_user),
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
     db: Session = Depends(get_local_db)
 ):
     """
@@ -274,8 +317,16 @@ async def get_pos_sale(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Vente POS avec ID {sale_id} introuvable"
         )
+    ensure_sales_record_access(pharmacy_context, sale.date)
     
-    return pos_service.enrich_pos_sale_response(sale)
+    loyalty_enabled = feature_is_available(
+        pharmacy_context.pharmacy.plan if pharmacy_context.pharmacy else None,
+        "customer_loyalty",
+    )
+    return pos_service.enrich_pos_sale_response(
+        sale,
+        loyalty_enabled=loyalty_enabled,
+    )
 
 
 @router.post(
@@ -286,6 +337,7 @@ async def get_pos_sale(
 async def cancel_pos_sale(
     sale_id: int,
     current_user: User = Depends(get_current_active_user),
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
     db: Session = Depends(get_local_db)
 ):
     """
@@ -308,7 +360,14 @@ async def cancel_pos_sale(
             user=current_user,
             details=f"Annulation vente POS de {sale.total_amount:.0f} FBu",
         )
-        return pos_service.enrich_pos_sale_response(sale)
+        loyalty_enabled = feature_is_available(
+            pharmacy_context.pharmacy.plan if pharmacy_context.pharmacy else None,
+            "customer_loyalty",
+        )
+        return pos_service.enrich_pos_sale_response(
+            sale,
+            loyalty_enabled=loyalty_enabled,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -326,6 +385,7 @@ async def get_pos_history(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(get_current_active_user),
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
     db: Session = Depends(get_local_db)
 ):
     """
@@ -333,6 +393,9 @@ async def get_pos_history(
     
     **Accessible to**: All authenticated users
     """
+    start_date = apply_sales_history_limit(
+        pharmacy_context, start_date, end_date
+    )
     sales, total = pos_service.get_pos_sales_history(
         db=db,
         page=page,
@@ -341,7 +404,14 @@ async def get_pos_history(
         end_date=end_date
     )
     
-    enriched = [pos_service.enrich_pos_sale_response(s) for s in sales]
+    loyalty_enabled = feature_is_available(
+        pharmacy_context.pharmacy.plan if pharmacy_context.pharmacy else None,
+        "customer_loyalty",
+    )
+    enriched = [
+        pos_service.enrich_pos_sale_response(s, loyalty_enabled=loyalty_enabled)
+        for s in sales
+    ]
     
     return {
         "total": total,
@@ -437,7 +507,8 @@ async def get_batches(
 
 @router.get(
     "/user-sales-summary",
-    summary="Get user sales performance by period (self or all accounts for admin)"
+    summary="Get user sales performance by period (self or all accounts for admin)",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def get_user_sales_summary(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
@@ -603,7 +674,8 @@ async def get_user_sales_summary(
 
 @router.get(
     "/reports/top-medicines",
-    summary="Get top selling medicines by volume and profitability across all accounts"
+    summary="Get top selling medicines by volume and profitability across all accounts",
+    dependencies=[Depends(require_feature("sales_reports"))],
 )
 async def get_top_medicines_report(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),

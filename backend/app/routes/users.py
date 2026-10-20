@@ -9,6 +9,7 @@ from typing import Optional
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
+from app.core.license_guard import ensure_user_capacity
 from app.services import sales_service
 
 # For now, we focus on stats.
@@ -158,6 +159,8 @@ async def update_user(
 
     # Update Status
     if user_data.is_active is not None:
+        if user_data.is_active and not user.is_active:
+            ensure_user_capacity(db, current_user.pharmacy_id)
         user.is_active = user_data.is_active
 
     db.commit()
@@ -188,6 +191,9 @@ async def toggle_user_status(
     # Prevent disabling super admin
     if user.role == "super_admin":
         raise HTTPException(status_code=400, detail="Cannot disable Super Admin")
+
+    if not user.is_active:
+        ensure_user_capacity(db, current_user.pharmacy_id)
         
     user.is_active = not user.is_active
     db.commit()

@@ -5,6 +5,7 @@ import 'package:frontend1/services/stock_service.dart';
 import 'package:frontend1/screens/stock/add_medicine_wizard.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/providers/auth_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/screens/medicine_pricing/medicine_pricing_page.dart';
 import 'package:frontend1/models/medicine_pricing.dart';
@@ -244,7 +245,7 @@ class _StockPageState extends State<StockPage> {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            if (isAdmin)
+            if (isAdmin && context.watch<LicenseProvider>().hasFeature('audit_logs'))
               OutlinedButton.icon(
                 onPressed: () => DeletionLogsDialog.show(context),
                 icon: const Icon(Icons.delete_sweep, size: 18, color: Colors.redAccent),
@@ -255,13 +256,14 @@ class _StockPageState extends State<StockPage> {
                 ),
               ),
             // Bouton Journal des Mouvements
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/stock-movements');
-              },
-              icon: const Icon(Icons.swap_vert, size: 18),
-              label: const Text('Journal Mouvements'),
-            ),
+            if (context.watch<LicenseProvider>().hasFeature('stock_movements'))
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/stock-movements');
+                },
+                icon: const Icon(Icons.swap_vert, size: 18),
+                label: const Text('Journal Mouvements'),
+              ),
             // Bouton Gestion des Prix
             OutlinedButton.icon(
               onPressed: () {

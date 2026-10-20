@@ -185,7 +185,12 @@ def decrement_stock(db: Session, validated_items: List[Tuple[Medicine, SaleItemC
 # SALE CREATION
 # ============================================================================
 
-def create_sale(db: Session, user_id: int, sale_data: SaleCreate) -> Sale:
+def create_sale(
+    db: Session,
+    user_id: int,
+    sale_data: SaleCreate,
+    award_bonus: bool = True,
+) -> Sale:
     """
     Create a complete sale transaction.
     
@@ -335,7 +340,7 @@ def create_sale(db: Session, user_id: int, sale_data: SaleCreate) -> Sale:
     db.refresh(sale)
     
     # Calculate bonus points for customer (based on total amount)
-    if sale.customer:
+    if sale.customer and award_bonus:
         points = calculate_bonus_points(sale.total_amount)
         if points > 0:
             # customer_service is already imported globally

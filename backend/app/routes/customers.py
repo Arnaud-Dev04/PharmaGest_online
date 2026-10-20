@@ -9,11 +9,14 @@ from typing import List, Optional
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
+from app.core.license_guard import require_feature
 from app.services import customer_service
 from app.schemas.customer import CustomerResponse, CustomerCreate, CustomerUpdate
 from app.schemas.common import PaginatedResponse
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(require_feature("customer_management"))]
+)
 
 @router.post(
     "/",

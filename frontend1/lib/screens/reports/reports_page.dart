@@ -9,6 +9,7 @@ import 'package:frontend1/services/reports_service.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // Imports conditionnels pour le téléchargement web
@@ -209,6 +210,9 @@ class _ReportsPageState extends State<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final lp = Provider.of<LanguageProvider>(context);
+    final license = context.watch<LicenseProvider>();
+    final canViewAdvancedReports = license.hasFeature('sales_reports');
+    final canExportOffice = license.hasFeature('report_exports');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -324,10 +328,12 @@ class _ReportsPageState extends State<ReportsPage> {
                   (v) => setState(() => _loadingStock = v),
                   _loadingStock,
                   lp,
+                  allowOfficeExports: canExportOffice,
                 ),
               ),
 
               // ── SALES CARD ──
+              if (canViewAdvancedReports)
               _buildReportCard(
                 title: lp.translate('sales'),
                 subtitle: 'Historique des ventes par période',
@@ -371,6 +377,7 @@ class _ReportsPageState extends State<ReportsPage> {
               ),
 
               // ── FINANCIAL CARD ──
+              if (license.hasFeature('financial_reports'))
               _buildReportCard(
                 title: lp.translate('financial'),
                 subtitle: 'Bilan financier détaillé',
@@ -586,6 +593,7 @@ class _ReportsPageState extends State<ReportsPage> {
     void Function(bool) setLoading,
     bool isLoading,
     LanguageProvider lp,
+    {bool allowOfficeExports = true}
   ) {
     if (isLoading) {
       return const Padding(
@@ -603,18 +611,20 @@ class _ReportsPageState extends State<ReportsPage> {
           'PDF',
           () => _dl('$labelPrefix PDF', pdfFunc, setLoading, lp),
         ),
-        _downloadBtn(
-          Icons.table_chart_rounded,
-          Colors.green.shade600,
-          'Excel',
-          () => _dl('$labelPrefix Excel', excelFunc, setLoading, lp),
-        ),
-        _downloadBtn(
-          Icons.description_rounded,
-          Colors.blue.shade600,
-          'Word',
-          () => _dl('$labelPrefix Word', wordFunc, setLoading, lp),
-        ),
+        if (allowOfficeExports)
+          _downloadBtn(
+            Icons.table_chart_rounded,
+            Colors.green.shade600,
+            'Excel',
+            () => _dl('$labelPrefix Excel', excelFunc, setLoading, lp),
+          ),
+        if (allowOfficeExports)
+          _downloadBtn(
+            Icons.description_rounded,
+            Colors.blue.shade600,
+            'Word',
+            () => _dl('$labelPrefix Word', wordFunc, setLoading, lp),
+          ),
       ],
     );
   }

@@ -12,6 +12,7 @@ import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/services/invoice_auto_service.dart';
 import 'package:frontend1/core/error_helper.dart';
 import 'package:frontend1/providers/auth_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 import 'package:frontend1/screens/sales/user_sales_performance_dialog.dart';
 import 'package:frontend1/screens/sales/top_medicines_dialog.dart';
 
@@ -782,6 +783,17 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   }
 
   Widget _buildDateFilter(String label, TextEditingController controller) {
+    final canViewExtendedHistory = context
+      .watch<LicenseProvider>()
+      .hasFeature('extended_sales_history');
+    final today = DateTime.now();
+    final earliestDate = canViewExtendedHistory
+      ? DateTime(1900)
+      : today.subtract(const Duration(days: 29));
+    var initialDate = DateTime.tryParse(controller.text) ?? today;
+    if (initialDate.isBefore(earliestDate)) initialDate = earliestDate;
+    if (initialDate.isAfter(today)) initialDate = today;
+
     return SizedBox(
       width: 150,
       child: TextField(
@@ -796,9 +808,9 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
         onTap: () async {
           final date = await showDatePicker(
             context: context,
-            initialDate: DateTime.now(),
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2030),
+            initialDate: initialDate,
+            firstDate: earliestDate,
+            lastDate: today,
           );
           if (date != null) {
             controller.text = DateFormat('yyyy-MM-dd').format(date);

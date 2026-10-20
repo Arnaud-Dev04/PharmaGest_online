@@ -11,6 +11,7 @@ from datetime import date
 from app.database import get_local_db
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user, get_admin_user, get_pharmacist_user
+from app.core.license_guard import require_feature
 from app.schemas.medicine import (
     MedicineCreate, MedicineUpdate, MedicineResponse,
     StockAlertsResponse
@@ -378,7 +379,8 @@ async def get_batch_alerts(
 @router.get(
     "/integrity",
     response_model=dict,
-    summary="Check stock total consistency between medicines and batches"
+    summary="Check stock total consistency between medicines and batches",
+    dependencies=[Depends(require_feature("inventory_reconciliation"))],
 )
 async def get_stock_integrity(
     current_user: User = Depends(get_current_active_user),
@@ -391,7 +393,8 @@ async def get_stock_integrity(
 @router.post(
     "/integrity/fix",
     response_model=dict,
-    summary="Fix stock totals from active batches (Admin only)"
+    summary="Fix stock totals from active batches (Admin only)",
+    dependencies=[Depends(require_feature("inventory_reconciliation"))],
 )
 async def fix_stock_integrity(
     current_admin: User = Depends(get_admin_user),
@@ -403,7 +406,8 @@ async def fix_stock_integrity(
 
 @router.get(
     "/movements",
-    summary="Get stock movements journal with filters"
+    summary="Get stock movements journal with filters",
+    dependencies=[Depends(require_feature("stock_movements"))],
 )
 async def get_stock_movements(
     page: int = Query(1, ge=1, description="Page number"),
@@ -510,6 +514,7 @@ async def get_stock_movements(
 @router.get(
     "/medicines/{medicine_id}/audit-logs",
     summary="Get modification and deletion history for a specific medicine",
+    dependencies=[Depends(require_feature("audit_logs"))],
 )
 async def get_medicine_audit_history(
     medicine_id: int,
@@ -541,6 +546,7 @@ async def get_medicine_audit_history(
 @router.get(
     "/audit-logs",
     summary="Get global stock audit logs (modifications and deletions)",
+    dependencies=[Depends(require_feature("audit_logs"))],
 )
 async def get_stock_audit_logs(
     action: Optional[str] = None,
@@ -584,6 +590,7 @@ class BulkDeleteLogsRequest(BaseModel):
 @router.delete(
     "/audit-logs/{log_id}",
     summary="Delete a single audit log entry (Admin only)",
+    dependencies=[Depends(require_feature("audit_logs"))],
 )
 async def delete_stock_audit_log(
     log_id: int,
@@ -607,6 +614,7 @@ async def delete_stock_audit_log(
 @router.delete(
     "/audit-logs",
     summary="Bulk delete audit log entries (Admin only)",
+    dependencies=[Depends(require_feature("audit_logs"))],
 )
 async def bulk_delete_stock_audit_logs(
     body: BulkDeleteLogsRequest,

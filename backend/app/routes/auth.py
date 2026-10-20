@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
+from app.models.pharmacy import Pharmacy
 from datetime import timedelta
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -20,7 +21,8 @@ from app.utils.security import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-from app.auth.dependencies import get_current_active_user, get_admin_user
+from app.auth.dependencies import get_current_user, get_current_active_user, get_admin_user
+from app.core.license_guard import ensure_user_capacity
 
 # Create router
 router = APIRouter()
@@ -144,6 +146,12 @@ async def register(
         HTTPException 400: If username already exists
         HTTPException 403: If current user is not admin
     """
+    if user_data.role == UserRole.PLATFORM_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator accounts cannot be created by a pharmacy",
+        )
+
     # Check if username already exists
     existing_user = db.query(User).filter(User.username == user_data.username).first()
     
@@ -152,6 +160,15 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Username '{user_data.username}' already exists"
         )
+
+    if current_admin.pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin is not assigned to a pharmacy",
+        )
+
+    if user_data.is_active:
+        ensure_user_capacity(db, current_admin.pharmacy_id)
     
     # Create new user
     new_user = User(
@@ -159,7 +176,8 @@ async def register(
         password_hash=hash_password(user_data.password),
         role=user_data.role,
         is_active=user_data.is_active,
-        must_change_password=True
+        must_change_password=True,
+        pharmacy_id=current_admin.pharmacy_id,
     )
     
     db.add(new_user)
@@ -179,7 +197,7 @@ async def register(
     summary="Get current user information"
 )
 async def get_me(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get current authenticated user information.
@@ -190,6 +208,11 @@ async def get_me(
     Raises:
         HTTPException 401: If not authenticated
     """
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user",
+        )
     print(f"[DEBUG] /auth/me endpoint reached for {current_user.username}")
     return current_user
 
@@ -316,6 +339,8 @@ async def toggle_user_status(
         )
     
     # Toggle status
+    if not user.is_active:
+        ensure_user_capacity(db, current_admin.pharmacy_id)
     user.is_active = not user.is_active
     db.commit()
     db.refresh(user)

@@ -174,6 +174,41 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  String _licenseFeatureSummary(LanguageProvider language) {
+    final features = _licenseStatus?['available_features'];
+    if (features is! List || features.isEmpty) return '—';
+    return features.map((feature) {
+      switch (feature) {
+        case 'customer_management':
+          return language.translate('customerManagement');
+        case 'customer_loyalty':
+          return language.translate('customerLoyalty');
+        case 'cloud_sync':
+          return language.translate('cloudSync');
+        case 'sales_discounts':
+          return language.translate('salesDiscounts');
+        case 'insurance_sales':
+          return language.translate('insuranceSales');
+        case 'sales_reports':
+          return language.translate('salesReports');
+        case 'report_exports':
+          return language.translate('reportExports');
+        case 'financial_reports':
+          return language.translate('financialReports');
+        case 'stock_movements':
+          return language.translate('stockMovements');
+        case 'inventory_reconciliation':
+          return language.translate('inventoryReconciliation');
+        case 'audit_logs':
+          return language.translate('auditLogs');
+        case 'extended_sales_history':
+          return language.translate('extendedSalesHistory');
+        default:
+          return feature.toString();
+      }
+    }).join(', ');
+  }
+
   Future<void> _updateLicenseExpiry() async {
     // Validate date format
     if (_licenseExpiryDateCtrl.text.isEmpty) {
@@ -437,6 +472,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                         ),
                                       ),
                                     ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    '${lp.translate('platformPlan')}: ${(_licenseStatus!['plan'] ?? '—').toString().toUpperCase()}',
+                                  ),
+                                  Text(
+                                    '${lp.translate('platformUsers')}: ${_licenseStatus!['active_users'] ?? 0} / ${(_licenseStatus!['max_users'] ?? 0) >= 1000 ? lp.translate('unlimited') : _licenseStatus!['max_users'] ?? 0}',
+                                  ),
+                                  Text(
+                                    '${lp.translate('planFeatures')}: ${_licenseFeatureSummary(lp)}',
                                   ),
                                   if (_licenseStatus!['message'] != null) ...[
                                     const SizedBox(height: 8),

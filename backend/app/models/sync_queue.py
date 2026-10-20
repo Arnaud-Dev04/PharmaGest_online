@@ -8,6 +8,7 @@ from sqlalchemy.sql import func
 import enum
 
 from app.database import Base
+from app.models.base import PharmacyScopedMixin
 
 class SyncAction(str, enum.Enum):
     CREATE = "CREATE"
@@ -19,7 +20,7 @@ class SyncStatus(str, enum.Enum):
     DONE = "DONE"
     ERROR = "ERROR"
 
-class SyncQueue(Base):
+class SyncQueue(Base, PharmacyScopedMixin):
     __tablename__ = "sync_queue"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -4,15 +4,15 @@ Dedicated POS transaction models with batch-level tracking.
 Separated from legacy Sale/SaleItem to avoid breaking existing functionality.
 """
 
-from sqlalchemy import Column, String, Float, DateTime, Integer, ForeignKey
+from sqlalchemy import Column, String, Float, DateTime, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 from datetime import datetime
 import uuid as uuid_lib
 
 
-class POSSale(Base, BaseModelMixin):
+class POSSale(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     POS Sale transaction header.
 
@@ -24,6 +24,9 @@ class POSSale(Base, BaseModelMixin):
         synced_at   : Timestamp de la dernière sync réussie
     """
     __tablename__ = "pos_sales"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "code", name="uq_pos_sales_pharmacy_code"),
+    )
 
     sale_uuid = Column(
         String(36),
@@ -32,12 +35,18 @@ class POSSale(Base, BaseModelMixin):
         index=True,
         default=lambda: str(uuid_lib.uuid4())
     )
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), nullable=False)
     total_amount = Column(Float, nullable=False)
     payment_method = Column(String(20), nullable=False, default="cash")
     date = Column(DateTime, default=datetime.now, nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
+    cash_session_uuid = Column(
+        String(36),
+        ForeignKey("cash_register_sessions.session_uuid"),
+        nullable=True,
+        index=True,
+    )
     customer_name = Column(String(200), nullable=True)
     customer_phone = Column(String(30), nullable=True)
     status = Column(String(20), default="completed", nullable=False)
@@ -64,6 +73,7 @@ class POSSale(Base, BaseModelMixin):
     user = relationship("User", foreign_keys=[user_id])
     cancelled_by_user = relationship("User", foreign_keys=[cancelled_by])
     customer = relationship("Customer")
+    cash_session = relationship("CashRegisterSession")
     items = relationship("POSSaleItem", back_populates="sale", cascade="all, delete-orphan")
 
     def __repr__(self):
@@ -73,7 +83,7 @@ class POSSale(Base, BaseModelMixin):
         )
 
 
-class POSSaleItem(Base, BaseModelMixin):
+class POSSaleItem(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     POS Sale line item — always linked to a specific batch.
 

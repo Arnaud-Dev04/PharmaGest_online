@@ -133,6 +133,12 @@ class POSCheckoutRequest(BaseModel):
     """
     items: List[CheckoutItem] = Field(..., min_length=1, description="Cart items with allocations")
     payment_method: str = Field(default="cash", description="Payment: 'cash' or 'insurance'")
+    cash_session_uuid: Optional[str] = Field(
+        default=None,
+        min_length=36,
+        max_length=36,
+        description="Open cashier session UUID for cash payments",
+    )
     customer_id: Optional[int] = Field(None, description="Optional customer ID")
     customer_name: Optional[str] = Field(None, description="Optional customer name for invoice")
     

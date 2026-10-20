@@ -13,15 +13,16 @@ import 'package:frontend1/screens/auth/setup_screen.dart';
 import 'package:frontend1/screens/auth/change_password_screen.dart';
 import 'package:frontend1/screens/layout/main_layout.dart';
 import 'package:frontend1/screens/dashboard/dashboard_page.dart';
-import 'package:frontend1/screens/stock/stock_page.dart';
 import 'package:frontend1/screens/stock/stock_movements_page.dart';
 import 'package:frontend1/screens/medicine_pricing/medicine_pricing_page.dart';
 import 'package:frontend1/screens/pos/pos_page.dart';
+import 'package:frontend1/screens/cash_register/cash_register_page.dart';
 import 'package:frontend1/screens/sales/sales_history_page.dart'; // Import Sales
 import 'package:frontend1/screens/reports/reports_page.dart';
 import 'package:frontend1/screens/settings/settings_page.dart'; // Import Settings
 // Import REAL pages instead of placeholders
 import 'package:frontend1/screens/admin/super_admin_page.dart';
+import 'package:frontend1/screens/admin/platform_admin_page.dart';
 import 'package:frontend1/screens/suppliers/suppliers_page.dart';
 import 'package:frontend1/screens/users/users_page.dart';
 
@@ -57,12 +58,12 @@ class PharmacApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
 
         // InventoryProvider pour totaux achat/vente
-        ChangeNotifierProvider(create: (_) => InventoryProvider()..loadTotals()),
+        ChangeNotifierProvider(
+          create: (_) => InventoryProvider()..loadTotals(),
+        ),
 
         // LicenseProvider pour gérer la licence
-        ChangeNotifierProvider(
-          create: (_) => LicenseProvider()..checkLicense(),
-        ),
+        ChangeNotifierProvider(create: (_) => LicenseProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -95,7 +96,10 @@ class PharmacApp extends StatelessWidget {
                       const MainLayout(child: DashboardPage()),
                   '/stock': (context) =>
                       const MainLayout(child: _StockWrapper()),
-                  '/pos': (context) => const MainLayout(child: POSPage(), noPadding: true),
+                  '/pos': (context) =>
+                      const MainLayout(noPadding: true, child: POSPage()),
+                  '/cash-register': (context) =>
+                      const MainLayout(child: CashRegisterPage()),
                   '/sales-history': (context) =>
                       const MainLayout(child: SalesHistoryPage()),
                   '/reports': (context) =>
@@ -108,9 +112,10 @@ class PharmacApp extends StatelessWidget {
                       const MainLayout(child: SettingsPage()),
                   '/super-admin': (context) =>
                       const MainLayout(child: SuperAdminPage()),
+                  '/platform-admin': (context) =>
+                      const MainLayout(child: PlatformAdminPage()),
                   '/setup': (context) => const SetupScreen(),
-                  '/change-password': (context) =>
-                      const ChangePasswordScreen(),
+                  '/change-password': (context) => const ChangePasswordScreen(),
                   '/stock-movements': (context) =>
                       const MainLayout(child: StockMovementsPage()),
                 },
@@ -139,13 +144,18 @@ class AuthWrapper extends StatelessWidget {
         // Si authentifié
         if (authProvider.isAuthenticated) {
           // Première installation : wizard de configuration (Super Admin)
-          if (authProvider.isFirstSetup && authProvider.user?.isSuperAdmin == true) {
+          if (authProvider.isFirstSetup &&
+              authProvider.user?.isSuperAdmin == true) {
             return const SetupScreen();
           }
 
           // Utilisateur doit changer son mot de passe (première connexion)
           if (authProvider.mustChangePassword) {
             return const ChangePasswordScreen();
+          }
+
+          if (authProvider.user?.role == 'platform_admin') {
+            return const MainLayout(child: PlatformAdminPage());
           }
 
           // Normal : aller au dashboard

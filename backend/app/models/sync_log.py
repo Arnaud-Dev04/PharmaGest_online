@@ -4,7 +4,7 @@ SyncLog model for tracking synchronization events.
 
 from sqlalchemy import Column, String, Text, DateTime, Enum as SQLEnum
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 from datetime import datetime
 import enum
 
@@ -16,7 +16,7 @@ class SyncLogStatus(str, enum.Enum):
     PENDING = "pending"
 
 
-class SyncLog(Base, BaseModelMixin):
+class SyncLog(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Sync log model for debugging synchronization.
     

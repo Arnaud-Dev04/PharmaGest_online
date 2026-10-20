@@ -6,10 +6,10 @@ Stores complete reception and pricing data for medications.
 from sqlalchemy import Column, String, Integer, Float, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 
 
-class MedicinePricing(Base, BaseModelMixin):
+class MedicinePricing(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Medicine pricing entry model.
     

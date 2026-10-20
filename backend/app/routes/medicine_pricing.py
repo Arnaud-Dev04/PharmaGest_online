@@ -81,7 +81,7 @@ async def list_pricing_entries(
 
     **Accessible to**: All authenticated users
     """
-    cache_key = f"{page}_{page_size}_{out_of_stock_only}"
+    cache_key = f"{current_user.pharmacy_id}_{page}_{page_size}_{out_of_stock_only}"
     now = _time_module.time()
 
     if not search and cache_key in _pricing_entries_cache and (now - _pricing_entries_cache[cache_key]["ts"]) < _PRICING_CACHE_TTL:
@@ -278,8 +278,10 @@ async def get_pricing_alerts(
     global _pricing_alerts_cache
     now = _time_module.time()
 
-    if _pricing_alerts_cache.get("ts") and (now - _pricing_alerts_cache["ts"]) < _PRICING_ALERTS_CACHE_TTL:
-        return _pricing_alerts_cache["data"]
+    cache_key = current_user.pharmacy_id
+    cached_alerts = _pricing_alerts_cache.get(cache_key)
+    if cached_alerts and (now - cached_alerts["ts"]) < _PRICING_ALERTS_CACHE_TTL:
+        return cached_alerts["data"]
 
     alerts = medicine_pricing_service.get_pricing_alerts(db)
     result = {
@@ -288,7 +290,7 @@ async def get_pricing_alerts(
         "out_of_stock":  [enrich_pricing_response(e).model_dump() for e in alerts["out_of_stock"]],
         "total_alerts":  alerts["total_alerts"],
     }
-    _pricing_alerts_cache = {"data": result, "ts": now}
+    _pricing_alerts_cache[cache_key] = {"data": result, "ts": now}
     return result
 
 

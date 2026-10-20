@@ -32,7 +32,7 @@ from app.models import (
     User, Medicine, MedicineFamily, MedicineType,
     Supplier, Customer, Sale, SaleItem,
     RestockOrder, RestockItem, Settings, SyncLog,
-    Batch, POSSale, POSSaleItem, StockMovement,
+    Batch, POSSale, POSSaleItem, StockMovement, Pharmacy,
     DeletionLog,
 )
 from app.models.medicine_pricing import MedicinePricing
@@ -42,20 +42,21 @@ target_metadata = Base.metadata
 
 def get_url() -> str:
     """
-    Determine quelle URL de DB utiliser pour les migrations.
+    Resolve the migration target only from an explicit migration-specific URL.
 
-    Priorite :
-      1. DB_URL_REMOTE si definie (MySQL cloud)
-      2. DB_URL_LOCAL  si definie (SQLite local)
-      3. SQLite par defaut (./pharmacy_local.db)
+    This deliberately never falls back to DB_URL_REMOTE: both .env files in this
+    project may contain production credentials, so an implicit Alembic command
+    must not be able to modify the cloud database.
     """
-    remote = os.getenv("DB_URL_REMOTE", "")
-    if remote:
-        # Normaliser mysql:// -> mysql+pymysql://
-        if remote.startswith("mysql://") and "+pymysql" not in remote:
-            remote = remote.replace("mysql://", "mysql+pymysql://", 1)
-        return remote
-    return os.getenv("DB_URL_LOCAL", "sqlite:///./pharmacy_local.db")
+    url = os.getenv("PHARMAGEST_MIGRATION_DATABASE_URL", "").strip()
+    if not url:
+        raise RuntimeError(
+            "Set PHARMAGEST_MIGRATION_DATABASE_URL explicitly before running Alembic; "
+            "DB_URL_REMOTE is never selected implicitly."
+        )
+    if url.startswith("mysql://") and "+pymysql" not in url:
+        url = url.replace("mysql://", "mysql+pymysql://", 1)
+    return url
 
 
 def run_migrations_offline() -> None:

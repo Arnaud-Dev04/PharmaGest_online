@@ -4,11 +4,11 @@ Supplier model for managing medicine suppliers.
 
 from sqlalchemy import Column, String
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 from sqlalchemy.orm import relationship
 
 
-class Supplier(Base, BaseModelMixin):
+class Supplier(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Supplier model.
     

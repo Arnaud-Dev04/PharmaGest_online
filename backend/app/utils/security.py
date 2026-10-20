@@ -22,10 +22,31 @@ def _find_dotenv():
 
 load_dotenv(_find_dotenv())
 
-# Configuration from environment
-# En mode exe local, une cle par defaut stable est utilisee si SECRET_KEY absent
 _DEFAULT_KEY = "pharma-local-s3cur3-k3y-2026-d3fault"
-SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_KEY)
+_KNOWN_INSECURE_KEYS = {
+    _DEFAULT_KEY,
+    "pharma-gest-s3cur3-k3y-2026-render",
+}
+
+
+def load_secret_key(value: Optional[str], environment: str) -> str:
+    """Require a non-default JWT key in production; preserve local offline startup."""
+    is_production = environment.strip().lower() in {"prod", "production"}
+    secret_key = (value or "").strip()
+    if is_production and (
+        len(secret_key) < 32 or secret_key in _KNOWN_INSECURE_KEYS
+    ):
+        raise RuntimeError(
+            "Production SECRET_KEY must be a private value of at least 32 characters; "
+            "known default keys are forbidden"
+        )
+    return secret_key or _DEFAULT_KEY
+
+
+SECRET_KEY = load_secret_key(
+    os.getenv("SECRET_KEY"),
+    os.getenv("ENVIRONMENT", "development"),
+)
 
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")

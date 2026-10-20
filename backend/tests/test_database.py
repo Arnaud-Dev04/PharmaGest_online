@@ -74,6 +74,12 @@ class TestDatabaseConnection:
         assert "medicine_pricings" in tables
         assert "users" in tables
 
+    def test_pharmacies_table_created(self, engine):
+        from sqlalchemy import inspect
+
+        tables = inspect(engine).get_table_names()
+        assert "pharmacies" in tables
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SERVICE — CREATE

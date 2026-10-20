@@ -16,10 +16,11 @@ class LicenseService:
     def get_license_status(db: Session = None):
         global _license_cache
 
-        # Retourner le cache si encore valide
+        cache_key = db.info.get("pharmacy_id") if db else None
         now_ts = time.time()
-        if _license_cache.get("ts") and now_ts - _license_cache["ts"] < _LICENSE_CACHE_TTL:
-            return _license_cache["data"]
+        cached = _license_cache.get(cache_key)
+        if cached and now_ts - cached["ts"] < _LICENSE_CACHE_TTL:
+            return cached["data"]
 
         expiration_date_str = LICENSE_EXPIRATION_DATE
         warning_days = WARNING_DAYS_THRESHOLD
@@ -84,14 +85,14 @@ class LicenseService:
             }
 
         # Stocker dans le cache (même les erreurs, pour ne pas bombarder Aiven)
-        _license_cache = {"ts": time.time(), "data": result}
+        _license_cache[cache_key] = {"ts": time.time(), "data": result}
         return result
 
     @staticmethod
     def invalidate_cache():
         """Appeler après modification de la licence pour forcer le rechargement."""
         global _license_cache
-        _license_cache = {}
+        _license_cache.clear()
 
     @staticmethod
     def check_license_validity(db: Session = None) -> bool:

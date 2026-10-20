@@ -24,6 +24,15 @@ from app.models.user import User
 
 from app.auth.dependencies import get_current_active_user
 
+from app.auth.dependencies import PharmacyContext, get_current_pharmacy_context
+
+from app.core.license_guard import (
+    ensure_feature_access,
+    apply_sales_history_limit,
+    ensure_sales_record_access,
+    feature_is_available,
+)
+
 from app.schemas.sales import SaleCreate, SaleResponse, SaleItemResponse
 
 from app.schemas.customer import CustomerResponse
@@ -262,6 +271,8 @@ async def create_sale(
 
     current_user: User = Depends(get_current_active_user),
 
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
+
     db: Session = Depends(get_local_db)
 
 ):
@@ -300,6 +311,30 @@ async def create_sale(
 
     """
 
+    if (sale_data.discount_percent or 0) > 0 or any(
+        item.discount_percent > 0 for item in sale_data.items
+    ):
+        ensure_feature_access(pharmacy_context, "sales_discounts")
+
+    payment_method = getattr(
+        sale_data.payment_method, "value", sale_data.payment_method
+    )
+    if (
+        payment_method in ("insurance", "insurance_card")
+        or (sale_data.coverage_percent or 0) > 0
+        or sale_data.insurance_provider
+        or sale_data.insurance_card_id
+    ):
+        ensure_feature_access(pharmacy_context, "insurance_sales")
+
+    if any((
+        sale_data.customer_id is not None,
+        sale_data.customer_phone,
+        sale_data.customer_first_name,
+        sale_data.customer_last_name,
+    )):
+        ensure_feature_access(pharmacy_context, "customer_management")
+
     try:
 
         sale = sales_service.create_sale(
@@ -308,7 +343,12 @@ async def create_sale(
 
             user_id=current_user.id,
 
-            sale_data=sale_data
+            sale_data=sale_data,
+
+            award_bonus=feature_is_available(
+                pharmacy_context.pharmacy.plan if pharmacy_context.pharmacy else None,
+                "customer_loyalty",
+            ),
 
         )
 
@@ -372,6 +412,8 @@ async def get_sales_history(
 
     current_user: User = Depends(get_current_active_user),
 
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
+
     db: Session = Depends(get_local_db)
 
 ):
@@ -395,6 +437,10 @@ async def get_sales_history(
     - status_filter ("cancelled" or "completed")
 
     """
+
+    start_date = apply_sales_history_limit(
+        pharmacy_context, start_date, end_date
+    )
 
     from datetime import datetime
 
@@ -748,7 +794,7 @@ async def get_medicine_sales_stats(
     Mis en cache pendant 30s pour éviter des agrégations lentes répétées sur Aiven.
     """
     import time
-    cache_key = f"{start_date}_{end_date}_{limit}"
+    cache_key = f"{current_user.pharmacy_id}_{start_date}_{end_date}_{limit}"
     now = time.time()
     if cache_key in _med_stats_cache and (now - _med_stats_cache[cache_key]["ts"]) < _MED_STATS_CACHE_TTL:
         return _med_stats_cache[cache_key]["data"]
@@ -831,6 +877,8 @@ async def get_sale(
 
     current_user: User = Depends(get_current_active_user),
 
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
+
     db: Session = Depends(get_local_db)
 
 ):
@@ -848,16 +896,13 @@ async def get_sale(
     sale = sales_service.get_sale_by_id(db, sale_id)
 
     if not sale:
-
         raise HTTPException(
-
             status_code=status.HTTP_404_NOT_FOUND,
-
-            detail=f"Sale with ID {sale_id} not found"
-
+            detail=f"Sale with ID {sale_id} not found",
         )
 
-    
+    ensure_sales_record_access(pharmacy_context, sale.date)
+
 
     return enrich_sale_response(sale, db)
 
@@ -878,6 +923,8 @@ async def download_invoice(
     sale_id: int,
 
     current_user: User = Depends(get_current_active_user),
+
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
 
     db: Session = Depends(get_local_db)
 
@@ -910,6 +957,8 @@ async def download_invoice(
             )
 
         
+
+        ensure_sales_record_access(pharmacy_context, sale.date)
 
         # Prepare invoice data
 
@@ -979,6 +1028,8 @@ async def download_invoice(
 
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
 
         raise HTTPException(

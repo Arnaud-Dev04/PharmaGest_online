@@ -1,9 +1,171 @@
 # 🏗️ PharmaGestion — Analyse Multi-Pharmacies (Multi-Tenant)
 
-> Analyse de l'architecture actuelle et plan d'évolution pour supporter plusieurs pharmacies simultanément avec plusieurs utilisateurs par pharmacie.
+> État d'avancement, risques et plan de validation du support multi-pharmacies.
+
+## État actuel — synthèse
+
+Les phases 5 et 6 sont implémentées pour les fonctionnalités existantes. Les phases 1 à 4 disposent d'un socle applicatif, mais ne sont pas encore validées pour la production. Ne pas ouvrir le service à plusieurs pharmacies réelles avant la validation des migrations, de l'isolation complète et de la synchronisation sur des copies représentatives.
+
+| Phase | État | À retenir |
+|---|---|---|
+| 1 — Pharmacies et schéma | Implémentée dans le code, validation DB restante | Modèle `Pharmacy`, pharmacie historique `LEGACY-DEFAULT`, migrations et rattachement métier présents. Tester l'état Alembic et les données sur des copies SQLite et MySQL. La migration `20261001_add_user_pharmacy_id` est signalée comme non exécutée à distance. |
+| 2 — Authentification et rôles | Implémentée | La pharmacie est déterminée depuis l'utilisateur authentifié; un `pharmacy_id` fourni par le client n'accorde aucun accès. `platform_admin` est distinct des rôles pharmacie. Le login reste basé sur un nom d'utilisateur global; le couple identifiant + code pharmacie n'est pas livré. |
+| 3 — Isolation | Socle implémenté, validation exhaustive restante | Les requêtes métier, références, caches et statistiques sont conçus pour être tenant-scoped, avec refus des références inter-pharmacies. Il reste à vérifier toutes les routes et les comportements sur MySQL avant une ouverture réelle. |
+| 4 — Synchronisation hors ligne | Adaptée au tenant, validation production restante | La synchronisation SQLite ↔ MySQL tient compte de la pharmacie et les reprises POS sont idempotentes, y compris lorsque les identifiants locaux et distants diffèrent. Le téléchargement complet du catalogue médicaments reste à implémenter; les scénarios de reconnexion et de conflits doivent être testés. |
+| 5 — Administration et onboarding | Implémentée | Un `platform_admin` peut créer, consulter, modifier, activer et suspendre une pharmacie; la création inclut son premier administrateur. Flutter fournit l'onboarding, la recherche et des métriques. Le compte plateforme doit être provisionné explicitement par variables d'environnement; une pharmacie est suspendue plutôt que supprimée. |
+| 6 — Licences et limites | Implémentée pour les fonctionnalités disponibles | Basic : 3 utilisateurs et 30 jours d'historique; Pro : 10 utilisateurs; Enterprise : sans limite pratique. Les quotas comptent les utilisateurs actifs et s'appliquent à la création/réactivation. Les droits sont vérifiés côté serveur et reflétés dans Flutter. Une licence expirée bloque les routes métier, mais le Super Admin conserve l'accès au profil et au renouvellement. |
+
+### Droits et fonctionnalités non livrées
+
+Les fonctionnalités Pro/Enterprise comprennent, selon les modules existants, les rapports avancés, remises, ventes assurance, gestion des clients, certains outils de stock et synchronisation cloud. La fidélité et le crédit de points sont réservés à Enterprise. Flutter reflète ces droits, mais le backend reste l'autorité.
+
+Les fonctions évoquées dans la matrice initiale mais qui n'existent pas encore — notamment scanner de codes-barres, import CSV, 2FA et transferts inter-pharmacies — ne sont pas livrées et ne doivent pas être présentées comme disponibles.
+
+## Travaux restants et ordre recommandé
+
+1. **Sécuriser la base distante** : effectuer une sauvegarde, vérifier son état Alembic et la présence de `LEGACY-DEFAULT`. Ne lancer aucune migration distante avant d'avoir testé les migrations sur des copies représentatives SQLite et MySQL.
+2. **Valider l'isolation** : terminer l'audit exhaustif des routes, opérations par identifiant, références parent-enfant, tâches de maintenance, caches et statistiques; exécuter des tests inter-pharmacies sur MySQL.
+3. **Compléter et tester la synchronisation** : concevoir le téléchargement complet du catalogue médicaments, puis tester mode hors ligne, reconnexion, doublons, idempotence et conflits.
+4. **Préparer l'administration de production** : configurer les identifiants du compte plateforme via des variables d'environnement sécurisées, déployer et tester le parcours réel d'onboarding.
+5. **Valider Flutter** : exécuter `flutter analyze` et les tests Flutter. L'analyse Flutter complète et les tests Flutter n'ont pas été lancés dans l'état rapporté ici.
+6. **Déployer progressivement** : après validation et sauvegarde, commencer avec la pharmacie historique, surveiller POS, rapports et sync, puis seulement envisager l'ouverture à d'autres pharmacies.
+
+> **Important :** le contenu historique qui suit décrit le diagnostic initial et des propositions d'architecture. Ses formulations au présent (« n'existe pas », « à créer », « prochaine action ») ne décrivent plus l'état courant. Pour le suivi détaillé des phases et tests backend, consulter aussi `PLAN_IMPLEMENTATION_MULTI_TENANT.md`.
 
 ---
 
+## Analyse initiale et propositions (historique)
+
+---
+
+## 1. État initial — avant l'implémentation multi-tenant
+
+### Ce que le projet avait déjà de bien
+
+| Fonctionnalité | Fichier | Status |
+|---|---|---|
+| Système d'authentification JWT | `backend/app/auth/dependencies.py` | ✅ Présent |
+| Rôles utilisateurs (Admin, Pharmacist, Super Admin) | `backend/app/models/user.py` | ✅ Présent |
+| Double DB (SQLite local + MySQL remote) | `backend/app/database/core.py` | ✅ Présent |
+| Sync local ↔ cloud | `backend/app/sync/sync_manager.py` | ✅ Présent |
+| Audit logs | `backend/app/models/audit_log.py` | ✅ Présent |
+| API REST FastAPI | `backend/app/routes/` | ✅ Présent |
+| Système de licences | `backend/app/core/license.py` | ✅ Présent |
+
+### Le problème fondamental — architecture au démarrage
+
+```
+État de départ : architecture mono-tenant, avant l'ajout du modèle Pharmacy et des rattachements pharmacy_id.
+```
+
+**Ce diagnostic décrit l'état initial du projet, pas l'état actuel.**
+
+---
+
+## 2. Les 3 Approches Multi-Tenant (référence historique)
+
+### Option A — Multi-DB (une DB par pharmacie) 🔴 Complexe
+- Chaque pharmacie a sa propre base de données PostgreSQL
+- **Avantages :** isolation parfaite, migration facile par client
+- **Inconvénients :** coûteux (N bases = N connexions), difficile à maintenir
+- **Recommandé pour :** >100 pharmacies avec exigences de confidentialité très strictes
+
+### Option B — Schema PostgreSQL par pharmacie 🟡 Intermédiaire
+- Une seule DB PostgreSQL, mais un `schema` différent par pharmacie (`pharma_001.medicines`, `pharma_002.medicines`)
+- **Avantages :** bonne isolation, facile à sauvegarder par client
+- **Inconvénients :** Nécessite PostgreSQL obligatoirement (incompatible SQLite local)
+
+### Option C — `pharmacy_id` sur toutes les tables ✅ **Recommandé**
+- Une seule DB, toutes les tables ont une colonne `pharmacy_id`
+- Chaque requête est filtrée automatiquement par `pharmacy_id`
+- **Avantages :** simple, peu coûteux, compatible SQLite + PostgreSQL, évolutif
+- **Inconvénients :** il faut bien sécuriser les routes (jamais de fuite entre pharmacies)
+
+> [!IMPORTANT]
+> **L'Option C est la meilleure pour PharmaGestion** car elle préserve la compatibilité SQLite locale tout en permettant le multi-tenant cloud. C'est aussi la plus facile à implémenter progressivement.
+
+---
+
+<!-- Les anciennes sections 3 à 10 restent des propositions d'architecture historiques; elles ne sont pas la liste des tâches actuelles. -->
+
+---
+
+## 3. Architecture Cible — Plan Complet
+
+### 3.1 Nouveau modèle `Pharmacy` (déjà créé depuis cette proposition)
+
+```python
+# backend/app/models/pharmacy.py (extrait indicatif, non code actuel)
+class Pharmacy(Base, BaseModelMixin):
+    __tablename__ = "pharmacies"
+
+    name         = Column(String(200), nullable=False)
+    code         = Column(String(50), unique=True, nullable=False)  # ex: PHARMA-001
+    address      = Column(String(500), nullable=True)
+    phone        = Column(String(50), nullable=True)
+    email        = Column(String(200), nullable=True)
+    country      = Column(String(100), default="Côte d'Ivoire")
+    city         = Column(String(100), nullable=True)
+    is_active    = Column(Boolean, default=True)
+    license_key  = Column(String(255), nullable=True)  # Lier au système de licence
+    plan         = Column(String(50), default="basic")  # basic / pro / enterprise
+    max_users    = Column(Integer, default=5)  # Limite d'utilisateurs par pharma
+
+    # Relations
+    users        = relationship("User", back_populates="pharmacy")
+    medicines    = relationship("Medicine", back_populates="pharmacy")
+    # ...
+```
+
+### 3.2 Modification du modèle `User`
+
+```python
+# Ajouter dans backend/app/models/user.py
+class User(Base, BaseModelMixin):
+    # ... colonnes existantes ...
+    pharmacy_id = Column(Integer, ForeignKey("pharmacies.id"), nullable=True)
+    # nullable=True pour le super admin global (platform admin)
+
+    # Relation
+    pharmacy = relationship("Pharmacy", back_populates="users")
+```
+
+### 3.3 Ajout de `pharmacy_id` sur tous les modèles métier
+
+```python
+# À ajouter sur : Medicine, Sale, POSSale, Batch, Supplier,
+#                 Customer, RestockOrder, StockMovement, MedicinePricing...
+
+pharmacy_id = Column(Integer, ForeignKey("pharmacies.id"), nullable=False, index=True)
+pharmacy    = relationship("Pharmacy")
+```
+
+### 3.4 Nouveau système de hiérarchie des rôles
+
+```
+PLATFORM_ADMIN (super_admin)
+    │  → Gérer TOUTES les pharmacies
+    │  → Créer / désactiver des pharmacies
+    │  → Voir les métriques globales
+    │
+    ├── PHARMACY_ADMIN (admin)
+    │       │  → Gérer SA pharmacie seulement
+    │       │  → Créer/modifier les utilisateurs de SA pharmacie
+    │       │  → Voir les rapports de SA pharmacie
+    │       │
+    │       └── PHARMACIST (pharmacist)
+    │               → POS, Stock, Ventes de SA pharmacie
+    │               → Pas d'accès admin
+    │
+    └── PHARMACY_MANAGER (nouveau rôle optionnel)
+            → Gérer plusieurs pharmacies d'une chaîne
+```
+
+### 3.5 Contexte pharmacie (proposition initiale)
+
+Le contexte pharmacie est désormais résolu côté backend depuis l'utilisateur authentifié. Le client ne choisit pas son tenant; consulter la synthèse en tête du document et `PLAN_IMPLEMENTATION_MULTI_TENANT.md` pour l'état courant et les validations restantes.
+
+<!-- Archive dupliquée et obsolète, conservée temporairement pour référence; ne pas utiliser comme documentation active.
 ## 1. État Actuel — Ce qui existe déjà ✅
 
 ### Ce que le projet a déjà de bien
@@ -776,3 +938,5 @@ guard.guard(
 **Commencer par Phase 1 — Créer le modèle `Pharmacy` et migrer les données existantes vers une "pharmacie par défaut".**
 
 Cela ne casse rien et pose la fondation. Veux-tu qu'on commence ?
+-->
+

@@ -9,6 +9,7 @@ import 'package:frontend1/widgets/users/user_form_dialog.dart';
 
 import 'package:provider/provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 import 'package:frontend1/core/error_helper.dart';
 
 class UsersPage extends StatefulWidget {
@@ -191,6 +192,17 @@ class _UsersPageState extends State<UsersPage> {
   @override
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final license = context.watch<LicenseProvider>().status;
+    final activeUserCount = _allUsers.where((user) => user.isActive).length;
+    final hasUserCapacity = license == null ||
+      license.maxUsers <= 0 ||
+      license.maxUsers >= 1000 ||
+      activeUserCount < license.maxUsers;
+    final userLimitLabel = license == null || license.maxUsers <= 0
+      ? ''
+      : license.maxUsers >= 1000
+      ? languageProvider.translate('unlimited')
+      : '${license.maxUsers}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,13 +221,15 @@ class _UsersPageState extends State<UsersPage> {
                   ),
                 ),
                 Text(
-                  '${_filteredUsers.length} ${languageProvider.translate('users')}',
+                  '${languageProvider.translate('activeUsers')}: $activeUserCount${userLimitLabel.isEmpty ? '' : ' / $userLimitLabel'}',
                   style: const TextStyle(color: Colors.grey),
                 ),
               ],
             ),
             ElevatedButton.icon(
-              onPressed: () => _showUserDialog(languageProvider),
+              onPressed: hasUserCapacity
+                  ? () => _showUserDialog(languageProvider)
+                  : null,
               icon: const Icon(Icons.person_add),
               label: Text(languageProvider.translate('newUser')),
               style: ElevatedButton.styleFrom(

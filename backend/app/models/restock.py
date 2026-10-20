@@ -5,7 +5,7 @@ Restock models: RestockOrder and RestockItem.
 from sqlalchemy import Column, String, Float, Date, Integer, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 import enum
 from datetime import date
 
@@ -18,7 +18,7 @@ class RestockStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class RestockOrder(Base, BaseModelMixin):
+class RestockOrder(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Restock order header model.
     
@@ -43,7 +43,7 @@ class RestockOrder(Base, BaseModelMixin):
         return f"<RestockOrder(id={self.id}, supplier_id={self.supplier_id}, status='{self.status}', total={self.total_amount} FBu)>"
 
 
-class RestockItem(Base, BaseModelMixin):
+class RestockItem(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Restock order line item model.
     

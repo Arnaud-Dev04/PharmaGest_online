@@ -5,10 +5,10 @@ Audit Log model for tracking sensitive operations (deletions, cancellations, etc
 from sqlalchemy import Column, Integer, String, DateTime, Text
 from datetime import datetime
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 
 
-class DeletionLog(Base, BaseModelMixin):
+class DeletionLog(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Tracks deleted medicines, pricing entries, and cancelled invoices.
     

@@ -20,7 +20,9 @@ class AppSidebar extends StatelessWidget {
 
     final User? user = authProvider.user;
     final isSuperAdmin = user?.role.toLowerCase() == 'super_admin';
-    final isAdmin = user?.role.toLowerCase() == 'admin' || isSuperAdmin;
+    final isAdmin = user?.role.toLowerCase() == 'admin' ||
+      isSuperAdmin ||
+      user?.role.toLowerCase() == 'platform_admin';
 
     // Filtrer la navigation selon le rôle
     final filteredNavItems = NavigationItems.filterByRole(user?.role);

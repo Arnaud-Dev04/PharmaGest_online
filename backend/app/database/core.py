@@ -6,7 +6,8 @@ Manages database connections with dual-engine capability:
 """
 
 from sqlalchemy import create_engine, text, event, inspect
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase, with_loader_criteria
+from fastapi import HTTPException, status
 from sqlalchemy.pool import NullPool
 from typing import Generator
 import os
@@ -99,17 +100,20 @@ def _is_mysql_url(url: str) -> bool:
     return "mysql" in url.lower() if url else False
 
 
-if getattr(sys, 'frozen', False):
-    DATABASE_URL_LOCAL = get_database_path()
-else:
-    # Si DB_URL_LOCAL n'est pas defini mais DB_URL ou DATABASE_URL l'est, l'utiliser
-    DATABASE_URL_LOCAL = (
-        os.getenv("DB_URL_LOCAL") or
-        os.getenv("DB_URL") or
-        os.getenv("DATABASE_URL") or
-        os.getenv("DB_URL_REMOTE") or
-        "sqlite:///./pharmacy_local.db"
+def resolve_local_database_url(env: dict[str, str], *, frozen: bool = False) -> str:
+    """Resolve the application database without ever falling back to cloud DB URLs."""
+    if frozen:
+        return get_database_path()
+    return _normalize_db_url(
+        env.get("DB_URL_LOCAL", "").strip() or "sqlite:///./pharmacy_local.db"
     )
+
+
+if getattr(sys, 'frozen', False):
+    DATABASE_URL_LOCAL = resolve_local_database_url(os.environ, frozen=True)
+else:
+    # A missing local URL must stay local; remote credentials are never a fallback.
+    DATABASE_URL_LOCAL = resolve_local_database_url(os.environ)
 
 DATABASE_URL_LOCAL = _normalize_db_url(DATABASE_URL_LOCAL)
 DATABASE_URL_REMOTE = _normalize_db_url(os.getenv("DB_URL_REMOTE", ""))
@@ -197,6 +201,142 @@ class Base(DeclarativeBase):
     pass
 
 
+@event.listens_for(Session, "do_orm_execute")
+def _apply_pharmacy_query_scope(execute_state):
+    """Apply tenant criteria to ORM reads and bulk writes for scoped sessions."""
+    session_info = execute_state.session.info
+    if not session_info.get("pharmacy_scope_enabled"):
+        return
+    if session_info.get("is_platform_admin"):
+        return
+
+    pharmacy_id = session_info.get("pharmacy_id")
+    if pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A pharmacy context is required for this operation",
+        )
+
+    if execute_state.is_select or execute_state.is_update or execute_state.is_delete:
+        from app.models.base import PharmacyScopedMixin
+
+        execute_state.statement = execute_state.statement.options(
+            with_loader_criteria(
+                PharmacyScopedMixin,
+                lambda model: model.pharmacy_id == pharmacy_id,
+                include_aliases=True,
+            )
+        )
+
+
+@event.listens_for(Session, "before_flush")
+def _assign_and_validate_pharmacy_on_flush(session, flush_context, instances):
+    """Assign new scoped records to the session tenant and reject cross-tenant writes."""
+    session_info = session.info
+    if not session_info.get("pharmacy_scope_enabled") or session_info.get("is_platform_admin"):
+        return
+
+    pharmacy_id = session_info.get("pharmacy_id")
+    if pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A pharmacy context is required for this operation",
+        )
+
+    from app.models.base import PharmacyScopedMixin
+    scoped_tables = {
+        mapper.local_table: mapper.local_table.c.pharmacy_id
+        for mapper in Base.registry.mappers
+        if issubclass(mapper.class_, PharmacyScopedMixin)
+    }
+
+    for record in session.new:
+        if isinstance(record, PharmacyScopedMixin):
+            record_pharmacy_id = getattr(record, "pharmacy_id", None)
+            if record_pharmacy_id not in (None, pharmacy_id):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Cannot create a record for another pharmacy",
+                )
+            record.pharmacy_id = pharmacy_id
+
+    for record in session.new.union(session.dirty):
+        if not isinstance(record, PharmacyScopedMixin):
+            continue
+
+        for relationship in record.__mapper__.relationships:
+            if not issubclass(relationship.mapper.class_, PharmacyScopedMixin):
+                continue
+            if relationship.key not in record.__dict__:
+                continue
+            related = record.__dict__[relationship.key]
+            if isinstance(related, bool):
+                continue
+            # A dynamic relationship stores an AppenderQuery, not related ORM
+            # records; its foreign keys are validated in the column loop below.
+            if hasattr(related, "session") and hasattr(related, "statement"):
+                continue
+            related_records = related if relationship.uselist else [related]
+            for related_record in related_records:
+                if related_record is None:
+                    continue
+                if isinstance(related_record, bool):
+                    continue
+                if related_record.pharmacy_id not in (None, pharmacy_id):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Cannot link records from different pharmacies",
+                    )
+                if related_record in session.new:
+                    related_record.pharmacy_id = pharmacy_id
+
+        for column in record.__mapper__.columns:
+            for foreign_key in column.foreign_keys:
+                target_table = foreign_key.column.table
+                target_pharmacy_column = scoped_tables.get(target_table)
+                target_id = getattr(record, column.key, None)
+                if target_pharmacy_column is None or target_id is None:
+                    continue
+
+                pending_target = next(
+                    (
+                        candidate for candidate in session.new
+                        if candidate.__table__ is target_table
+                        and getattr(candidate, foreign_key.column.name, None) == target_id
+                    ),
+                    None,
+                )
+                if pending_target is not None:
+                    if pending_target.pharmacy_id not in (None, pharmacy_id):
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Cannot link records from different pharmacies",
+                        )
+                    pending_target.pharmacy_id = pharmacy_id
+                    continue
+
+                target_exists = session.connection().execute(
+                    target_table.select()
+                    .with_only_columns(target_table.c[foreign_key.column.name])
+                    .where(
+                        target_table.c[foreign_key.column.name] == target_id,
+                        target_pharmacy_column == pharmacy_id,
+                    )
+                ).first()
+                if target_exists is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Referenced record is not available in this pharmacy",
+                    )
+
+    for record in session.dirty.union(session.deleted):
+        if isinstance(record, PharmacyScopedMixin) and record.pharmacy_id != pharmacy_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cannot modify a record owned by another pharmacy",
+            )
+
+
 # ============================================================
 # FASTAPI DEPENDENCIES
 # ============================================================
@@ -234,6 +374,9 @@ def _auto_repair_schema(bind_engine):
 
     # Liste des colonnes additionnelles requises pour chaque table
     required_columns = {
+        "users": [
+            ("pharmacy_id", "INT NULL"),
+        ],
         "medicines": [
             ("price_buy", "FLOAT NOT NULL DEFAULT 0.0"),
             ("price_sell", "FLOAT NOT NULL DEFAULT 0.0"),
@@ -285,6 +428,15 @@ def _auto_repair_schema(bind_engine):
             ("discount_percent", "FLOAT DEFAULT 0.0 NULL"),
         ],
     }
+    tenant_tables = (
+        "deletion_logs", "batches", "customers", "medicine_pricing",
+        "medicine_families", "medicine_types", "medicines", "pos_sales",
+        "pos_sale_items", "restock_orders", "restock_items", "sales",
+        "sale_items", "settings", "stock_movements", "suppliers",
+        "sync_logs", "sync_queue",
+    )
+    for table_name in tenant_tables:
+        required_columns.setdefault(table_name, []).append(("pharmacy_id", "INT NULL"))
 
     with bind_engine.connect() as conn:
         for table, cols in required_columns.items():
@@ -314,7 +466,8 @@ def init_local_db():
         User, Medicine, MedicineFamily, MedicineType,
         Supplier, Customer, Sale, SaleItem,
         RestockOrder, RestockItem, Settings, SyncLog,
-        Batch, POSSale, POSSaleItem, StockMovement,
+        Batch, POSSale, POSSaleItem, StockMovement, Pharmacy,
+        CashRegisterSession, CashRegisterMovement,
         DeletionLog
     )
     from app.models.medicine_pricing import MedicinePricing
@@ -337,44 +490,109 @@ def init_local_db():
     # 3. Super Admin & Utilisateur par defaut
     from sqlalchemy.orm import Session
     from app.models.user import User, UserRole
-    from app.utils.security import hash_password, verify_password
+    from app.utils.security import hash_password
     from app.models.settings import Settings
 
     session = Session(bind=engine_local)
     try:
-        initial_password = os.getenv("ADMIN_INITIAL_PASSWORD", "arnaud123")
+        initial_password = os.getenv("ADMIN_INITIAL_PASSWORD", "").strip()
+        pharmacist_initial_password = os.getenv("PHARMACIST_INITIAL_PASSWORD", "").strip()
+
+        default_pharmacy = session.query(Pharmacy).filter(
+            Pharmacy.code == "LEGACY-DEFAULT"
+        ).first()
+        if not default_pharmacy:
+            session.add(Pharmacy(
+                name="Pharmacie principale",
+                code="LEGACY-DEFAULT",
+                is_active=True,
+                plan="basic",
+                max_users=3,
+            ))
+            session.commit()
+
+        existing_tables = set(inspect(engine_local).get_table_names())
+        tenant_tables = (
+            "users", "deletion_logs", "batches", "customers", "medicine_pricing",
+            "medicine_families", "medicine_types", "medicines", "pos_sales",
+            "pos_sale_items", "restock_orders", "restock_items", "sales",
+            "sale_items", "settings", "stock_movements", "suppliers",
+            "sync_logs", "sync_queue",
+        )
+        for table_name in tenant_tables:
+            if table_name not in existing_tables:
+                continue
+            columns = {column["name"] for column in inspect(engine_local).get_columns(table_name)}
+            if "pharmacy_id" not in columns:
+                continue
+            user_filter = " AND role != 'platform_admin'" if table_name == "users" else ""
+            session.execute(
+                text(
+                    f"UPDATE {table_name} SET pharmacy_id = :pharmacy_id "
+                    f"WHERE pharmacy_id IS NULL{user_filter}"
+                ),
+                {"pharmacy_id": default_pharmacy.id},
+            )
+        session.commit()
+
+        session.query(User).filter(
+            User.pharmacy_id.is_(None),
+            User.role != UserRole.PLATFORM_ADMIN,
+        ).update(
+            {User.pharmacy_id: default_pharmacy.id},
+            synchronize_session=False,
+        )
+        session.commit()
+
+        platform_username = os.getenv("PLATFORM_ADMIN_USERNAME", "").strip()
+        platform_password = os.getenv("PLATFORM_ADMIN_PASSWORD", "")
+        if platform_username and platform_password:
+            platform_admin = session.query(User).filter(
+                User.username == platform_username
+            ).first()
+            if platform_admin is None:
+                session.add(User(
+                    username=platform_username,
+                    password_hash=hash_password(platform_password),
+                    role=UserRole.PLATFORM_ADMIN,
+                    is_active=True,
+                    must_change_password=True,
+                    pharmacy_id=None,
+                ))
+                session.commit()
+                print("[OK] Platform administrator bootstrap account created")
+            elif platform_admin.role != UserRole.PLATFORM_ADMIN:
+                print("[WARNING] PLATFORM_ADMIN_USERNAME is already assigned to a non-platform user")
 
         # Super admin "arnaud"
         admin = session.query(User).filter(User.username == "arnaud").first()
-        if not admin:
+        if not admin and initial_password:
             admin_user = User(
                 username="arnaud",
                 password_hash=hash_password(initial_password),
                 role=UserRole.SUPER_ADMIN,
                 is_active=True,
-                must_change_password=False
+                must_change_password=True,
+                pharmacy_id=default_pharmacy.id,
             )
             session.add(admin_user)
             session.commit()
-            print("[OK] Super admin cree (username: arnaud)")
-        else:
-            if not verify_password(initial_password, admin.password_hash):
-                admin.password_hash = hash_password(initial_password)
-                session.commit()
+            print("[OK] Pharmacy administrator bootstrap account created; password change required")
 
-        # Pharmacien par defaut "pharmacien"
+        # Optional pharmacist bootstrap; never create an account with a known default password.
         pharm = session.query(User).filter(User.username == "pharmacien").first()
-        if not pharm:
+        if not pharm and pharmacist_initial_password:
             pharm_user = User(
                 username="pharmacien",
-                password_hash=hash_password("password123"),
+                password_hash=hash_password(pharmacist_initial_password),
                 role=UserRole.PHARMACIST,
                 is_active=True,
-                must_change_password=True
+                must_change_password=True,
+                pharmacy_id=default_pharmacy.id,
             )
             session.add(pharm_user)
             session.commit()
-            print("[OK] Utilisateur pharmacien cree (username: pharmacien / pass: password123)")
+            print("[OK] Pharmacist bootstrap account created; password change required")
 
         # Parametre is_first_setup
         first_setup = session.query(Settings).filter(Settings.key == "is_first_setup").first()

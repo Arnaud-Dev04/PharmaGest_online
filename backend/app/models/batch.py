@@ -7,10 +7,10 @@ Used for FEFO (First Expired First Out) stock management.
 from sqlalchemy import Column, String, Integer, Float, Date, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import BaseModelMixin
+from app.models.base import BaseModelMixin, PharmacyScopedMixin
 
 
-class Batch(Base, BaseModelMixin):
+class Batch(Base, BaseModelMixin, PharmacyScopedMixin):
     """
     Represents a specific lot/batch of a medicine.
     

@@ -6,7 +6,9 @@ import 'package:frontend1/models/app_settings.dart';
 import 'package:frontend1/providers/auth_provider.dart';
 import 'package:frontend1/providers/cart_provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
+import 'package:frontend1/providers/license_provider.dart';
 import 'package:frontend1/services/pos_service.dart';
+import 'package:frontend1/services/cash_register_service.dart';
 import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/services/invoice_pdf_service.dart';
 import 'package:frontend1/services/invoice_auto_service.dart';
@@ -29,6 +31,7 @@ class PaymentModal extends StatefulWidget {
 
 class _PaymentModalState extends State<PaymentModal> {
   final PosService _posService = PosService();
+  final CashRegisterService _cashRegisterService = CashRegisterService();
   final SettingsService _settingsService = SettingsService();
 
   String _paymentMethod = 'cash'; // 'cash' ou 'insurance'
@@ -209,6 +212,8 @@ class _PaymentModalState extends State<PaymentModal> {
 
   Future<void> _processPayment() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final cashier =
+        Provider.of<AuthProvider>(context, listen: false).user?.username ?? '';
 
     setState(() => _isProcessing = true);
 
@@ -241,7 +246,8 @@ class _PaymentModalState extends State<PaymentModal> {
           'level': item.level,
           'base_units': allocation['base_units'],
           'unit_price': item.effectiveUnitPrice,
-          'discount_percent': item.discountPercent,  // Remise appliquée sur cet article
+          'discount_percent':
+              item.discountPercent, // Remise appliquée sur cet article
         });
       }
 
@@ -254,14 +260,35 @@ class _PaymentModalState extends State<PaymentModal> {
           ? typedClientName
           : cartProvider.customerName.trim();
 
+      // Resolve the currently open cashier session immediately before checkout.
+      // This also works offline when the configured API points at the local DB.
+      String? cashSessionUuid;
+      if (_paymentMethod != 'insurance_card') {
+        final session = await _cashRegisterService.getCurrentSession(
+          cashier: cashier,
+        );
+        if (session == null || session['status'] != 'open') {
+          throw Exception(
+            'Ouvrez une session de caisse avant un paiement en espèces.',
+          );
+        }
+        cashSessionUuid = session['session_uuid']?.toString();
+        if (cashSessionUuid == null || cashSessionUuid.isEmpty) {
+          throw Exception(
+            'La session de caisse ne contient pas d’identifiant valide.',
+          );
+        }
+      }
+
       final checkoutData = {
         'items': checkoutItems,
-        'payment_method': _paymentMethod == 'insurance_card' ? 'insurance' : _paymentMethod,
+        'payment_method': _paymentMethod == 'insurance_card'
+            ? 'insurance'
+            : _paymentMethod,
         'customer_id': cartProvider.customerId,
+        'cash_session_uuid': cashSessionUuid,
         // Nom client optionnel (pour la facture)
-        'customer_name': customerName.isNotEmpty
-            ? customerName
-            : null,
+        'customer_name': customerName.isNotEmpty ? customerName : null,
         // Insurance
         'insurance_provider': _paymentMethod == 'insurance_card'
             ? _insuranceProviderController.text
@@ -281,8 +308,7 @@ class _PaymentModalState extends State<PaymentModal> {
         final sale = Sale.fromJson(response);
 
         // Capturer les valeurs dépendantes du context AVANT les appels async
-        final authProvider =
-            Provider.of<AuthProvider>(context, listen: false);
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final sellerName = authProvider.user?.username ?? 'N/A';
         final navigator = Navigator.of(context);
 
@@ -349,6 +375,9 @@ class _PaymentModalState extends State<PaymentModal> {
   @override
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final canUseInsurance = context.watch<LicenseProvider>().hasFeature(
+      'insurance_sales',
+    );
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -419,7 +448,11 @@ class _PaymentModalState extends State<PaymentModal> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Client (optionnel)',
@@ -441,7 +474,10 @@ class _PaymentModalState extends State<PaymentModal> {
                             labelText: 'Prénom',
                             isDense: true,
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                           ),
                           style: const TextStyle(fontSize: 13),
                         ),
@@ -454,7 +490,10 @@ class _PaymentModalState extends State<PaymentModal> {
                             labelText: 'Nom',
                             isDense: true,
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                           ),
                           style: const TextStyle(fontSize: 13),
                         ),
@@ -475,12 +514,14 @@ class _PaymentModalState extends State<PaymentModal> {
             Row(
               children: [
                 _buildPaymentOption('cash', 'Espèces', Icons.payments),
-                const SizedBox(width: 12),
-                _buildPaymentOption(
-                  'insurance_card',
-                  'Assurance',
-                  Icons.card_membership,
-                ),
+                if (canUseInsurance) ...[
+                  const SizedBox(width: 12),
+                  _buildPaymentOption(
+                    'insurance_card',
+                    'Assurance',
+                    Icons.card_membership,
+                  ),
+                ],
               ],
             ),
 
@@ -649,7 +690,6 @@ class _PaymentModalState extends State<PaymentModal> {
   }
 }
 
-
 // ═══════════════════════════════════════════════════════════════════
 // OVERLAY FACTURE — Affiché 5 secondes après un paiement réussi
 // ═══════════════════════════════════════════════════════════════════
@@ -808,7 +848,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                     // Montant total
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
@@ -828,35 +871,48 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                     // Info row
                     Row(
                       children: [
-                        _infoChip(Icons.credit_card, _paymentLabel(sale.paymentMethod)),
+                        _infoChip(
+                          Icons.credit_card,
+                          _paymentLabel(sale.paymentMethod),
+                        ),
                         const SizedBox(width: 8),
-                        if (sale.customerName != null && sale.customerName!.isNotEmpty)
+                        if (sale.customerName != null &&
+                            sale.customerName!.isNotEmpty)
                           _infoChip(Icons.person, sale.customerName!),
                         // Badge remise si applicable
-                        Builder(builder: (_) {
-                          final hasDiscount = sale.items.any((i) => i.discountPercent > 0);
-                          if (!hasDiscount) return const SizedBox.shrink();
-                          final pct = sale.items.firstWhere((i) => i.discountPercent > 0).discountPercent;
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.red[300]!),
-                              ),
-                              child: Text(
-                                'Remise -${pct.toStringAsFixed(0)}%',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red[700],
+                        Builder(
+                          builder: (_) {
+                            final hasDiscount = sale.items.any(
+                              (i) => i.discountPercent > 0,
+                            );
+                            if (!hasDiscount) return const SizedBox.shrink();
+                            final pct = sale.items
+                                .firstWhere((i) => i.discountPercent > 0)
+                                .discountPercent;
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.red[300]!),
+                                ),
+                                child: Text(
+                                  'Remise -${pct.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[700],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        }),
+                            );
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -880,7 +936,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                         children: [
                           // Header
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: const BorderRadius.only(
@@ -892,49 +951,88 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                               children: [
                                 Expanded(
                                   flex: 3,
-                                  child: Text('Produit',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                                  child: Text(
+                                    'Produit',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ),
                                 Expanded(
-                                  child: Text('Qté', textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                                  child: Text(
+                                    'Qté',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ),
                                 Expanded(
                                   flex: 2,
-                                  child: Text('Total', textAlign: TextAlign.right,
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                                  child: Text(
+                                    'Total',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                           // Items
-                          ...sale.items.map((item) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(item.medicineName,
+                          ...sale.items.map(
+                            (item) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(color: Colors.grey[200]!),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      item.medicineName,
                                       style: const TextStyle(fontSize: 12),
-                                      overflow: TextOverflow.ellipsis),
-                                ),
-                                Expanded(
-                                  child: Text('x${item.quantity}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'x${item.quantity}',
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text('${item.totalPrice.toStringAsFixed(0)} FBu',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      '${item.totalPrice.toStringAsFixed(0)} FBu',
                                       textAlign: TextAlign.right,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                ),
-                              ],
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          )),
+                          ),
                         ],
                       ),
                     ),
@@ -969,7 +1067,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                       OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                         ),
                         child: const Text('Fermer'),
                       ),
@@ -985,7 +1086,11 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                                 widget.invoiceResult.savedPath!,
                               );
                             },
-                            icon: const Icon(Icons.picture_as_pdf, size: 16, color: Color(0xFFE53935)),
+                            icon: const Icon(
+                              Icons.picture_as_pdf,
+                              size: 16,
+                              color: Color(0xFFE53935),
+                            ),
                             label: const Text(
                               'Voir PDF',
                               style: TextStyle(fontSize: 12),
@@ -993,7 +1098,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFE53935),
                               side: const BorderSide(color: Color(0xFFE53935)),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
                             ),
                           ),
                         )
@@ -1012,7 +1120,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                                   }
                                 : null,
                             icon: const Icon(Icons.picture_as_pdf, size: 16),
-                            label: const Text('Voir PDF', style: TextStyle(fontSize: 12)),
+                            label: const Text(
+                              'Voir PDF',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ),
                       const SizedBox(width: 8),
@@ -1030,11 +1141,17 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                             );
                           },
                           icon: const Icon(Icons.print, size: 16),
-                          label: const Text('Imprimer', style: TextStyle(fontSize: 12)),
+                          label: const Text(
+                            'Imprimer',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryColor,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
                           ),
                         ),
                       ),
@@ -1103,7 +1220,10 @@ class _InvoiceOverlayDialogState extends State<_InvoiceOverlayDialog>
                   ),
                   Text(
                     shortPath,
-                    style: const TextStyle(fontSize: 9, color: Color(0xFF4CAF50)),
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF4CAF50),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

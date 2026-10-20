@@ -17,6 +17,8 @@ from .license import router as license_router
 from .medicine_pricing import router as medicine_pricing_router
 from .pos import router as pos_router
 from .sync import router as sync_router
+from .platform_admin import router as platform_admin_router
+from .cash_register import router as cash_register_router
 
 __all__ = [
     "auth_router",
@@ -36,5 +38,7 @@ __all__ = [
     "medicine_pricing_router",
     "pos_router",
     "sync_router",
+    "platform_admin_router",
+    "cash_register_router",
 ]
 

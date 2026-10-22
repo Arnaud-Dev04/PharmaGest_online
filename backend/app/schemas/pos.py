@@ -142,6 +142,9 @@ class POSCheckoutRequest(BaseModel):
     customer_id: Optional[int] = Field(None, description="Optional customer ID")
     customer_name: Optional[str] = Field(None, description="Optional customer name for invoice")
     
+    # Optional client-provided UUID for idempotency
+    sale_uuid: Optional[str] = Field(default=None, description="Client-generated UUID for idempotence")
+    
     # Insurance fields
     insurance_provider: Optional[str] = None
     insurance_card_id: Optional[str] = None

@@ -147,9 +147,10 @@ def _create_configured_engine(url: str, is_local: bool = True):
         return create_engine(
             url,
             pool_pre_ping=True,         # Reconnexion automatique si la connexion tombe
-            pool_recycle=1800,          # Recycle les connexions toutes les 30 min (evite timeout MySQL)
-            pool_size=5,
-            max_overflow=10,
+            pool_recycle=900,           # Recycle les connexions toutes les 15 min (evite timeout MySQL)
+            pool_size=25,               # Connexions maintenues ouvertes par worker
+            max_overflow=25,            # Connexions de pointe temporaires
+            pool_timeout=20,            # Temps d'attente max avant timeout
             connect_args=connect_args,
             echo=False
         )
@@ -433,7 +434,7 @@ def _auto_repair_schema(bind_engine):
         "medicine_families", "medicine_types", "medicines", "pos_sales",
         "pos_sale_items", "restock_orders", "restock_items", "sales",
         "sale_items", "settings", "stock_movements", "suppliers",
-        "sync_logs", "sync_queue", "users",
+        "sync_logs", "sync_queue", "users", "invoice_sequences",
     )
     for table_name in tenant_tables:
         required_columns.setdefault(table_name, []).append(("pharmacy_id", "INT NULL"))
@@ -486,7 +487,7 @@ def init_local_db():
         User, Medicine, MedicineFamily, MedicineType,
         Supplier, Customer, Sale, SaleItem,
         RestockOrder, RestockItem, Settings, SyncLog,
-        Batch, POSSale, POSSaleItem, StockMovement, Pharmacy,
+        Batch, POSSale, POSSaleItem, InvoiceSequence, StockMovement, Pharmacy,
         CashRegisterSession, CashRegisterMovement,
         DeletionLog
     )
@@ -537,7 +538,7 @@ def init_local_db():
             "medicine_families", "medicine_types", "medicines", "pos_sales",
             "pos_sale_items", "restock_orders", "restock_items", "sales",
             "sale_items", "settings", "stock_movements", "suppliers",
-            "sync_logs", "sync_queue",
+            "sync_logs", "sync_queue", "invoice_sequences",
         )
         for table_name in tenant_tables:
             if table_name not in existing_tables:

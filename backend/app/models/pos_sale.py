@@ -112,3 +112,21 @@ class POSSaleItem(Base, BaseModelMixin, PharmacyScopedMixin):
             f"medicine_id={self.medicine_id}, batch_id={self.batch_id}, "
             f"qty={self.quantity}, total={self.total_price} FBu)>"
         )
+
+
+class InvoiceSequence(Base, BaseModelMixin, PharmacyScopedMixin):
+    """
+    Monotonic atomic sequence counter per pharmacy tenant and year.
+    Used for concurrency-safe invoice generation.
+    """
+    __tablename__ = "invoice_sequences"
+    __table_args__ = (
+        UniqueConstraint("pharmacy_id", "year", name="uq_invoice_sequences_pharmacy_year"),
+    )
+
+    year = Column(Integer, nullable=False, index=True)
+    current_number = Column(Integer, nullable=False, default=0)
+
+    def __repr__(self):
+        return f"<InvoiceSequence(pharmacy_id={self.pharmacy_id}, year={self.year}, current_number={self.current_number})>"
+

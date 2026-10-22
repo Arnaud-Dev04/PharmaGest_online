@@ -37,7 +37,20 @@ if getattr(sys, "frozen", False):
         sys.stdout = log_file
         sys.stderr = log_file
     except Exception:
-        pass
+# SENTRY APM & ERROR TRACKING (OPTIONAL IN PRODUCTION)
+_sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            traces_sample_rate=0.1,
+            profiles_sample_rate=0.1,
+            environment=os.getenv("ENVIRONMENT", "production"),
+        )
+        print("[OK] Sentry error tracking and APM initialized.")
+    except Exception as e:
+        print(f"[WARNING] Sentry initialization skipped: {e}")
 
 # =========================
 # LIFESPAN EVENT HANDLER
@@ -47,6 +60,13 @@ if getattr(sys, "frozen", False):
 async def lifespan(app: FastAPI):
     # Filtrer /sync/status des logs d'accès console Uvicorn
     logging.getLogger("uvicorn.access").addFilter(EndpointLogFilter())
+
+    try:
+        from anyio.to_thread import current_default_thread_limiter
+        current_default_thread_limiter().total_tokens = 100
+        print("[OK] Concurrency thread pool configured to 100 workers.")
+    except Exception as e:
+        print(f"[WARNING] Thread limiter config: {e}")
 
     # Startup — initialisation synchrone de la base pour garantir la disponibilité immédiate
     print("[*] Starting Pharmacy Management System...")

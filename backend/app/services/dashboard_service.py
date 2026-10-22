@@ -28,6 +28,7 @@ def get_stats(db: Session, start_date: Optional[str] = None, end_date: Optional[
 
     today = date.today()
     week_ago = today - timedelta(days=7)
+    week_ago_dt = datetime.combine(week_ago, datetime.min.time())
 
     # ── 1. Stats medicaments (1 requete = total + expires + stock bas) ───────
     try:
@@ -54,7 +55,7 @@ def get_stats(db: Session, start_date: Optional[str] = None, end_date: Optional[
             func.count(Sale.id).label("total_count"),
             func.sum(Sale.total_amount).label("total_revenue"),
             func.sum(
-                case((func.date(Sale.date) >= week_ago, Sale.total_amount), else_=0)
+                case((Sale.date >= week_ago_dt, Sale.total_amount), else_=0)
             ).label("weekly"),
         ).filter(Sale.status == "completed").one()
         legacy_count   = int(sale_rows.total_count   or 0)
@@ -71,7 +72,7 @@ def get_stats(db: Session, start_date: Optional[str] = None, end_date: Optional[
             func.count(POSSale.id).label("total_count"),
             func.sum(POSSale.total_amount).label("total_revenue"),
             func.sum(
-                case((func.date(POSSale.date) >= week_ago, POSSale.total_amount), else_=0)
+                case((POSSale.date >= week_ago_dt, POSSale.total_amount), else_=0)
             ).label("weekly"),
         ).filter(POSSale.status == "completed").one()
         pos_count   = int(pos_rows.total_count   or 0)
@@ -103,13 +104,15 @@ def get_stats(db: Session, start_date: Optional[str] = None, end_date: Optional[
         if start_date and end_date:
             dt_start_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
             dt_end_obj   = datetime.strptime(end_date,   "%Y-%m-%d").date()
+            dt_start_dt = datetime.combine(dt_start_obj, datetime.min.time())
+            dt_end_dt   = datetime.combine(dt_end_obj,   datetime.max.time())
             legacy_cancel_q = legacy_cancel_q.filter(
-                func.date(Sale.date) >= dt_start_obj,
-                func.date(Sale.date) <= dt_end_obj,
+                Sale.date >= dt_start_dt,
+                Sale.date <= dt_end_dt,
             )
             pos_cancel_q = pos_cancel_q.filter(
-                func.date(POSSale.date) >= dt_start_obj,
-                func.date(POSSale.date) <= dt_end_obj,
+                POSSale.date >= dt_start_dt,
+                POSSale.date <= dt_end_dt,
             )
         cancelled_sales = (legacy_cancel_q.scalar() or 0) + (pos_cancel_q.scalar() or 0)
     except Exception:

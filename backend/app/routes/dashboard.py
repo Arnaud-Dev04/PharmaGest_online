@@ -16,9 +16,8 @@ from app.services import dashboard_service
 router = APIRouter()
 
 
-import time
+from app.core.distributed_cache import get_cache, set_cache, tenant_key
 
-_stats_cache: dict = {}
 _STATS_CACHE_TTL = 30  # secondes
 
 
@@ -27,7 +26,7 @@ _STATS_CACHE_TTL = 30  # secondes
     response_model=DashboardStatsResponse,
     summary="Get dashboard statistics"
 )
-async def get_dashboard_stats(
+def get_dashboard_stats(
     days: int = 7,
     start_date: str = None,
     end_date: str = None,
@@ -36,16 +35,15 @@ async def get_dashboard_stats(
 ):
     """
     Get key metrics for the dashboard.
-    Mis en cache pendant 30s pour éviter de relancer 15+ requêtes Aiven
-    à chaque clic d'onglet ou retour sur l'accueil.
+    Mis en cache pendant 30s avec isolation tenant.
     """
-    cache_key = f"{current_user.pharmacy_id}_{days}_{start_date}_{end_date}"
-    now = time.time()
-    if cache_key in _stats_cache and (now - _stats_cache[cache_key]["ts"]) < _STATS_CACHE_TTL:
-        return _stats_cache[cache_key]["data"]
+    cache_k = tenant_key(current_user.pharmacy_id, "dashboard", f"stats_{days}_{start_date}_{end_date}")
+    cached = get_cache(cache_k)
+    if cached is not None:
+        return cached
 
     stats = dashboard_service.get_stats(db, start_date=start_date, end_date=end_date)
-    _stats_cache[cache_key] = {"data": stats, "ts": now}
+    set_cache(cache_k, stats, ttl_seconds=_STATS_CACHE_TTL)
     return stats
 
 

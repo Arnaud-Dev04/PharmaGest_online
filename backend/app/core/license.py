@@ -5,22 +5,20 @@ from sqlalchemy.orm import Session
 from app.models.settings import Settings
 import time
 
-# ── Cache en mémoire pour éviter 3 queries Aiven par requête ─────────────────
-# La licence ne change pas souvent : on garde le résultat 60 secondes.
-_license_cache: dict = {}
+from app.core.distributed_cache import get_cache, set_cache, delete_cache, tenant_key
+
 _LICENSE_CACHE_TTL = 60  # secondes
 
 
 class LicenseService:
     @staticmethod
     def get_license_status(db: Session = None):
-        global _license_cache
+        pharmacy_id = db.info.get("pharmacy_id") if db else None
+        cache_k = tenant_key(pharmacy_id, "license", "status")
 
-        cache_key = db.info.get("pharmacy_id") if db else None
-        now_ts = time.time()
-        cached = _license_cache.get(cache_key)
-        if cached and now_ts - cached["ts"] < _LICENSE_CACHE_TTL:
-            return cached["data"]
+        cached = get_cache(cache_k)
+        if cached is not None:
+            return cached
 
         expiration_date_str = LICENSE_EXPIRATION_DATE
         warning_days = WARNING_DAYS_THRESHOLD
@@ -84,18 +82,18 @@ class LicenseService:
                 "message": f"Erreur de vérification de licence: {str(e)}",
             }
 
-        # Stocker dans le cache (même les erreurs, pour ne pas bombarder Aiven)
-        _license_cache[cache_key] = {"ts": time.time(), "data": result}
+        set_cache(cache_k, result, ttl_seconds=_LICENSE_CACHE_TTL)
         return result
 
     @staticmethod
     def invalidate_cache(pharmacy_id: int = None):
         """Appeler après modification de la licence pour forcer le rechargement."""
-        global _license_cache
         if pharmacy_id is None:
-            _license_cache.clear()
+            from app.core.distributed_cache import invalidate_tenant_namespace
+            invalidate_tenant_namespace(None, "license")
         else:
-            _license_cache.pop(pharmacy_id, None)
+            cache_k = tenant_key(pharmacy_id, "license", "status")
+            delete_cache(cache_k)
 
     @staticmethod
     def check_license_validity(db: Session = None) -> bool:

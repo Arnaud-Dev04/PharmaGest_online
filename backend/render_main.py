@@ -18,6 +18,21 @@ from slowapi.errors import RateLimitExceeded
 # Rate limiter global — partagé avec les routes
 limiter = Limiter(key_func=get_remote_address)
 
+# SENTRY APM & ERROR TRACKING (OPTIONAL IN PRODUCTION)
+_sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            traces_sample_rate=0.1,
+            profiles_sample_rate=0.1,
+            environment=os.getenv("ENVIRONMENT", "production"),
+        )
+        print("[Render] Sentry error tracking and APM initialized.")
+    except Exception as e:
+        print(f"[Render][WARNING] Sentry initialization skipped: {e}")
+
 # ── Import des routes ─────────────────────────────────────────────────────────
 from app.routes.auth import router as auth_router
 from app.routes.metrics import router as metrics_router
@@ -58,6 +73,13 @@ from app.database import init_local_db
 async def lifespan(application: FastAPI):
     """Initialise la base de données au démarrage."""
     print("[Render] Démarrage PharmaGestion API...")
+    try:
+        from anyio.to_thread import current_default_thread_limiter
+        current_default_thread_limiter().total_tokens = 100
+        print("[Render] Concurrency thread pool configured to 100 workers.")
+    except Exception as e:
+        print(f"[Render][WARNING] Thread limiter config: {e}")
+
     try:
         # Toujours init la DB locale (SQLite — même si éphémère, nécessaire pour les sessions)
         from app.database import init_local_db

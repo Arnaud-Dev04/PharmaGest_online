@@ -101,6 +101,14 @@ async def login(
     if isinstance(pharmacy_code, str):
         pharmacy_code = pharmacy_code.strip() or None
 
+    if not pharmacy_code:
+        candidates = db.query(User).filter(User.username == form_data.username).all()
+        if len(candidates) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ce nom d'utilisateur existe dans plusieurs pharmacies. Veuillez renseigner le code pharmacie pour vous connecter.",
+            )
+
     user = authenticate_user(db, form_data.username, form_data.password, pharmacy_code=pharmacy_code)
     
     if not user:

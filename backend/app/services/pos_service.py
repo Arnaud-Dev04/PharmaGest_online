@@ -514,10 +514,50 @@ def cart_add(db: Session, request: CartAddRequest) -> CartAddResponse:
 def generate_pos_invoice_code(db: Session) -> str:
     """
     Generate unique POS invoice code in format: POS-YYYY-NNNN.
+    Concurrency-safe via InvoiceSequence and row locking per pharmacy tenant.
     Compatible SQLite (local) et MySQL (remote).
     """
     from sqlalchemy import extract
+    from app.models.pos_sale import InvoiceSequence
     current_year = datetime.now().year
+    pharmacy_id = db.info.get("pharmacy_id")
+
+    if pharmacy_id is not None:
+        try:
+            seq = db.query(InvoiceSequence).filter(
+                InvoiceSequence.pharmacy_id == pharmacy_id,
+                InvoiceSequence.year == current_year,
+            ).with_for_update().first()
+
+            if seq is None:
+                # Find current max number for this pharmacy and year to initialize sequence
+                last_sale = db.query(POSSale).filter(
+                    POSSale.pharmacy_id == pharmacy_id,
+                    extract('year', POSSale.date) == current_year
+                ).order_by(POSSale.id.desc()).first()
+                start_num = 0
+                if last_sale and last_sale.code:
+                    try:
+                        start_num = int(last_sale.code.split('-')[-1])
+                    except (ValueError, IndexError):
+                        start_num = 0
+                seq = InvoiceSequence(
+                    pharmacy_id=pharmacy_id,
+                    year=current_year,
+                    current_number=start_num + 1,
+                )
+                db.add(seq)
+                db.flush()
+                next_number = seq.current_number
+            else:
+                seq.current_number += 1
+                db.flush()
+                next_number = seq.current_number
+
+            return f"POS-{current_year}-{next_number:04d}"
+        except Exception:
+            # Fallback if table not ready or lock error
+            pass
 
     # extract('year', ...) est compatible SQLite >= 3.38 et MySQL
     last_sale = db.query(POSSale).filter(
@@ -570,6 +610,14 @@ def checkout(
         ValueError: If validation fails (stock, invalid batch, etc.)
     """
     try:
+        # Idempotency check: if client already supplied a sale_uuid, return the existing sale if already committed
+        req_sale_uuid = getattr(checkout_data, "sale_uuid", None)
+        if req_sale_uuid:
+            existing_sale = db.query(POSSale).filter(POSSale.sale_uuid == req_sale_uuid).first()
+            if existing_sale:
+                logger.info(f"Idempotent checkout: returning existing sale {existing_sale.code} (UUID: {req_sale_uuid})")
+                return existing_sale
+
         cash_session = None
         if (checkout_data.payment_method or "cash").lower() == "cash":
             if not cash_session_uuid:
@@ -584,14 +632,14 @@ def checkout(
                 raise ValueError("La session de caisse est fermée ou ne vous appartient pas")
             cash_session.sync_status = "pending"
 
-        # Phase 1: Validate all allocations
+        # Phase 1: Validate all allocations with pessimistic row locks
         validated_items = []
         total_amount = 0.0
         
         for item in checkout_data.items:
             medicine = db.query(Medicine).filter(
                 Medicine.id == item.medicine_id
-            ).first()
+            ).with_for_update().first()
             
             if not medicine:
                 raise ValueError(f"Médicament avec ID {item.medicine_id} introuvable")
@@ -607,7 +655,7 @@ def checkout(
                 batch = db.query(Batch).filter(
                     Batch.id == alloc.batch_id,
                     Batch.medicine_id == item.medicine_id
-                ).first()
+                ).with_for_update().first()
                 
                 if not batch:
                     raise ValueError(
@@ -655,17 +703,18 @@ def checkout(
         if checkout_data.customer_id is not None:
             customer = db.query(Customer).filter(
                 Customer.id == checkout_data.customer_id
-            ).first()
+            ).with_for_update().first()
             if customer is None:
                 raise ValueError("Client introuvable dans cette pharmacie")
             if award_loyalty_points:
                 bonus_earned = int(total_amount / 1000)
         
-        # Phase 2: Create POSSale
+        # Phase 2: Create POSSale with atomic sequence
         invoice_code = generate_pos_invoice_code(db)
+        actual_sale_uuid = req_sale_uuid or str(uuid_lib.uuid4())
         
         sale = POSSale(
-            sale_uuid=str(uuid_lib.uuid4()),
+            sale_uuid=actual_sale_uuid,
             code=invoice_code,
             total_amount=total_amount,
             payment_method=checkout_data.payment_method,
@@ -703,7 +752,7 @@ def checkout(
                 db.add(sale_item)
                 
                 # Deduct batch stock
-                batch = db.query(Batch).filter(Batch.id == alloc.batch_id).first()
+                batch = db.query(Batch).filter(Batch.id == alloc.batch_id).with_for_update().first()
                 batch.quantity -= alloc.quantity
                 
                 # Deactivate batch if empty
@@ -715,12 +764,12 @@ def checkout(
                 pricing_entry = db.query(MedicinePricing).filter(
                     MedicinePricing.medicine_id == medicine.id,
                     MedicinePricing.lot == batch.batch_number
-                ).first()
+                ).with_for_update().first()
                 if not pricing_entry:
                     pricing_entry = db.query(MedicinePricing).filter(
                         MedicinePricing.medicine_id == medicine.id,
                         MedicinePricing.total_comprimes > 0
-                    ).order_by(MedicinePricing.date_peremption.asc()).first()
+                    ).with_for_update().order_by(MedicinePricing.date_peremption.asc()).first()
 
                 if pricing_entry:
                     pricing_entry.total_comprimes = max(0, pricing_entry.total_comprimes - alloc.quantity)

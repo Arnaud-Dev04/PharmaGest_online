@@ -117,6 +117,16 @@ class SyncService {
     }
   }
 
+  /// Pousse les ventes avec un délai aléatoire (jitter) pour éviter l'effet Thundering Herd
+  /// lorsque de nombreuses pharmacies se reconnectent simultanément.
+  static Future<SyncPushResult> pushWithJitter({int maxJitterSeconds = 15}) async {
+    if (maxJitterSeconds > 0) {
+      final jitter = (DateTime.now().millisecondsSinceEpoch % (maxJitterSeconds * 1000));
+      await Future.delayed(Duration(milliseconds: jitter));
+    }
+    return await push();
+  }
+
   /// Récupère les paramètres depuis Supabase.
   static Future<bool> pull() async {
     try {

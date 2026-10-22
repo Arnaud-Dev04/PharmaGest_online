@@ -71,22 +71,15 @@ async def sync_stock(
 # PRODUCT SEARCH
 # ============================================================================
 
-import time as _pos_time
+from app.core.distributed_cache import (
+    get_cache, set_cache, delete_cache, tenant_key, invalidate_tenant_namespace
+)
 
-_pos_search_cache = {}
-_pos_top_cache = {}
 _POS_CACHE_TTL = 30  # secondes
 
 
 def invalidate_pos_cache(pharmacy_id: Optional[int] = None):
-    global _pos_search_cache, _pos_top_cache
-    if pharmacy_id is None:
-        _pos_search_cache.clear()
-        _pos_top_cache.clear()
-    else:
-        prefix = f"{pharmacy_id}_"
-        _pos_search_cache = {k: v for k, v in _pos_search_cache.items() if not k.startswith(prefix)}
-        _pos_top_cache = {k: v for k, v in _pos_top_cache.items() if not k.startswith(prefix)}
+    invalidate_tenant_namespace(pharmacy_id, "pos")
 
 
 @router.get(
@@ -104,14 +97,15 @@ async def search_products(
     Search products by name or code for POS use.
     Mis en cache 30s quand la recherche est vide pour éviter de recharger 1000 produits sur Aiven.
     """
-    now = _pos_time.time()
-    cache_key = f"{current_user.pharmacy_id}_{limit}"
-    if not q.strip() and cache_key in _pos_search_cache and (now - _pos_search_cache[cache_key]["ts"]) < _POS_CACHE_TTL:
-        return _pos_search_cache[cache_key]["data"]
+    cache_k = tenant_key(current_user.pharmacy_id, "pos", f"search_empty_{limit}")
+    if not q.strip():
+        cached = get_cache(cache_k)
+        if cached is not None:
+            return cached
 
     results = pos_service.search_products(db, q, limit)
     if not q.strip():
-        _pos_search_cache[cache_key] = {"data": results, "ts": now}
+        set_cache(cache_k, [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in results], ttl_seconds=_POS_CACHE_TTL)
     return results
 
 
@@ -130,13 +124,13 @@ async def get_top_products(
     Mis en cache 30s.
     """
     try:
-        now = _pos_time.time()
-        cache_key = f"{current_user.pharmacy_id}_{limit}"
-        if cache_key in _pos_top_cache and (now - _pos_top_cache[cache_key]["ts"]) < _POS_CACHE_TTL:
-            return _pos_top_cache[cache_key]["data"]
+        cache_k = tenant_key(current_user.pharmacy_id, "pos", f"top_{limit}")
+        cached = get_cache(cache_k)
+        if cached is not None:
+            return cached
 
         results = pos_service.get_top_products(db, limit)
-        _pos_top_cache[cache_key] = {"data": results, "ts": now}
+        set_cache(cache_k, [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in results], ttl_seconds=_POS_CACHE_TTL)
         return results
     except Exception as e:
         logger.error(f"get_top_products failed: {e}", exc_info=True)

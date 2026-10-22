@@ -56,10 +56,15 @@ _pricing_alerts_cache: dict = {}
 _PRICING_ALERTS_CACHE_TTL = 60  # secondes
 
 
-def invalidate_pricing_cache():
+def invalidate_pricing_cache(pharmacy_id: Optional[int] = None):
     global _pricing_entries_cache, _pricing_alerts_cache
-    _pricing_entries_cache.clear()
-    _pricing_alerts_cache.clear()
+    if pharmacy_id is None:
+        _pricing_entries_cache.clear()
+        _pricing_alerts_cache.clear()
+    else:
+        prefix = f"{pharmacy_id}_"
+        _pricing_entries_cache = {k: v for k, v in _pricing_entries_cache.items() if not k.startswith(prefix)}
+        _pricing_alerts_cache.pop(pharmacy_id, None)
 
 
 @router.get(
@@ -127,20 +132,20 @@ async def get_pricing_entry(
     "/entries",
     response_model=MedicinePricingResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a new pricing entry (Admin & Pharmacist)",
+    summary="Create a new pricing entry (Admin only)",
 )
 async def create_pricing_entry(
     data: MedicinePricingCreate,
-    current_user: User = Depends(get_pharmacist_user),
+    current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
 ):
     """
     Create a new medicine pricing entry.
 
-    **Accessible to**: Admin and Pharmacist
+    **Accessible to**: Admin only
     """
     entry = medicine_pricing_service.create_pricing(db, data)
-    invalidate_pricing_cache()
+    invalidate_pricing_cache(current_user.pharmacy_id)
     return enrich_pricing_response(entry)
 
 
@@ -210,7 +215,7 @@ async def update_pricing_entry(
         details=details_str,
     )
 
-    invalidate_pricing_cache()
+    invalidate_pricing_cache(current_user.pharmacy_id)
     return enrich_pricing_response(entry)
 
 
@@ -221,7 +226,7 @@ async def update_pricing_entry(
 )
 async def delete_pricing_entry(
     entry_id: int,
-    current_user: User = Depends(get_pharmacist_user),
+    current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
 ):
     """
@@ -258,7 +263,7 @@ async def delete_pricing_entry(
         details=f"Suppression lot {entry_lot}, stock: {entry_stock} unités",
     )
 
-    invalidate_pricing_cache()
+    invalidate_pricing_cache(current_user.pharmacy_id)
 
 
 @router.get(

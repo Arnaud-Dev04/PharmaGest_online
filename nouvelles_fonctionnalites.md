@@ -1,11 +1,11 @@
-# 🚀 PharmaGestion — Nouvelles Fonctionnalités Proposées
+#  PharmaGestion — Nouvelles Fonctionnalités Proposées
 
 > Catalogue de fonctionnalités pour rendre PharmaGestion le logiciel de pharmacie le plus complet d'Afrique de l'Ouest.
 > Chaque fonctionnalité est notée : **Effort** (1-5) · **Impact Business** (⭐-⭐⭐⭐⭐⭐) · **Plan requis**
 
 ---
 
-## CATÉGORIE 1 — 🤖 Intelligence Artificielle & Prédictions
+## CATÉGORIE 1 —  Intelligence Artificielle & Prédictions
 
 ### 1.1 Prédiction de rupture de stock (IA)
 > **"Le logiciel te dit AVANT que tu manques de médicaments"**
@@ -18,16 +18,16 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  🔮 Prédictions de rupture — Semaine prochaine              │
+│   Prédictions de rupture — Semaine prochaine              │
 ├───────────────────────────┬──────────┬──────────────────────┤
 │  Médicament               │ Stock    │ Rupture prévue dans  │
 ├───────────────────────────┼──────────┼──────────────────────┤
-│  🔴 Paracétamol 500mg     │  12 btes │  3 jours             │
-│  🟠 Amoxicilline 250mg    │  8 btes  │  5 jours             │
-│  🟡 Ibuprofène 400mg      │  22 btes │  11 jours            │
-│  🟢 Vitamine C 1000mg     │  45 btes │  28 jours            │
+│   Paracétamol 500mg     │  12 btes │  3 jours             │
+│   Amoxicilline 250mg    │  8 btes  │  5 jours             │
+│   Ibuprofène 400mg      │  22 btes │  11 jours            │
+│   Vitamine C 1000mg     │  45 btes │  28 jours            │
 ├───────────────────────────┴──────────┴──────────────────────┤
-│  [📋 Générer bon de commande automatique]                    │
+│  [ Générer bon de commande automatique]                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,7 +70,7 @@
 
 ---
 
-## CATÉGORIE 2 — 📱 SMS & Notifications
+## CATÉGORIE 2 —  SMS & Notifications
 
 ### 2.1 SMS aux clients — Rappels & Promotions
 > **"Envoi automatique de SMS à tes clients"**
@@ -83,7 +83,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📱 Envoyer un SMS groupé                                   │
+│   Envoyer un SMS groupé                                   │
 ├─────────────────────────────────────────────────────────────┤
 │  Destinataires : [Tous les clients ▼]   (142 clients)       │
 │                                                              │
@@ -91,7 +91,7 @@
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │ Pharmacie Santé Plus vous offre 15% de remise sur     │  │
 │  │ tous les vitamines du 1er au 5 octobre 2026.          │  │
-│  │ Venez vite ! 📍 Abidjan, Cocody                       │  │
+│  │ Venez vite !  Abidjan, Cocody                       │  │
 │  └───────────────────────────────────────────────────────┘  │
 │  Caractères : 142/160                                        │
 │                                                              │
@@ -129,7 +129,7 @@
 
 ---
 
-## CATÉGORIE 3 — 💰 Caisse & Paiements Avancés
+## CATÉGORIE 3 —  Caisse & Paiements Avancés
 
 ### 3.1 Mobile Money (Orange Money, MTN MoMo, Moov Money)
 > **"Paiement par Mobile Money directement depuis la caisse"**
@@ -141,11 +141,11 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  💳 Choisir le mode de paiement                             │
+│   Choisir le mode de paiement                             │
 ├──────────────┬───────────────┬──────────────────────────────┤
-│  💵 Espèces  │ 📱 Orange Money│  📱 MTN MoMo               │
+│   Espèces  │  Orange Money│   MTN MoMo               │
 │              │               │                              │
-│              │  ☑ Sélectionné│                              │
+│              │   Sélectionné│                              │
 └──────────────┴───────────────┴──────────────────────────────┘
 │  Montant : 4 500 F CFA                                      │
 │  Numéro client : +225 07 XX XX XX                           │
@@ -198,7 +198,7 @@
 
 ---
 
-## CATÉGORIE 4 — 📋 Ordonnances & Prescriptions
+## CATÉGORIE 4 —  Ordonnances & Prescriptions
 
 ### 4.1 Gestion des ordonnances médicales
 > **"Scanner et archiver les ordonnances des clients"**
@@ -211,19 +211,19 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📋 Ordonnance — Aminata Koné                               │
+│   Ordonnance — Aminata Koné                               │
 ├─────────────────────────────────────────────────────────────┤
 │  Médecin : Dr. Kouamé | Date : 25/09/2026                   │
-│  [📷 Photo]                                                  │
+│  [ Photo]                                                  │
 │  ┌─────────────────────────────────────────────────┐        │
 │  │                                                 │        │
 │  │  [Image de l'ordonnance scannée]                │        │
 │  │                                                 │        │
 │  └─────────────────────────────────────────────────┘        │
 │  Médicaments prescrits :                                     │
-│  • Amoxicilline 500mg — 2x/jour — 7 jours   [Vendu ✅]     │
-│  • Ibuprofène 400mg  — 3x/jour — 5 jours   [Vendu ✅]     │
-│  [📁 Archiver] [🔄 Renouveler] [🖨️ Imprimer]               │
+│  • Amoxicilline 500mg — 2x/jour — 7 jours   [Vendu ]     │
+│  • Ibuprofène 400mg  — 3x/jour — 5 jours   [Vendu ]     │
+│  [ Archiver] [ Renouveler] [ Imprimer]               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -243,7 +243,7 @@
 
 ---
 
-## CATÉGORIE 5 — 🚴 Livraison à Domicile
+## CATÉGORIE 5 —  Livraison à Domicile
 
 ### 5.1 Module de livraison
 > **"Livraison des médicaments à domicile"**
@@ -256,13 +256,13 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  🚴 Commandes en attente de livraison (3)                   │
+│   Commandes en attente de livraison (3)                   │
 ├─────────────────────────────────────────────────────────────┤
 │  #001 | Aminata Koné      | Cocody     | 4 500 F  | [→]    │
 │  #002 | Kouamé Yao        | Plateau    | 8 200 F  | [→]    │
 │  #003 | Marie Diallo      | Marcory    | 2 100 F  | [→]    │
 ├─────────────────────────────────────────────────────────────┤
-│  [+ Nouvelle livraison]   [📊 Voir toutes les livraisons]  │
+│  [+ Nouvelle livraison]   [ Voir toutes les livraisons]  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -271,7 +271,7 @@
 
 ---
 
-## CATÉGORIE 6 — 📊 Comptabilité & Finance
+## CATÉGORIE 6 —  Comptabilité & Finance
 
 ### 6.1 Comptabilité simplifiée intégrée
 > **"Comptabilité de base sans logiciel externe"**
@@ -290,18 +290,18 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  💰 Tableau de Bord Financier — Septembre 2026              │
+│   Tableau de Bord Financier — Septembre 2026              │
 ├──────────────┬──────────────┬──────────────────────────────┤
 │  CA du mois  │  Bénéfice    │  Marge moyenne               │
 │  1 245 000 F │  387 000 F   │  31%                         │
 ├──────────────┴──────────────┴──────────────────────────────┤
-│  📈 Évolution CA                                            │
+│   Évolution CA                                            │
 │  Juin  ████████████  980 000                                │
 │  Juil  ██████████████ 1 100 000                             │
 │  Août  █████████████████ 1 180 000                          │
 │  Sep   ████████████████████ 1 245 000  ↑ +5.5%             │
 ├─────────────────────────────────────────────────────────────┤
-│  🏆 Top produits rentables (marge > 30%)                    │
+│   Top produits rentables (marge > 30%)                    │
 │  1. Paracétamol 500mg   Marge: 42%   CA: 185 000 F         │
 │  2. Amoxicilline 250mg  Marge: 38%   CA: 142 000 F         │
 └─────────────────────────────────────────────────────────────┘
@@ -324,7 +324,7 @@
 
 ---
 
-## CATÉGORIE 7 — 📲 Application Mobile Dédiée
+## CATÉGORIE 7 —  Application Mobile Dédiée
 
 ### 7.1 Application mobile pour les clients (B2C)
 > **"L'application que les clients installent sur leur téléphone"**
@@ -352,7 +352,7 @@
 
 ---
 
-## CATÉGORIE 8 — 🏥 Intégrations Médicales
+## CATÉGORIE 8 —  Intégrations Médicales
 
 ### 8.1 Base de données médicaments DCI
 > **"Catalogue complet de médicaments pré-chargé"**
@@ -375,7 +375,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ⚠️ ALERTE INTERACTION MÉDICAMENTEUSE                       │
+│   ALERTE INTERACTION MÉDICAMENTEUSE                       │
 ├─────────────────────────────────────────────────────────────┤
 │  Ibuprofène 400mg + Aspirine 500mg                          │
 │  → Risque de saignement digestif accru (modéré)             │
@@ -399,7 +399,7 @@
 
 ---
 
-## CATÉGORIE 9 — 🔒 Sécurité & Conformité
+## CATÉGORIE 9 —  Sécurité & Conformité
 
 ### 9.1 Caméra de surveillance intégrée (CCTV)
 > **"Voir le flux vidéo en direct depuis l'interface"**
@@ -436,7 +436,7 @@
 
 ---
 
-## CATÉGORIE 10 — 🌐 API Publique & Intégrations
+## CATÉGORIE 10 —  API Publique & Intégrations
 
 ### 10.1 API publique pour développeurs
 > **"D'autres systèmes peuvent se connecter à PharmaGestion"**
@@ -473,7 +473,7 @@
 
 ---
 
-## CATÉGORIE 11 — 🎨 Expérience Utilisateur (UX)
+## CATÉGORIE 11 —  Expérience Utilisateur (UX)
 
 ### 11.1 Mode sombre / Mode clair
 > Interface moderne adaptée à toutes les luminosités
@@ -523,36 +523,36 @@
 
 ---
 
-## 📊 Résumé — Priorités de développement
+##  Résumé — Priorités de développement
 
 | # | Fonctionnalité | Effort | Impact | Plan | Priorité |
 |---|---|:---:|:---:|---|:---:|
-| 1 | Mobile Money (Orange/MTN) | 4 | ⭐⭐⭐⭐⭐ | Pro | 🔴 Haute |
-| 2 | SMS clients automatiques | 2 | ⭐⭐⭐⭐⭐ | Pro | 🔴 Haute |
-| 3 | Prédiction rupture de stock | 3 | ⭐⭐⭐⭐⭐ | Pro | 🔴 Haute |
-| 4 | Crédit client | 2 | ⭐⭐⭐⭐⭐ | Pro | 🔴 Haute |
-| 5 | Gestion de caisse (fond) | 2 | ⭐⭐⭐⭐⭐ | Pro | 🔴 Haute |
-| 6 | Impression tickets thermiques | 3 | ⭐⭐⭐⭐ | Basic | 🔴 Haute |
-| 7 | Gestion ordonnances | 3 | ⭐⭐⭐⭐⭐ | Pro | 🟠 Moyenne |
-| 8 | Notifications Push (FCM) | 2 | ⭐⭐⭐⭐ | Pro | 🟠 Moyenne |
-| 9 | Comptabilité simplifiée | 3 | ⭐⭐⭐⭐⭐ | Pro | 🟠 Moyenne |
-| 10 | Multi-caisse simultané | 3 | ⭐⭐⭐⭐⭐ | Pro | 🟠 Moyenne |
-| 11 | Mode sombre / multilingue | 1 | ⭐⭐⭐ | Basic | 🟢 Facile |
-| 12 | Recherche universelle Ctrl+K | 2 | ⭐⭐⭐⭐ | Basic | 🟢 Facile |
-| 13 | Interactions médicamenteuses | 4 | ⭐⭐⭐⭐⭐ | Enterprise | 🟡 Long terme |
-| 14 | Livraison à domicile | 4 | ⭐⭐⭐⭐⭐ | Enterprise | 🟡 Long terme |
-| 15 | App mobile clients | 5 | ⭐⭐⭐⭐⭐ | Enterprise | 🟡 Long terme |
-| 16 | WhatsApp Business | 3 | ⭐⭐⭐⭐⭐ | Enterprise | 🟡 Long terme |
-| 17 | Marketplace fournisseurs | 5 | ⭐⭐⭐⭐⭐ | Enterprise | 🟡 Long terme |
+| 1 | Mobile Money (Orange/MTN) | 4 | ⭐⭐⭐⭐⭐ | Pro |  Haute |
+| 2 | SMS clients automatiques | 2 | ⭐⭐⭐⭐⭐ | Pro |  Haute |
+| 3 | Prédiction rupture de stock | 3 | ⭐⭐⭐⭐⭐ | Pro |  Haute |
+| 4 | Crédit client | 2 | ⭐⭐⭐⭐⭐ | Pro |  Haute |
+| 5 | Gestion de caisse (fond) | 2 | ⭐⭐⭐⭐⭐ | Pro |  Haute |
+| 6 | Impression tickets thermiques | 3 | ⭐⭐⭐⭐ | Basic |  Haute |
+| 7 | Gestion ordonnances | 3 | ⭐⭐⭐⭐⭐ | Pro |  Moyenne |
+| 8 | Notifications Push (FCM) | 2 | ⭐⭐⭐⭐ | Pro |  Moyenne |
+| 9 | Comptabilité simplifiée | 3 | ⭐⭐⭐⭐⭐ | Pro |  Moyenne |
+| 10 | Multi-caisse simultané | 3 | ⭐⭐⭐⭐⭐ | Pro |  Moyenne |
+| 11 | Mode sombre / multilingue | 1 | ⭐⭐⭐ | Basic |  Facile |
+| 12 | Recherche universelle Ctrl+K | 2 | ⭐⭐⭐⭐ | Basic |  Facile |
+| 13 | Interactions médicamenteuses | 4 | ⭐⭐⭐⭐⭐ | Enterprise |  Long terme |
+| 14 | Livraison à domicile | 4 | ⭐⭐⭐⭐⭐ | Enterprise |  Long terme |
+| 15 | App mobile clients | 5 | ⭐⭐⭐⭐⭐ | Enterprise |  Long terme |
+| 16 | WhatsApp Business | 3 | ⭐⭐⭐⭐⭐ | Enterprise |  Long terme |
+| 17 | Marketplace fournisseurs | 5 | ⭐⭐⭐⭐⭐ | Enterprise |  Long terme |
 
 ---
 
-## ✅ Par où commencer ?
+##  Par où commencer ?
 
 **Les 3 fonctionnalités avec le meilleur rapport effort/impact pour commencer :**
 
-1. 🥇 **SMS clients** (2/5 effort · impact maximal) — Africa's Talking, API simple
-2. 🥈 **Crédit client** (2/5 effort · très demandé en Afrique) — Juste une table + route
-3. 🥉 **Gestion de caisse** (2/5 effort · confiance accrue) — Fond de caisse + clôture journalière
+1.  **SMS clients** (2/5 effort · impact maximal) — Africa's Talking, API simple
+2.  **Crédit client** (2/5 effort · très demandé en Afrique) — Juste une table + route
+3.  **Gestion de caisse** (2/5 effort · confiance accrue) — Fond de caisse + clôture journalière
 
 Laquelle veux-tu qu'on implémente en premier ?

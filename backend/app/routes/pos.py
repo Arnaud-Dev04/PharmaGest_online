@@ -78,10 +78,15 @@ _pos_top_cache = {}
 _POS_CACHE_TTL = 30  # secondes
 
 
-def invalidate_pos_cache():
+def invalidate_pos_cache(pharmacy_id: Optional[int] = None):
     global _pos_search_cache, _pos_top_cache
-    _pos_search_cache.clear()
-    _pos_top_cache.clear()
+    if pharmacy_id is None:
+        _pos_search_cache.clear()
+        _pos_top_cache.clear()
+    else:
+        prefix = f"{pharmacy_id}_"
+        _pos_search_cache = {k: v for k, v in _pos_search_cache.items() if not k.startswith(prefix)}
+        _pos_top_cache = {k: v for k, v in _pos_top_cache.items() if not k.startswith(prefix)}
 
 
 @router.get(
@@ -262,7 +267,7 @@ async def checkout(
             award_loyalty_points=loyalty_enabled,
             cash_session_uuid=cash_session.session_uuid if cash_session else None,
         )
-        invalidate_pos_cache()
+        invalidate_pos_cache(current_user.pharmacy_id)
         return pos_service.enrich_pos_sale_response(
             sale,
             loyalty_enabled=loyalty_enabled,

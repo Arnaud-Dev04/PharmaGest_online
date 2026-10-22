@@ -320,7 +320,7 @@ class _PaymentModalState extends State<PaymentModal> {
           settings = AppSettings();
         }
 
-        // ✅ FACTURATION AUTOMATIQUE :
+        //  FACTURATION AUTOMATIQUE :
         // Génération PDF + sauvegarde locale (autoOpen:false pour éviter
         // d'ouvrir le PDF système avant l'overlay de succès)
         final invoiceResult = await InvoiceAutoService.generateAndSave(
@@ -333,7 +333,7 @@ class _PaymentModalState extends State<PaymentModal> {
         widget.onSuccess(); // Vider panier
         navigator.pop(); // Fermer modal paiement
 
-        // ✅ Afficher l'overlay facture avec statut de sauvegarde
+        //  Afficher l'overlay facture avec statut de sauvegarde
         _showInvoiceOverlay(sale, settings, sellerName, invoiceResult);
       }
     } catch (e) {

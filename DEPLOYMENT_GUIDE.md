@@ -1,10 +1,10 @@
-# 🚀 Guide de Déploiement — PharmaGest Online
+#  Guide de Déploiement — PharmaGest Online
 
 Ce document récapitule l'architecture complète, la configuration de chaque composant et la procédure pas-à-pas pour mettre à jour l'application en ligne.
 
 ---
 
-## 🏛️ 1. Architecture Globale (Les 3 Piliers)
+##  1. Architecture Globale (Les 3 Piliers)
 
 L'application repose sur une architecture Cloud 3-tiers moderne et ultra-rapide :
 
@@ -39,12 +39,12 @@ L'application repose sur une architecture Cloud 3-tiers moderne et ultra-rapide 
 └─────────────────────────────────┘
 ```
 
-> **💡 Pourquoi l'application est rapide ?**  
+> ** Pourquoi l'application est rapide ?**  
 > Le backend (Render) et la base de données (Aiven) sont hébergés dans la **même région (Francfort/Europe)**. La communication entre l'API et la base s'effectue en **moins de 2 millisecondes**, ce qui permet d'afficher les écrans instantanément pour l'utilisateur.
 
 ---
 
-## 🔑 2. Coordonnées et Configuration
+##  2. Coordonnées et Configuration
 
 ### A. Base de données (Aiven Cloud MySQL)
 - **Hôte** : `mysql-de9b9a6-ntakiarnaud04-3b3b.k.aivencloud.com`
@@ -84,7 +84,7 @@ Si une clé de signature ou un mot de passe réel a déjà été publié, le ré
 
 ---
 
-## 🔄 3. Comment faire des mises à jour (Workflow quotidien)
+##  3. Comment faire des mises à jour (Workflow quotidien)
 
 ### Cas 1 : Tu as modifié le Backend (Python / API)
 Render se met à jour **automatiquement** dès que tu pousses sur GitHub :
@@ -117,7 +117,7 @@ git push
 
 ---
 
-## ⚠️ 4. Points d'attention importants
+##  4. Points d'attention importants
 
 1. **Cold Start sur Render (Plan Gratuit) :**
    - Sur l'offre gratuite de Render, le serveur s'endort après 15 minutes d'inactivité.

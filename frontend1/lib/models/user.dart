@@ -5,6 +5,7 @@ class User {
   final String role; // 'admin', 'pharmacist', 'super_admin'
   final bool isActive;
   final bool mustChangePassword;
+  final int? pharmacyId;
   final DateTime? createdAt;
 
   bool get isAdmin => role == 'admin' || role == 'super_admin';
@@ -17,6 +18,7 @@ class User {
     required this.role,
     this.isActive = true,
     this.mustChangePassword = false,
+    this.pharmacyId,
     this.createdAt,
   });
 
@@ -28,6 +30,7 @@ class User {
       role: json['role']?.toString() ?? 'pharmacist',
       isActive: json['is_active'] as bool? ?? true,
       mustChangePassword: json['must_change_password'] as bool? ?? false,
+      pharmacyId: json['pharmacy_id'] as int?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -42,6 +45,7 @@ class User {
       'role': role,
       'is_active': isActive,
       'must_change_password': mustChangePassword,
+      'pharmacy_id': pharmacyId,
       'created_at': createdAt?.toIso8601String(),
     };
   }

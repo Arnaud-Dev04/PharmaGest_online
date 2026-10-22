@@ -13,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   // État
   User? _user;
   String? _token;
+  String? _pharmacyCode;
   bool _isLoading = true;
   String? _errorMessage;
   bool _mustChangePassword = false;
@@ -21,6 +22,7 @@ class AuthProvider with ChangeNotifier {
   // Getters
   User? get user => _user;
   String? get token => _token;
+  String? get pharmacyCode => _pharmacyCode;
   bool get isAuthenticated => _token != null && _user != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -34,6 +36,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Récupérer le code pharmacie mémorisé
+      final savedPharmacyCode = await _secureStorage.read(key: 'pharmacy_code');
+      if (savedPharmacyCode != null && savedPharmacyCode.isNotEmpty) {
+        _pharmacyCode = savedPharmacyCode;
+      }
+
       // Récupérer le token sauvegardé
       final savedToken = await _secureStorage.read(key: 'auth_token');
 
@@ -67,15 +75,34 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Connexion avec username et password
-  Future<bool> login(String username, String password) async {
+  /// Mettre à jour ou effacer le code de pharmacie mémorisé
+  void setPharmacyCode(String? code) {
+    _pharmacyCode = code;
+    if (code != null && code.isNotEmpty) {
+      _secureStorage.write(key: 'pharmacy_code', value: code);
+    } else {
+      _secureStorage.delete(key: 'pharmacy_code');
+    }
+    notifyListeners();
+  }
+
+  /// Connexion avec username, password et pharmacyCode optionnel
+  Future<bool> login(
+    String username,
+    String password, {
+    String? pharmacyCode,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       // 1. Appeler l'API de login pour obtenir le token et les flags
-      final loginResult = await _authService.login(username, password);
+      final loginResult = await _authService.login(
+        username,
+        password,
+        pharmacyCode: pharmacyCode,
+      );
       final accessToken = loginResult['access_token'] as String;
       _token = accessToken;
       _mustChangePassword = loginResult['must_change_password'] as bool;
@@ -91,6 +118,12 @@ class AuthProvider with ChangeNotifier {
         key: 'is_first_setup',
         value: _isFirstSetup.toString(),
       );
+
+      // Mémoriser le code pharmacie saisi si présent
+      if (pharmacyCode != null && pharmacyCode.trim().isNotEmpty) {
+        _pharmacyCode = pharmacyCode.trim();
+        await _secureStorage.write(key: 'pharmacy_code', value: _pharmacyCode!);
+      }
 
       // 3. Récupérer les informations de l'utilisateur
       final userData = await _authService.getCurrentUser();

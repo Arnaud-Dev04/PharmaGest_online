@@ -1,4 +1,4 @@
-# 🏗️ PharmaGestion — Analyse Multi-Pharmacies (Multi-Tenant)
+#  PharmaGestion — Analyse Multi-Pharmacies (Multi-Tenant)
 
 > État d'avancement, risques et plan de validation du support multi-pharmacies.
 
@@ -44,13 +44,13 @@ Les fonctions évoquées dans la matrice initiale mais qui n'existent pas encore
 
 | Fonctionnalité | Fichier | Status |
 |---|---|---|
-| Système d'authentification JWT | `backend/app/auth/dependencies.py` | ✅ Présent |
-| Rôles utilisateurs (Admin, Pharmacist, Super Admin) | `backend/app/models/user.py` | ✅ Présent |
-| Double DB (SQLite local + MySQL remote) | `backend/app/database/core.py` | ✅ Présent |
-| Sync local ↔ cloud | `backend/app/sync/sync_manager.py` | ✅ Présent |
-| Audit logs | `backend/app/models/audit_log.py` | ✅ Présent |
-| API REST FastAPI | `backend/app/routes/` | ✅ Présent |
-| Système de licences | `backend/app/core/license.py` | ✅ Présent |
+| Système d'authentification JWT | `backend/app/auth/dependencies.py` |  Présent |
+| Rôles utilisateurs (Admin, Pharmacist, Super Admin) | `backend/app/models/user.py` |  Présent |
+| Double DB (SQLite local + MySQL remote) | `backend/app/database/core.py` |  Présent |
+| Sync local ↔ cloud | `backend/app/sync/sync_manager.py` |  Présent |
+| Audit logs | `backend/app/models/audit_log.py` |  Présent |
+| API REST FastAPI | `backend/app/routes/` |  Présent |
+| Système de licences | `backend/app/core/license.py` |  Présent |
 
 ### Le problème fondamental — architecture au démarrage
 
@@ -64,18 +64,18 @@ Les fonctions évoquées dans la matrice initiale mais qui n'existent pas encore
 
 ## 2. Les 3 Approches Multi-Tenant (référence historique)
 
-### Option A — Multi-DB (une DB par pharmacie) 🔴 Complexe
+### Option A — Multi-DB (une DB par pharmacie)  Complexe
 - Chaque pharmacie a sa propre base de données PostgreSQL
 - **Avantages :** isolation parfaite, migration facile par client
 - **Inconvénients :** coûteux (N bases = N connexions), difficile à maintenir
 - **Recommandé pour :** >100 pharmacies avec exigences de confidentialité très strictes
 
-### Option B — Schema PostgreSQL par pharmacie 🟡 Intermédiaire
+### Option B — Schema PostgreSQL par pharmacie  Intermédiaire
 - Une seule DB PostgreSQL, mais un `schema` différent par pharmacie (`pharma_001.medicines`, `pharma_002.medicines`)
 - **Avantages :** bonne isolation, facile à sauvegarder par client
 - **Inconvénients :** Nécessite PostgreSQL obligatoirement (incompatible SQLite local)
 
-### Option C — `pharmacy_id` sur toutes les tables ✅ **Recommandé**
+### Option C — `pharmacy_id` sur toutes les tables  **Recommandé**
 - Une seule DB, toutes les tables ont une colonne `pharmacy_id`
 - Chaque requête est filtrée automatiquement par `pharmacy_id`
 - **Avantages :** simple, peu coûteux, compatible SQLite + PostgreSQL, évolutif
@@ -166,19 +166,19 @@ PLATFORM_ADMIN (super_admin)
 Le contexte pharmacie est désormais résolu côté backend depuis l'utilisateur authentifié. Le client ne choisit pas son tenant; consulter la synthèse en tête du document et `PLAN_IMPLEMENTATION_MULTI_TENANT.md` pour l'état courant et les validations restantes.
 
 <!-- Archive dupliquée et obsolète, conservée temporairement pour référence; ne pas utiliser comme documentation active.
-## 1. État Actuel — Ce qui existe déjà ✅
+## 1. État Actuel — Ce qui existe déjà 
 
 ### Ce que le projet a déjà de bien
 
 | Fonctionnalité | Fichier | Status |
 |---|---|---|
-| Système d'authentification JWT | `backend/app/auth/dependencies.py` | ✅ Présent |
-| Rôles utilisateurs (Admin, Pharmacist, Super Admin) | `backend/app/models/user.py` | ✅ Présent |
-| Double DB (SQLite local + PostgreSQL remote) | `backend/app/database/core.py` | ✅ Présent |
-| Sync local ↔ cloud | `backend/app/sync/sync_manager.py` | ✅ Présent |
-| Audit logs | `backend/app/models/audit_log.py` | ✅ Présent |
-| API REST FastAPI | `backend/app/routes/` (18 fichiers) | ✅ Présent |
-| Système de licences | `backend/app/core/license.py` | ✅ Présent |
+| Système d'authentification JWT | `backend/app/auth/dependencies.py` |  Présent |
+| Rôles utilisateurs (Admin, Pharmacist, Super Admin) | `backend/app/models/user.py` |  Présent |
+| Double DB (SQLite local + PostgreSQL remote) | `backend/app/database/core.py` |  Présent |
+| Sync local ↔ cloud | `backend/app/sync/sync_manager.py` |  Présent |
+| Audit logs | `backend/app/models/audit_log.py` |  Présent |
+| API REST FastAPI | `backend/app/routes/` (18 fichiers) |  Présent |
+| Système de licences | `backend/app/core/license.py` |  Présent |
 
 ### Le problème fondamental — Architecture mono-tenant
 
@@ -198,18 +198,18 @@ Le contexte pharmacie est désormais résolu côté backend depuis l'utilisateur
 
 ## 2. Les 3 Approches Multi-Tenant
 
-### Option A — Multi-DB (une DB par pharmacie) 🔴 Complexe
+### Option A — Multi-DB (une DB par pharmacie)  Complexe
 - Chaque pharmacie a sa propre base de données PostgreSQL
 - **Avantages :** isolation parfaite, migration facile par client
 - **Inconvénients :** coûteux (N bases = N connexions), difficile à maintenir
 - **Recommandé pour :** >100 pharmacies avec exigences de confidentialité très strictes
 
-### Option B — Schema PostgreSQL par pharmacie 🟡 Intermédiaire
+### Option B — Schema PostgreSQL par pharmacie  Intermédiaire
 - Une seule DB PostgreSQL, mais un `schema` différent par pharmacie (`pharma_001.medicines`, `pharma_002.medicines`)
 - **Avantages :** bonne isolation, facile à sauvegarder par client
 - **Inconvénients :** Nécessite PostgreSQL obligatoirement (incompatible SQLite local)
 
-### Option C — `pharmacy_id` sur toutes les tables ✅ **Recommandé**
+### Option C — `pharmacy_id` sur toutes les tables  **Recommandé**
 - Une seule DB, toutes les tables ont une colonne `pharmacy_id`
 - Chaque requête est filtrée automatiquement par `pharmacy_id`
 - **Avantages :** simple, peu coûteux, compatible SQLite + PostgreSQL, évolutif
@@ -328,7 +328,7 @@ def get_stock(
 
 ## 4. Ce qui doit changer — Résumé des fichiers à modifier
 
-### 🆕 Fichiers à CRÉER
+###  Fichiers à CRÉER
 
 | Fichier | Description |
 |---|---|
@@ -340,7 +340,7 @@ def get_stock(
 | `frontend1/lib/models/pharmacy.dart` | Modèle Flutter |
 | `frontend1/lib/screens/platform_admin/` | Interface admin plateforme |
 
-### ✏️ Fichiers à MODIFIER
+###  Fichiers à MODIFIER
 
 | Fichier | Modification |
 |---|---|
@@ -430,10 +430,10 @@ def get_stock(
 
 | Phase | Durée estimée | Complexité |
 |---|---|---|
-| Phase 1 : Modèle Pharmacy + migration DB | 2-3 semaines | 🟡 Moyenne |
-| Phase 2 : Isolation des données (routes) | 3-4 semaines | 🔴 Haute |
-| Phase 3 : Interface admin plateforme | 2-3 semaines | 🟡 Moyenne |
-| Phase 4 : Déploiement cloud production | 2-4 semaines | 🔴 Haute |
+| Phase 1 : Modèle Pharmacy + migration DB | 2-3 semaines |  Moyenne |
+| Phase 2 : Isolation des données (routes) | 3-4 semaines |  Haute |
+| Phase 3 : Interface admin plateforme | 2-3 semaines |  Moyenne |
+| Phase 4 : Déploiement cloud production | 2-4 semaines |  Haute |
 | **Total** | **~10-14 semaines** | — |
 
 > [!TIP]
@@ -455,18 +455,18 @@ C'est **toi (le développeur / propriétaire du logiciel)** ou une équipe de su
 │                    PLATFORM SUPER ADMIN                             │
 │                  (Toi — propriétaire du logiciel)                   │
 │                                                                     │
-│   ✅ Voir TOUTES les pharmacies (liste, statut, activité)           │
-│   ✅ Créer une nouvelle pharmacie cliente                           │
-│   ✅ Activer / Suspendre / Supprimer une pharmacie                  │
-│   ✅ Gérer les licences (plan Basic / Pro / Enterprise)             │
-│   ✅ Voir les métriques globales (nb ventes, users actifs, stock)   │
-│   ✅ Réinitialiser le mot de passe admin d'une pharmacie            │
-│   ✅ Se connecter EN TANT QUE une pharmacie (mode support)          │
-│   ✅ Voir les logs d'erreurs de toutes les pharmacies               │
-│   ✅ Envoyer des notifications à toutes les pharmacies              │
-│   ✅ Gérer les mises à jour du logiciel                             │
+│    Voir TOUTES les pharmacies (liste, statut, activité)           │
+│    Créer une nouvelle pharmacie cliente                           │
+│    Activer / Suspendre / Supprimer une pharmacie                  │
+│    Gérer les licences (plan Basic / Pro / Enterprise)             │
+│    Voir les métriques globales (nb ventes, users actifs, stock)   │
+│    Réinitialiser le mot de passe admin d'une pharmacie            │
+│    Se connecter EN TANT QUE une pharmacie (mode support)          │
+│    Voir les logs d'erreurs de toutes les pharmacies               │
+│    Envoyer des notifications à toutes les pharmacies              │
+│    Gérer les mises à jour du logiciel                             │
 │                                                                     │
-│   ❌ Ne peut PAS modifier les données métier d'une pharmacie        │
+│    Ne peut PAS modifier les données métier d'une pharmacie        │
 │      (sauf en mode support explicitement activé)                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -477,9 +477,9 @@ C'est **toi (le développeur / propriétaire du logiciel)** ou une équipe de su
 # backend/app/models/user.py — Mise à jour de l'enum UserRole
 
 class UserRole(str, enum.Enum):
-    PLATFORM_ADMIN  = "platform_admin"   # 🆕 Gestionnaire du logiciel (toi)
+    PLATFORM_ADMIN  = "platform_admin"   #  Gestionnaire du logiciel (toi)
     SUPER_ADMIN     = "super_admin"      # Admin d'une pharmacie spécifique
-    PHARMACY_ADMIN  = "pharmacy_admin"   # 🆕 Manager d'une pharmacie
+    PHARMACY_ADMIN  = "pharmacy_admin"   #  Manager d'une pharmacie
     PHARMACIST      = "pharmacist"       # Employé d'une pharmacie
 
 # Le PLATFORM_ADMIN a pharmacy_id = NULL (pas lié à une pharmacie)
@@ -536,7 +536,7 @@ def require_platform_admin(current_user: User = Depends(get_current_user)):
 # Exemple d'utilisation dans une route
 @router.get("/platform/pharmacies")
 def list_all_pharmacies(
-    admin: User = Depends(require_platform_admin),  # 🔒 Protection
+    admin: User = Depends(require_platform_admin),  #  Protection
     db: Session = Depends(get_db)
 ):
     return db.query(Pharmacy).all()  # Toutes les pharmacies, sans filtre
@@ -549,25 +549,25 @@ def list_all_pharmacies(
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  🏥 PharmaGestion — Tableau de bord Plateforme                      │
+│   PharmaGestion — Tableau de bord Plateforme                      │
 ├───────────────┬─────────────────────────────────────────────────────┤
 │               │                                                     │
-│  📋 MENU      │  📊 VUE GLOBALE                                     │
+│   MENU      │   VUE GLOBALE                                     │
 │               │  ┌──────────┐ ┌──────────┐ ┌──────────┐            │
 │  ▶ Dashboard  │  │ 12       │ │ 87       │ │ 3        │            │
-│  🏥 Pharmacies│  │ Pharmacies│ │ Utilisat.│ │ Inactives│            │
-│  📜 Licences  │  └──────────┘ └──────────┘ └──────────┘            │
-│  📊 Métriques │                                                     │
-│  🔔 Notifs    │  📋 LISTE DES PHARMACIES                            │
-│  📝 Logs      │  ┌────────────────────────────────────────────────┐ │
-│  ⚙️ Paramètres│  │ Nom           │ Plan  │ Users │ Statut │ Actions│ │
+│   Pharmacies│  │ Pharmacies│ │ Utilisat.│ │ Inactives│            │
+│   Licences  │  └──────────┘ └──────────┘ └──────────┘            │
+│   Métriques │                                                     │
+│   Notifs    │   LISTE DES PHARMACIES                            │
+│   Logs      │  ┌────────────────────────────────────────────────┐ │
+│   Paramètres│  │ Nom           │ Plan  │ Users │ Statut │ Actions│ │
 │               │  │──────────────────────────────────────────────  │ │
-│               │  │ Pharma Abidjan│ Pro   │ 7/10  │ ✅ Actif│ [···] │ │
-│               │  │ Pharma Bouaké │ Basic │ 2/3   │ ✅ Actif│ [···] │ │
+│               │  │ Pharma Abidjan│ Pro   │ 7/10  │  Actif│ [···] │ │
+│               │  │ Pharma Bouaké │ Basic │ 2/3   │  Actif│ [···] │ │
 │               │  │ Pharma Yamoussa│ Pro  │ 0/10  │ ⏸ Suspendu│[···]│ │
 │               │  └────────────────────────────────────────────────┘ │
 │               │                                                     │
-│               │  [+ Nouvelle pharmacie]  [📢 Notifier toutes]       │
+│               │  [+ Nouvelle pharmacie]  [ Notifier toutes]       │
 └───────────────┴─────────────────────────────────────────────────────┘
 ```
 
@@ -619,101 +619,101 @@ User se connecte
 
 ### 9.1 Matrice complète des fonctionnalités
 
-#### 🟢 POS & Ventes
+####  POS & Ventes
 
 | Fonctionnalité | Basic | Pro | Enterprise |
 |---|:---:|:---:|:---:|
-| Caisse POS (ventes en unités, boîtes, plaquettes) | ✅ | ✅ | ✅ |
-| Historique des ventes (30 jours) | ✅ | ✅ | ✅ |
-| Historique des ventes (illimité) | ❌ | ✅ | ✅ |
-| Annulation de vente | ✅ | ✅ | ✅ |
-| Remise sur vente (%) | ❌ | ✅ | ✅ |
-| Vente avec assurance (couverture %) | ❌ | ✅ | ✅ |
-| Vente par client enregistré (fidélité) | ❌ | ✅ | ✅ |
-| Mode hors-ligne (SQLite local) | ✅ | ✅ | ✅ |
-| Synchronisation cloud automatique | ❌ | ✅ | ✅ |
-| Ticket de caisse personnalisé (logo, nom pharmacie) | ❌ | ✅ | ✅ |
+| Caisse POS (ventes en unités, boîtes, plaquettes) |  |  |  |
+| Historique des ventes (30 jours) |  |  |  |
+| Historique des ventes (illimité) |  |  |  |
+| Annulation de vente |  |  |  |
+| Remise sur vente (%) |  |  |  |
+| Vente avec assurance (couverture %) |  |  |  |
+| Vente par client enregistré (fidélité) |  |  |  |
+| Mode hors-ligne (SQLite local) |  |  |  |
+| Synchronisation cloud automatique |  |  |  |
+| Ticket de caisse personnalisé (logo, nom pharmacie) |  |  |  |
 
-#### 🟢 Stock & Médicaments
-
-| Fonctionnalité | Basic | Pro | Enterprise |
-|---|:---:|:---:|:---:|
-| Gestion du stock (ajout, modification, suppression) | ✅ | ✅ | ✅ |
-| Alertes stock minimum | ✅ | ✅ | ✅ |
-| Alertes péremption | ✅ | ✅ | ✅ |
-| Gestion des lots (numéro de lot, date péremption) | ✅ | ✅ | ✅ |
-| Multi-niveaux de prix (unité, boîte, carton) | ✅ | ✅ | ✅ |
-| Historique des mouvements de stock | ❌ | ✅ | ✅ |
-| Inventaire / Réconciliation de stock | ❌ | ✅ | ✅ |
-| Gestion par code-barres (scanner) | ❌ | ✅ | ✅ |
-| Import stock en masse (CSV/Excel) | ❌ | ❌ | ✅ |
-| Transfert de stock entre pharmacies (chaîne) | ❌ | ❌ | ✅ |
-
-#### 🟢 Approvisionnement & Fournisseurs
+####  Stock & Médicaments
 
 | Fonctionnalité | Basic | Pro | Enterprise |
 |---|:---:|:---:|:---:|
-| Gestion des fournisseurs | ✅ | ✅ | ✅ |
-| Commandes de réapprovisionnement | ✅ | ✅ | ✅ |
-| Historique des commandes | ❌ | ✅ | ✅ |
-| Relances fournisseurs automatiques | ❌ | ❌ | ✅ |
-| Comparaison prix fournisseurs | ❌ | ❌ | ✅ |
+| Gestion du stock (ajout, modification, suppression) |  |  |  |
+| Alertes stock minimum |  |  |  |
+| Alertes péremption |  |  |  |
+| Gestion des lots (numéro de lot, date péremption) |  |  |  |
+| Multi-niveaux de prix (unité, boîte, carton) |  |  |  |
+| Historique des mouvements de stock |  |  |  |
+| Inventaire / Réconciliation de stock |  |  |  |
+| Gestion par code-barres (scanner) |  |  |  |
+| Import stock en masse (CSV/Excel) |  |  |  |
+| Transfert de stock entre pharmacies (chaîne) |  |  |  |
 
-#### 🟢 Rapports & Statistiques
-
-| Fonctionnalité | Basic | Pro | Enterprise |
-|---|:---:|:---:|:---:|
-| Rapport stock (PDF) | ✅ | ✅ | ✅ |
-| Rapport ventes du jour | ✅ | ✅ | ✅ |
-| Rapport ventes par période | ❌ | ✅ | ✅ |
-| Rapport financier (revenus, marges) | ❌ | ✅ | ✅ |
-| Rapport trésorerie | ❌ | ✅ | ✅ |
-| Export Excel & Word | ❌ | ✅ | ✅ |
-| Rapport par utilisateur (qui a vendu quoi) | ❌ | ✅ | ✅ |
-| Tableau de bord avec graphiques avancés | ❌ | ✅ | ✅ |
-| Rapport multi-pharmacies (vue consolidée chaîne) | ❌ | ❌ | ✅ |
-| Rapport personnalisé (requêtes sur mesure) | ❌ | ❌ | ✅ |
-
-#### 🟢 Clients & Fidélité
+####  Approvisionnement & Fournisseurs
 
 | Fonctionnalité | Basic | Pro | Enterprise |
 |---|:---:|:---:|:---:|
-| Gestion des clients (ajout, modification) | ❌ | ✅ | ✅ |
-| Historique des achats par client | ❌ | ✅ | ✅ |
-| Programme de fidélité (points, réductions) | ❌ | ❌ | ✅ |
-| Notifications clients (SMS/Email) | ❌ | ❌ | ✅ |
+| Gestion des fournisseurs |  |  |  |
+| Commandes de réapprovisionnement |  |  |  |
+| Historique des commandes |  |  |  |
+| Relances fournisseurs automatiques |  |  |  |
+| Comparaison prix fournisseurs |  |  |  |
 
-#### 🟢 Utilisateurs & Sécurité
+####  Rapports & Statistiques
+
+| Fonctionnalité | Basic | Pro | Enterprise |
+|---|:---:|:---:|:---:|
+| Rapport stock (PDF) |  |  |  |
+| Rapport ventes du jour |  |  |  |
+| Rapport ventes par période |  |  |  |
+| Rapport financier (revenus, marges) |  |  |  |
+| Rapport trésorerie |  |  |  |
+| Export Excel & Word |  |  |  |
+| Rapport par utilisateur (qui a vendu quoi) |  |  |  |
+| Tableau de bord avec graphiques avancés |  |  |  |
+| Rapport multi-pharmacies (vue consolidée chaîne) |  |  |  |
+| Rapport personnalisé (requêtes sur mesure) |  |  |  |
+
+####  Clients & Fidélité
+
+| Fonctionnalité | Basic | Pro | Enterprise |
+|---|:---:|:---:|:---:|
+| Gestion des clients (ajout, modification) |  |  |  |
+| Historique des achats par client |  |  |  |
+| Programme de fidélité (points, réductions) |  |  |  |
+| Notifications clients (SMS/Email) |  |  |  |
+
+####  Utilisateurs & Sécurité
 
 | Fonctionnalité | Basic | Pro | Enterprise |
 |---|:---:|:---:|:---:|
 | Nombre max d'utilisateurs | **3** | **10** | **Illimité** |
-| Rôles : Admin + Pharmacien | ✅ | ✅ | ✅ |
-| Rôle Manager (gère plusieurs caisses) | ❌ | ✅ | ✅ |
-| Audit log (qui a fait quoi, quand) | ❌ | ✅ | ✅ |
-| Connexion par code PIN rapide | ❌ | ✅ | ✅ |
-| Authentification 2 facteurs (2FA) | ❌ | ❌ | ✅ |
+| Rôles : Admin + Pharmacien |  |  |  |
+| Rôle Manager (gère plusieurs caisses) |  |  |  |
+| Audit log (qui a fait quoi, quand) |  |  |  |
+| Connexion par code PIN rapide |  |  |  |
+| Authentification 2 facteurs (2FA) |  |  |  |
 
-#### 🟢 Sync & Cloud
-
-| Fonctionnalité | Basic | Pro | Enterprise |
-|---|:---:|:---:|:---:|
-| Mode hors-ligne (local SQLite) | ✅ | ✅ | ✅ |
-| Sync cloud manuelle | ❌ | ✅ | ✅ |
-| Sync cloud automatique en temps réel | ❌ | ✅ | ✅ |
-| Sauvegarde automatique cloud | ❌ | ✅ | ✅ |
-| Accès multi-postes simultanés (même pharmacie) | ❌ | ✅ | ✅ |
-| Multi-pharmacies (chaîne) | ❌ | ❌ | ✅ |
-
-#### 🟢 Support & Maintenance
+####  Sync & Cloud
 
 | Fonctionnalité | Basic | Pro | Enterprise |
 |---|:---:|:---:|:---:|
-| Support par email | ✅ | ✅ | ✅ |
-| Support prioritaire (réponse < 24h) | ❌ | ✅ | ✅ |
-| Support téléphonique dédié | ❌ | ❌ | ✅ |
-| Mises à jour automatiques | ✅ | ✅ | ✅ |
-| Formation et onboarding inclus | ❌ | ✅ | ✅ |
+| Mode hors-ligne (local SQLite) |  |  |  |
+| Sync cloud manuelle |  |  |  |
+| Sync cloud automatique en temps réel |  |  |  |
+| Sauvegarde automatique cloud |  |  |  |
+| Accès multi-postes simultanés (même pharmacie) |  |  |  |
+| Multi-pharmacies (chaîne) |  |  |  |
+
+####  Support & Maintenance
+
+| Fonctionnalité | Basic | Pro | Enterprise |
+|---|:---:|:---:|:---:|
+| Support par email |  |  |  |
+| Support prioritaire (réponse < 24h) |  |  |  |
+| Support téléphonique dédié |  |  |  |
+| Mises à jour automatiques |  |  |  |
+| Formation et onboarding inclus |  |  |  |
 
 ---
 
@@ -905,13 +905,13 @@ guard.guard(
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  📋 Votre Plan : BASIC                        [Passer en PRO →] │
+│   Votre Plan : BASIC                        [Passer en PRO →] │
 ├─────────────────────────────────────────────────────────────────┤
-│  👥 Utilisateurs      2 / 3     ████████░░  67%                 │
-│  📅 Ventes ce mois    142                                        │
-│  💾 Stockage local    SQLite (hors-ligne)                        │
+│   Utilisateurs      2 / 3     ████████░░  67%                 │
+│   Ventes ce mois    142                                        │
+│   Stockage local    SQLite (hors-ligne)                        │
 │                                                                  │
-│  🔒 Fonctionnalités non disponibles dans votre plan :            │
+│   Fonctionnalités non disponibles dans votre plan :            │
 │     • Synchronisation cloud                                      │
 │     • Rapport financier complet                                  │
 │     • Gestion des clients                                        │
@@ -933,7 +933,7 @@ guard.guard(
 
 ---
 
-## ✅ Prochaine action recommandée
+##  Prochaine action recommandée
 
 **Commencer par Phase 1 — Créer le modèle `Pharmacy` et migrer les données existantes vers une "pharmacie par défaut".**
 

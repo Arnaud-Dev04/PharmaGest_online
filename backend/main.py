@@ -121,7 +121,7 @@ async def timing_middleware(request: Request, call_next):
     path = request.url.path
     qs = f"?{request.url.query}" if request.url.query else ""
     if elapsed > 200:   # Afficher uniquement les requêtes > 200ms
-        flag = "🔴 SLOW" if elapsed > 2000 else ("🟡" if elapsed > 800 else "🟢")
+        flag = " SLOW" if elapsed > 2000 else ("" if elapsed > 800 else "")
         print(f"[TIMING] {flag} {request.method} {path}{qs}  →  {elapsed:.0f}ms", flush=True)
     return response
 

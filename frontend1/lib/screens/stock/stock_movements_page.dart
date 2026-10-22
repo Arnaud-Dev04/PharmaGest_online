@@ -33,11 +33,11 @@ class _StockMovementsPageState extends State<StockMovementsPage> {
 
   final List<Map<String, String>> _typeOptions = [
     {'value': '', 'label': 'Tous les types'},
-    {'value': 'entree', 'label': '📥 Entrée'},
-    {'value': 'sortie_vente', 'label': '📤 Sortie (Vente)'},
-    {'value': 'ajustement', 'label': '🔄 Ajustement'},
-    {'value': 'perte', 'label': '❌ Perte'},
-    {'value': 'annulation_vente', 'label': '↩️ Annulation'},
+    {'value': 'entree', 'label': ' Entrée'},
+    {'value': 'sortie_vente', 'label': ' Sortie (Vente)'},
+    {'value': 'ajustement', 'label': ' Ajustement'},
+    {'value': 'perte', 'label': ' Perte'},
+    {'value': 'annulation_vente', 'label': '↩ Annulation'},
   ];
 
   @override

@@ -86,12 +86,23 @@ async def reset_data(
     current_user: User = Depends(get_super_admin_user),
     db: Session = Depends(get_local_db)
 ):
+    import os
+    if os.getenv("ENVIRONMENT") == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Reset operation is disabled in production"
+        )
+
     from app.models.sales import Sale, SaleItem
     from app.models.medicine import Medicine
     from app.models.restock import RestockOrder, RestockItem
+    from app.models.pos_sale import POSSale, POSSaleItem
+    from app.models.cash_register import CashRegisterSession, CashRegisterMovement
+    from app.models.medicine_pricing import MedicinePricing
+    from app.models.batch import Batch
+    from app.models.stock_movement import StockMovement
     
     deleted_counts = {}
-
     
     try:
         # Dependency enforcement:
@@ -101,8 +112,10 @@ async def reset_data(
             
         # 1. Clear Sales (History)
         if reset_data.sales or reset_data.products:
-            # If we delete products, we MUST delete sales to avoid orphan/FK errors
-            # (unless we implemented soft delete, but here we do hard delete)
+            db.query(POSSaleItem).delete()
+            db.query(POSSale).delete()
+            db.query(CashRegisterMovement).delete()
+            db.query(CashRegisterSession).delete()
             sale_items_count = db.query(SaleItem).delete()
             sales_count = db.query(Sale).delete()
             deleted_counts['sales'] = sales_count
@@ -110,7 +123,9 @@ async def reset_data(
             
         # 2. Clear Products (Stock)
         if reset_data.products:
-            # Also clear Restock history (purchases from suppliers)
+            db.query(StockMovement).delete()
+            db.query(MedicinePricing).delete()
+            db.query(Batch).delete()
             restock_items_count = db.query(RestockItem).delete()
             restock_orders_count = db.query(RestockOrder).delete()
             
@@ -122,7 +137,6 @@ async def reset_data(
             
         # 3. Clear Users (except super_admin)
         if reset_data.users:
-            # Don't delete self or other super admins
             count = db.query(User).filter(User.role != "super_admin").delete()
             deleted_counts['users'] = count
             

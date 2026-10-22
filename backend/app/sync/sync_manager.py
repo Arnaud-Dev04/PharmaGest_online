@@ -314,11 +314,16 @@ class SyncManager:
     @staticmethod
     def sync_down(local_db: Session) -> Dict[str, Any]:
         """
-        Recupere les parametres et medicaments depuis la DB MySQL remote vers la base locale.
+        Recupere les parametres, catalogue medicaments, lots, prix et clients
+        depuis la DB MySQL remote vers la base locale.
         """
         report = {
             "online": False,
             "settings_updated": 0,
+            "medicines_synced": 0,
+            "batches_synced": 0,
+            "pricing_synced": 0,
+            "customers_synced": 0,
             "errors": 0,
         }
 
@@ -331,9 +336,39 @@ class SyncManager:
 
         try:
             SyncManager._configure_remote_scope(local_db, remote_db)
-            report["settings_updated"] = SyncManager._sync_settings(local_db, remote_db)
+
+            try:
+                report["settings_updated"] = SyncManager._sync_settings(local_db, remote_db)
+            except Exception as e:
+                logger.warning(f"[SyncDown] Settings sync skipped: {e}")
+                report["errors"] += 1
+
+            try:
+                report["medicines_synced"] = SyncManager._sync_medicines(local_db, remote_db)
+            except Exception as e:
+                logger.warning(f"[SyncDown] Medicines sync skipped: {e}")
+                report["errors"] += 1
+
+            try:
+                report["batches_synced"] = SyncManager._sync_batches(local_db, remote_db)
+            except Exception as e:
+                logger.warning(f"[SyncDown] Batches sync skipped: {e}")
+                report["errors"] += 1
+
+            try:
+                report["pricing_synced"] = SyncManager._sync_pricing(local_db, remote_db)
+            except Exception as e:
+                logger.warning(f"[SyncDown] Pricing sync skipped: {e}")
+                report["errors"] += 1
+
+            try:
+                report["customers_synced"] = SyncManager._sync_customers(local_db, remote_db)
+            except Exception as e:
+                logger.warning(f"[SyncDown] Customers sync skipped: {e}")
+                report["errors"] += 1
+
         except Exception as e:
-            logger.warning(f"[SyncDown] Settings sync skipped: {e}")
+            logger.error(f"[SyncDown] Remote scope configuration failed: {e}")
             report["errors"] += 1
         finally:
             remote_db.close()
@@ -472,6 +507,318 @@ class SyncManager:
                 ))
         local_db.commit()
         return len(remote_settings)
+
+    @staticmethod
+    def _sync_medicines(local_db: Session, remote_db: Session) -> int:
+        """Sync medicine catalog and classifications down from remote for this pharmacy."""
+        from app.models.medicine import Medicine, MedicineFamily, MedicineType
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        remote_pharmacy_id = remote_db.info.get("pharmacy_id")
+
+        # 1. Sync Families
+        remote_families = remote_db.query(MedicineFamily).filter(
+            MedicineFamily.pharmacy_id == remote_pharmacy_id
+        ).all()
+        family_map = {}
+        for rf in remote_families:
+            lf = local_db.query(MedicineFamily).filter(
+                MedicineFamily.pharmacy_id == local_pharmacy_id,
+                MedicineFamily.name == rf.name,
+            ).first()
+            if not lf:
+                lf = MedicineFamily(name=rf.name, pharmacy_id=local_pharmacy_id)
+                local_db.add(lf)
+                local_db.flush()
+            family_map[rf.id] = lf.id
+
+        # 2. Sync Types
+        remote_types = remote_db.query(MedicineType).filter(
+            MedicineType.pharmacy_id == remote_pharmacy_id
+        ).all()
+        type_map = {}
+        for rt in remote_types:
+            lt = local_db.query(MedicineType).filter(
+                MedicineType.pharmacy_id == local_pharmacy_id,
+                MedicineType.name == rt.name,
+            ).first()
+            if not lt:
+                lt = MedicineType(name=rt.name, pharmacy_id=local_pharmacy_id)
+                local_db.add(lt)
+                local_db.flush()
+            type_map[rt.id] = lt.id
+
+        # 3. Sync Medicines
+        remote_medicines = remote_db.query(Medicine).filter(
+            Medicine.pharmacy_id == remote_pharmacy_id
+        ).all()
+
+        synced_count = 0
+        for rm in remote_medicines:
+            lm = local_db.query(Medicine).filter(
+                Medicine.pharmacy_id == local_pharmacy_id,
+                Medicine.code == rm.code,
+            ).first()
+
+            local_fam_id = family_map.get(rm.family_id)
+            local_type_id = type_map.get(rm.type_id)
+
+            if not lm:
+                lm = Medicine(
+                    code=rm.code,
+                    name=rm.name,
+                    code_barres=rm.code_barres,
+                    dci=rm.dci,
+                    family_id=local_fam_id,
+                    type_id=local_type_id,
+                    forme_galenique=rm.forme_galenique,
+                    dosage_form=rm.dosage_form,
+                    packaging=rm.packaging,
+                    quantity=rm.quantity,
+                    min_stock_alert=rm.min_stock_alert,
+                    expiry_alert_threshold=rm.expiry_alert_threshold,
+                    is_active=rm.is_active,
+                    lot_fabricant=rm.lot_fabricant,
+                    date_entree_stock=rm.date_entree_stock,
+                    expiry_date=rm.expiry_date,
+                    fournisseur=rm.fournisseur,
+                    boxes_per_carton=rm.boxes_per_carton,
+                    blisters_per_box=rm.blisters_per_box,
+                    units_per_blister=rm.units_per_blister,
+                    carton_type=rm.carton_type,
+                    units_per_packaging=rm.units_per_packaging,
+                    price_buy=rm.price_buy,
+                    price_sell=rm.price_sell,
+                    prix_achat_unite=rm.prix_achat_unite,
+                    prix_vente_unite=rm.prix_vente_unite,
+                    prix_achat_boite=rm.prix_achat_boite,
+                    prix_vente_boite=rm.prix_vente_boite,
+                    prix_achat_carton=rm.prix_achat_carton,
+                    prix_vente_carton=rm.prix_vente_carton,
+                    prix_achat_plaquette=rm.prix_achat_plaquette,
+                    prix_vente_plaquette=rm.prix_vente_plaquette,
+                    pharmacy_id=local_pharmacy_id,
+                )
+                local_db.add(lm)
+                synced_count += 1
+            else:
+                lm.name = rm.name
+                lm.code_barres = rm.code_barres
+                lm.dci = rm.dci
+                lm.family_id = local_fam_id
+                lm.type_id = local_type_id
+                lm.forme_galenique = rm.forme_galenique
+                lm.dosage_form = rm.dosage_form
+                lm.packaging = rm.packaging
+                lm.min_stock_alert = rm.min_stock_alert
+                lm.expiry_alert_threshold = rm.expiry_alert_threshold
+                lm.is_active = rm.is_active
+                lm.boxes_per_carton = rm.boxes_per_carton
+                lm.blisters_per_box = rm.blisters_per_box
+                lm.units_per_blister = rm.units_per_blister
+                lm.carton_type = rm.carton_type
+                lm.units_per_packaging = rm.units_per_packaging
+                lm.price_buy = rm.price_buy
+                lm.price_sell = rm.price_sell
+                lm.prix_achat_unite = rm.prix_achat_unite
+                lm.prix_vente_unite = rm.prix_vente_unite
+                lm.prix_achat_boite = rm.prix_achat_boite
+                lm.prix_vente_boite = rm.prix_vente_boite
+                lm.prix_achat_carton = rm.prix_achat_carton
+                lm.prix_vente_carton = rm.prix_vente_carton
+                lm.prix_achat_plaquette = rm.prix_achat_plaquette
+                lm.prix_vente_plaquette = rm.prix_vente_plaquette
+                synced_count += 1
+
+        local_db.commit()
+        return synced_count
+
+    @staticmethod
+    def _sync_batches(local_db: Session, remote_db: Session) -> int:
+        """Sync batches down from remote for this pharmacy."""
+        from app.models.batch import Batch
+        from app.models.medicine import Medicine
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        remote_pharmacy_id = remote_db.info.get("pharmacy_id")
+
+        remote_batches = remote_db.query(Batch).filter(
+            Batch.pharmacy_id == remote_pharmacy_id
+        ).all()
+
+        synced_count = 0
+        for rb in remote_batches:
+            if not rb.medicine:
+                continue
+            lm = local_db.query(Medicine).filter(
+                Medicine.pharmacy_id == local_pharmacy_id,
+                Medicine.code == rb.medicine.code,
+            ).first()
+            if not lm:
+                continue
+
+            lb = local_db.query(Batch).filter(
+                Batch.pharmacy_id == local_pharmacy_id,
+                Batch.medicine_id == lm.id,
+                Batch.batch_number == rb.batch_number,
+            ).first()
+
+            if not lb:
+                lb = Batch(
+                    batch_number=rb.batch_number,
+                    medicine_id=lm.id,
+                    expiration_date=rb.expiration_date,
+                    quantity=rb.quantity,
+                    purchase_price=rb.purchase_price,
+                    is_active=rb.is_active,
+                    pharmacy_id=local_pharmacy_id,
+                )
+                local_db.add(lb)
+                synced_count += 1
+            else:
+                lb.expiration_date = rb.expiration_date
+                lb.purchase_price = rb.purchase_price
+                lb.is_active = rb.is_active
+                synced_count += 1
+
+        local_db.commit()
+        return synced_count
+
+    @staticmethod
+    def _sync_pricing(local_db: Session, remote_db: Session) -> int:
+        """Sync medicine pricing entries down from remote for this pharmacy."""
+        from app.models.medicine_pricing import MedicinePricing
+        from app.models.medicine import Medicine
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        remote_pharmacy_id = remote_db.info.get("pharmacy_id")
+
+        remote_pricing = remote_db.query(MedicinePricing).filter(
+            MedicinePricing.pharmacy_id == remote_pharmacy_id
+        ).all()
+
+        synced_count = 0
+        for rp in remote_pricing:
+            lp = local_db.query(MedicinePricing).filter(
+                MedicinePricing.pharmacy_id == local_pharmacy_id,
+                MedicinePricing.lot == rp.lot,
+                MedicinePricing.nom == rp.nom,
+            ).first()
+
+            local_med_id = None
+            if rp.medicine_id and rp.medicine:
+                lm = local_db.query(Medicine).filter(
+                    Medicine.pharmacy_id == local_pharmacy_id,
+                    Medicine.code == rp.medicine.code,
+                ).first()
+                if lm:
+                    local_med_id = lm.id
+
+            if not lp:
+                lp = MedicinePricing(
+                    medicine_id=local_med_id,
+                    nom=rp.nom,
+                    dci=rp.dci,
+                    forme=rp.forme,
+                    dosage=rp.dosage,
+                    lot=rp.lot,
+                    fournisseur=rp.fournisseur,
+                    bon_livraison=rp.bon_livraison,
+                    date_reception=rp.date_reception,
+                    date_peremption=rp.date_peremption,
+                    nb_cartons=rp.nb_cartons,
+                    boites_par_carton=rp.boites_par_carton,
+                    plaquettes_par_boite=rp.plaquettes_par_boite,
+                    comprimes_par_plaquette=rp.comprimes_par_plaquette,
+                    total_boites=rp.total_boites,
+                    total_plaquettes=rp.total_plaquettes,
+                    total_comprimes=rp.total_comprimes,
+                    prix_mode=rp.prix_mode,
+                    achat_carton=rp.achat_carton,
+                    achat_boite=rp.achat_boite,
+                    achat_plaquette=rp.achat_plaquette,
+                    achat_comprime=rp.achat_comprime,
+                    vente_carton=rp.vente_carton,
+                    vente_boite=rp.vente_boite,
+                    vente_plaquette=rp.vente_plaquette,
+                    vente_comprime=rp.vente_comprime,
+                    marge_pct=rp.marge_pct,
+                    benefice_estime=rp.benefice_estime,
+                    seuil_alerte=rp.seuil_alerte,
+                    pharmacy_id=local_pharmacy_id,
+                )
+                local_db.add(lp)
+                synced_count += 1
+            else:
+                lp.medicine_id = local_med_id or lp.medicine_id
+                lp.dci = rp.dci
+                lp.forme = rp.forme
+                lp.dosage = rp.dosage
+                lp.fournisseur = rp.fournisseur
+                lp.bon_livraison = rp.bon_livraison
+                lp.date_reception = rp.date_reception
+                lp.date_peremption = rp.date_peremption
+                lp.nb_cartons = rp.nb_cartons
+                lp.boites_par_carton = rp.boites_par_carton
+                lp.plaquettes_par_boite = rp.plaquettes_par_boite
+                lp.comprimes_par_plaquette = rp.comprimes_par_plaquette
+                lp.total_boites = rp.total_boites
+                lp.total_plaquettes = rp.total_plaquettes
+                lp.total_comprimes = rp.total_comprimes
+                lp.prix_mode = rp.prix_mode
+                lp.achat_carton = rp.achat_carton
+                lp.achat_boite = rp.achat_boite
+                lp.achat_plaquette = rp.achat_plaquette
+                lp.achat_comprime = rp.achat_comprime
+                lp.vente_carton = rp.vente_carton
+                lp.vente_boite = rp.vente_boite
+                lp.vente_plaquette = rp.vente_plaquette
+                lp.vente_comprime = rp.vente_comprime
+                lp.marge_pct = rp.marge_pct
+                lp.benefice_estime = rp.benefice_estime
+                lp.seuil_alerte = rp.seuil_alerte
+                synced_count += 1
+
+        local_db.commit()
+        return synced_count
+
+    @staticmethod
+    def _sync_customers(local_db: Session, remote_db: Session) -> int:
+        """Sync customers down from remote for this pharmacy."""
+        from app.models.customer import Customer
+
+        local_pharmacy_id = local_db.info.get("pharmacy_id")
+        remote_pharmacy_id = remote_db.info.get("pharmacy_id")
+
+        remote_customers = remote_db.query(Customer).filter(
+            Customer.pharmacy_id == remote_pharmacy_id
+        ).all()
+
+        synced_count = 0
+        for rc in remote_customers:
+            lc = local_db.query(Customer).filter(
+                Customer.pharmacy_id == local_pharmacy_id,
+                Customer.phone == rc.phone,
+            ).first()
+
+            if not lc:
+                lc = Customer(
+                    first_name=rc.first_name,
+                    last_name=rc.last_name,
+                    phone=rc.phone,
+                    total_points=rc.total_points,
+                    pharmacy_id=local_pharmacy_id,
+                )
+                local_db.add(lc)
+                synced_count += 1
+            else:
+                lc.first_name = rc.first_name
+                lc.last_name = rc.last_name
+                lc.total_points = max(lc.total_points, rc.total_points)
+                synced_count += 1
+
+        local_db.commit()
+        return synced_count
 
     # ------------------------------------------------------------------
     # STATUT — optimisé + cache

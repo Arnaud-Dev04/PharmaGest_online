@@ -64,6 +64,26 @@ class PharmacyStatusRequest(BaseModel):
     is_active: bool
 
 
+class PlatformAccountResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+    is_active: bool
+    must_change_password: bool
+    pharmacy_id: Optional[int] = None
+    pharmacy_name: Optional[str] = None
+
+
+class PlatformAccountCreateRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class PlatformPasswordResetRequest(BaseModel):
+    temporary_password: str = Field(min_length=8, max_length=128)
+    current_password: Optional[str] = Field(default=None, min_length=1, max_length=128)
+
+
 class PharmacyOnboardResponse(BaseModel):
     pharmacy: PharmacyResponse
     admin_username: str

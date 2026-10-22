@@ -81,11 +81,11 @@ class TestStockMovements:
 
 class TestDashboard:
     def test_dashboard_retourne_statistiques(self, client, admin_user, admin_headers):
-        resp = client.get("/dashboard", headers=admin_headers)
+        resp = client.get("/dashboard/stats", headers=admin_headers)
         assert resp.status_code in [200, 404]
 
     def test_dashboard_sans_token_retourne_401(self, client):
-        resp = client.get("/dashboard")
+        resp = client.get("/dashboard/stats")
         assert resp.status_code == 401
 
 

@@ -37,10 +37,10 @@ class SyncStatus {
 
   /// Icône à afficher dans le header
   String get statusIcon {
-    if (!online) return '🔴';
-    if (errorCount > 0) return '🟠';
-    if (pendingCount > 0) return '🟡';
-    return '🟢';
+    if (!online) return '';
+    if (errorCount > 0) return '';
+    if (pendingCount > 0) return '';
+    return '';
   }
 
   String get statusLabel {

@@ -805,7 +805,7 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
     if (earliest == null) return const Text('-', style: TextStyle(fontSize: 12));
     final daysLeft = earliest.difference(DateTime.now()).inDays;
     Color c = daysLeft <= 0 ? AppTheme.dangerColor : (daysLeft <= 90 ? AppTheme.warningColor : AppTheme.successColor);
-    String icon = daysLeft <= 0 ? '🔴' : (daysLeft <= 90 ? '🟡' : '🟢');
+    String icon = daysLeft <= 0 ? '' : (daysLeft <= 90 ? '' : '');
     return Text('$icon ${df.format(earliest)}', style: TextStyle(fontSize: 12, color: c, fontWeight: FontWeight.w500));
   }
 

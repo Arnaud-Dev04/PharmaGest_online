@@ -89,10 +89,13 @@ class LicenseService:
         return result
 
     @staticmethod
-    def invalidate_cache():
+    def invalidate_cache(pharmacy_id: int = None):
         """Appeler après modification de la licence pour forcer le rechargement."""
         global _license_cache
-        _license_cache.clear()
+        if pharmacy_id is None:
+            _license_cache.clear()
+        else:
+            _license_cache.pop(pharmacy_id, None)
 
     @staticmethod
     def check_license_validity(db: Session = None) -> bool:

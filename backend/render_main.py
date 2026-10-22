@@ -67,6 +67,16 @@ async def lifespan(application: FastAPI):
         print(f"[Render][WARNING] SQLite init warning: {e}")
 
     try:
+        # Appliquer les migrations Alembic (MySQL / Cloud)
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        print("[Render] Migrations Alembic appliquées avec succès ('head').")
+    except Exception as e:
+        print(f"[Render][WARNING] Alembic upgrade warning: {e}")
+
+    try:
         # Init la DB remote (MySQL) si configuree
         from app.database import init_remote_db
         import os
@@ -88,7 +98,7 @@ async def lifespan(application: FastAPI):
     except Exception as e:
         print(f"[Render][WARNING] sync_legacy_stock at startup: {e}")
 
-    print("[Render] API prête ✅")
+    print("[Render] API prête ")
     yield
     print("[Render] Arrêt du serveur.")
 

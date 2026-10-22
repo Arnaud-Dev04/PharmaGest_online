@@ -209,7 +209,7 @@ class _ErrorInterceptor extends Interceptor {
     // Log les réponses réussies (optionnel en production)
     if (response.statusCode == 200 || response.statusCode == 201) {
       debugPrint(
-        '[API] ✅ ${response.requestOptions.method} ${response.requestOptions.path} - Success',
+        '[API]  ${response.requestOptions.method} ${response.requestOptions.path} - Success',
       );
     }
 

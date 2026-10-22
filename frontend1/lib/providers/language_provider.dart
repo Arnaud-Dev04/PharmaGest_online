@@ -62,6 +62,24 @@ class LanguageProvider with ChangeNotifier {
       'platformAccessDenied': 'Accès réservé à l’administration plateforme',
       'platformActionFailed': 'Impossible de modifier cette pharmacie',
       'platformSaved': 'Pharmacie enregistrée',
+      'platformAccounts': 'Comptes administrateurs',
+      'platformCreateAccount': 'Créer un compte plateforme',
+      'platformResetPassword': 'Réinitialiser le mot de passe',
+      'platformTemporaryPassword': 'Mot de passe temporaire',
+      'platformTemporaryPasswordHint':
+          'Au moins 8 caractères; changement requis à la prochaine connexion',
+      'platformPasswordReset':
+          'Mot de passe temporaire défini; changement requis à la prochaine connexion',
+      'platformAdminRole': 'Administrateur plateforme',
+      'pharmacyAdminRole': 'Administrateur pharmacie',
+      'passwordChangeRequired': 'Changement de mot de passe requis',
+      'platformUsernameHint':
+          'Le nom d’utilisateur doit contenir 3 caractères minimum',
+      'currentPasswordRequired': 'Saisissez votre mot de passe actuel',
+      'currentPassword': 'Mot de passe actuel',
+      'licenseUnavailable': 'Inconnu',
+      'licenseUnavailableMessage':
+          'Impossible de vérifier la licence et le quota. Réessayez avant de gérer les comptes.',
       'logout': 'Déconnexion',
 
       // Common
@@ -414,6 +432,23 @@ class LanguageProvider with ChangeNotifier {
       'platformAccessDenied': 'Access reserved for platform administrators',
       'platformActionFailed': 'Unable to update this pharmacy',
       'platformSaved': 'Pharmacy saved',
+      'platformAccounts': 'Administrator accounts',
+      'platformCreateAccount': 'Create platform account',
+      'platformResetPassword': 'Reset password',
+      'platformTemporaryPassword': 'Temporary password',
+      'platformTemporaryPasswordHint':
+          'At least 8 characters; change required at next login',
+      'platformPasswordReset':
+          'Temporary password set; change required at next login',
+      'platformAdminRole': 'Platform administrator',
+      'pharmacyAdminRole': 'Pharmacy administrator',
+      'passwordChangeRequired': 'Password change required',
+      'platformUsernameHint': 'Username must contain at least 3 characters',
+      'currentPasswordRequired': 'Enter your current password',
+      'currentPassword': 'Current password',
+      'licenseUnavailable': 'Unknown',
+      'licenseUnavailableMessage':
+          'Unable to verify license and quota. Retry before managing accounts.',
       'logout': 'Logout',
 
       // Common

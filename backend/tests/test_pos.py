@@ -44,18 +44,17 @@ def _make_pos_payload(medicine_id: int = 1, qty: int = 5) -> dict:
 
 class TestPOSList:
     def test_lister_ventes_authentifie(self, client, admin_user, admin_headers):
-        resp = client.get("/pos/sales", headers=admin_headers)
-        # 200 OK ou 404 si l'endpoint a un autre chemin
+        resp = client.get("/pos/history", headers=admin_headers)
         assert resp.status_code in [200, 404, 422]
 
     def test_lister_ventes_sans_token_retourne_401(self, client):
-        resp = client.get("/pos/sales")
+        resp = client.get("/pos/history")
         assert resp.status_code == 401
 
     def test_pharmacien_peut_lister_ventes(
         self, client, pharmacist_user, pharmacist_headers
     ):
-        resp = client.get("/pos/sales", headers=pharmacist_headers)
+        resp = client.get("/pos/history", headers=pharmacist_headers)
         assert resp.status_code in [200, 404]
 
 
@@ -65,11 +64,11 @@ class TestPOSList:
 
 class TestPOSSummary:
     def test_summary_retourne_total_ventes(self, client, admin_user, admin_headers):
-        resp = client.get("/pos/summary", headers=admin_headers)
+        resp = client.get("/dashboard/stats", headers=admin_headers)
         assert resp.status_code in [200, 404]
 
     def test_summary_sans_token_retourne_401(self, client):
-        resp = client.get("/pos/summary")
+        resp = client.get("/dashboard/stats")
         assert resp.status_code == 401
 
 

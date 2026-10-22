@@ -25,10 +25,10 @@ class _LevelSelectionDialogState extends State<LevelSelectionDialog> {
 
   String _levelLabel(String level) {
     switch (level) {
-      case 'carton': return '🏢 Carton';
-      case 'boite': return '📦 Boîte';
-      case 'plaquette': return '💊 Plaquette';
-      default: return '💎 Unité';
+      case 'carton': return ' Carton';
+      case 'boite': return ' Boîte';
+      case 'plaquette': return ' Plaquette';
+      default: return ' Unité';
     }
   }
 

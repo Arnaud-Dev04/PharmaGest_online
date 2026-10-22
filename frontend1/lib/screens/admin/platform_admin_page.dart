@@ -116,9 +116,11 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(language.translate(
-            pharmacy == null ? 'platformNewPharmacy' : 'platformEditPharmacy',
-          )),
+          title: Text(
+            language.translate(
+              pharmacy == null ? 'platformNewPharmacy' : 'platformEditPharmacy',
+            ),
+          ),
           content: SizedBox(
             width: 520,
             child: Form(
@@ -127,7 +129,11 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _formField(name, language.translate('name'), required: true),
+                    _formField(
+                      name,
+                      language.translate('name'),
+                      required: true,
+                    ),
                     if (pharmacy == null)
                       _formField(
                         code,
@@ -150,7 +156,10 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                       items: const [
                         DropdownMenuItem(value: 'basic', child: Text('Basic')),
                         DropdownMenuItem(value: 'pro', child: Text('Pro')),
-                        DropdownMenuItem(value: 'enterprise', child: Text('Enterprise')),
+                        DropdownMenuItem(
+                          value: 'enterprise',
+                          child: Text('Enterprise'),
+                        ),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -173,16 +182,22 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                         labelText: language.translate('platformMaxUsers'),
                         border: const OutlineInputBorder(),
                       ),
-                        items: optionsForPlan(plan, maxUsers)
-                          .map((value) => DropdownMenuItem(
-                                value: value,
-                            child: Text(value == 1000
-                              ? language.translate('unlimited')
-                              : '$value'),
-                              ))
+                      items: optionsForPlan(plan, maxUsers)
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(
+                                value == 1000
+                                    ? language.translate('unlimited')
+                                    : '$value',
+                              ),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) setDialogState(() => maxUsers = value);
+                        if (value != null) {
+                          setDialogState(() => maxUsers = value);
+                        }
                       },
                     ),
                     if (pharmacy == null) ...[
@@ -195,13 +210,19 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _formField(username, language.translate('username'), required: true),
+                      _formField(
+                        username,
+                        language.translate('username'),
+                        required: true,
+                      ),
                       _formField(
                         password,
                         language.translate('password'),
                         required: true,
                         obscure: true,
-                        helper: language.translate('platformInitialPasswordHint'),
+                        helper: language.translate(
+                          'platformInitialPasswordHint',
+                        ),
                       ),
                     ],
                   ],
@@ -252,13 +273,19 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                         await _load();
                         if (!mounted) return;
                         ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(content: Text(language.translate('platformSaved'))),
+                          SnackBar(
+                            content: Text(language.translate('platformSaved')),
+                          ),
                         );
                       } catch (error) {
                         if (!dialogContext.mounted) return;
                         setDialogState(() => isSaving = false);
                         ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(content: Text('${language.translate('errorPrefix')}: $error')),
+                          SnackBar(
+                            content: Text(
+                              '${language.translate('errorPrefix')}: $error',
+                            ),
+                          ),
                         );
                       }
                     },
@@ -275,12 +302,314 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
       ),
     );
 
-    for (final controller in [name, code, address, city, country, phone, email, username, password]) {
+    for (final controller in [
+      name,
+      code,
+      address,
+      city,
+      country,
+      phone,
+      email,
+      username,
+      password,
+    ]) {
       controller.dispose();
     }
   }
 
   String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
+
+  Future<void> _showAccountManagement() async {
+    final language = context.read<LanguageProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final currentUsername = authProvider.user?.username;
+    final messenger = ScaffoldMessenger.of(context);
+    final accounts = await _service.getAccounts();
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          return AlertDialog(
+            title: Text(language.translate('platformAccounts')),
+            content: SizedBox(
+              width: 620,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        final created = await _showCreatePlatformAccount();
+                        if (!created || !dialogContext.mounted) return;
+                        final refreshed = await _service.getAccounts();
+                        setDialogState(() {
+                          accounts
+                            ..clear()
+                            ..addAll(refreshed);
+                        });
+                      },
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: Text(language.translate('platformCreateAccount')),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: accounts.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final account = accounts[index];
+                        final isPlatform = account.role == 'platform_admin';
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(account.username),
+                          subtitle: Text(
+                            '${language.translate(isPlatform ? 'platformAdminRole' : 'pharmacyAdminRole')}'
+                            '${account.pharmacyName == null ? '' : ' · ${account.pharmacyName}'}'
+                            '${account.mustChangePassword ? ' · ${language.translate('passwordChangeRequired')}' : ''}',
+                          ),
+                          trailing: IconButton(
+                            tooltip: language.translate(
+                              'platformResetPassword',
+                            ),
+                            icon: const Icon(Icons.key_outlined),
+                            onPressed: () async {
+                              final reset = await _showResetAdminPassword(
+                                account,
+                              );
+                              if (!reset || !dialogContext.mounted) return;
+                              final refreshed = await _service.getAccounts();
+                              setDialogState(() {
+                                accounts
+                                  ..clear()
+                                  ..addAll(refreshed);
+                              });
+                              if (account.username == currentUsername) {
+                                await authProvider.logout();
+                                if (!mounted) return;
+                                Navigator.of(
+                                  this.context,
+                                ).pushNamedAndRemoveUntil(
+                                  '/login',
+                                  (_) => false,
+                                );
+                                return;
+                              }
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    language.translate('platformPasswordReset'),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(language.translate('close')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<bool> _showCreatePlatformAccount() async {
+    final language = context.read<LanguageProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final formKey = GlobalKey<FormState>();
+    final username = TextEditingController();
+    final password = TextEditingController();
+    var saving = false;
+    var created = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(language.translate('platformCreateAccount')),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: username,
+                  decoration: InputDecoration(
+                    labelText: language.translate('username'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.trim().length < 3
+                      ? language.translate('platformUsernameHint')
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: language.translate('password'),
+                    helperText: language.translate(
+                      'platformInitialPasswordHint',
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.length < 8
+                      ? language.translate('platformInitialPasswordHint')
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: Text(language.translate('cancel')),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => saving = true);
+                      try {
+                        await _service.createPlatformAccount(
+                          username: username.text.trim(),
+                          password: password.text,
+                        );
+                        created = true;
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      } catch (error) {
+                        if (!dialogContext.mounted) return;
+                        setDialogState(() => saving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${language.translate('errorPrefix')}: $error',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: Text(language.translate(saving ? 'saving' : 'save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    username.dispose();
+    password.dispose();
+    return created;
+  }
+
+  Future<bool> _showResetAdminPassword(PlatformAccount account) async {
+    final language = context.read<LanguageProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final formKey = GlobalKey<FormState>();
+    final password = TextEditingController();
+    final currentPassword = TextEditingController();
+    final currentUsername = context.read<AuthProvider>().user?.username;
+    final isSelf = account.username == currentUsername;
+    var saving = false;
+    var updated = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(
+            '${language.translate('platformResetPassword')}: ${account.username}',
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSelf) ...[
+                  TextFormField(
+                    controller: currentPassword,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: language.translate('currentPassword'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.isEmpty
+                        ? language.translate('currentPasswordRequired')
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextFormField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: language.translate('platformTemporaryPassword'),
+                    helperText: language.translate(
+                      'platformTemporaryPasswordHint',
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.length < 8
+                      ? language.translate('platformTemporaryPasswordHint')
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: Text(language.translate('cancel')),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => saving = true);
+                      try {
+                        await _service.resetAdminPassword(
+                          userId: account.id,
+                          temporaryPassword: password.text,
+                          currentPassword: isSelf ? currentPassword.text : null,
+                        );
+                        updated = true;
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      } catch (error) {
+                        if (!dialogContext.mounted) return;
+                        setDialogState(() => saving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${language.translate('errorPrefix')}: $error',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: Text(language.translate(saving ? 'saving' : 'save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    password.dispose();
+    currentPassword.dispose();
+    return updated;
+  }
 
   Widget _formField(
     TextEditingController controller,
@@ -300,7 +629,8 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
           border: const OutlineInputBorder(),
         ),
         validator: required
-            ? (value) => value == null || value.trim().isEmpty ? 'Required' : null
+            ? (value) =>
+                  value == null || value.trim().isEmpty ? 'Required' : null
             : null,
       ),
     );
@@ -313,7 +643,11 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.read<LanguageProvider>().translate('platformActionFailed'))),
+        SnackBar(
+          content: Text(
+            context.read<LanguageProvider>().translate('platformActionFailed'),
+          ),
+        ),
       );
     }
   }
@@ -352,6 +686,11 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
           icon: const Icon(Icons.add_business_outlined),
           label: Text(language.translate('platformNewPharmacy')),
         );
+        final accountsButton = OutlinedButton.icon(
+          onPressed: _showAccountManagement,
+          icon: const Icon(Icons.manage_accounts_outlined),
+          label: Text(language.translate('platformAccounts')),
+        );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -359,8 +698,17 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(children: [Expanded(child: title), refreshButton]),
-                  Align(alignment: Alignment.centerRight, child: createButton),
+                  Row(
+                    children: [
+                      Expanded(child: title),
+                      refreshButton,
+                    ],
+                  ),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    children: [accountsButton, createButton],
+                  ),
                 ],
               )
             else
@@ -368,6 +716,8 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                 children: [
                   Expanded(child: title),
                   refreshButton,
+                  const SizedBox(width: 8),
+                  accountsButton,
                   const SizedBox(width: 8),
                   createButton,
                 ],
@@ -402,11 +752,36 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
   Widget _buildMetrics(LanguageProvider language, bool compact) {
     final metrics = _metrics!;
     final values = [
-      (label: language.translate('platformPharmacies'), value: '${metrics.pharmacyCount}', icon: Icons.storefront_outlined, color: AppTheme.primaryColor),
-      (label: language.translate('platformActive'), value: '${metrics.activePharmacyCount}', icon: Icons.check_circle_outline, color: AppTheme.successColor),
-      (label: language.translate('platformUsers'), value: '${metrics.userCount}', icon: Icons.people_outline, color: AppTheme.warningColor),
-      (label: language.translate('platformSales'), value: '${metrics.saleCount}', icon: Icons.point_of_sale_outlined, color: AppTheme.dangerColor),
-      (label: language.translate('platformRevenue'), value: NumberFormat.decimalPattern().format(metrics.totalRevenue), icon: Icons.payments_outlined, color: AppTheme.successColor),
+      (
+        label: language.translate('platformPharmacies'),
+        value: '${metrics.pharmacyCount}',
+        icon: Icons.storefront_outlined,
+        color: AppTheme.primaryColor,
+      ),
+      (
+        label: language.translate('platformActive'),
+        value: '${metrics.activePharmacyCount}',
+        icon: Icons.check_circle_outline,
+        color: AppTheme.successColor,
+      ),
+      (
+        label: language.translate('platformUsers'),
+        value: '${metrics.userCount}',
+        icon: Icons.people_outline,
+        color: AppTheme.warningColor,
+      ),
+      (
+        label: language.translate('platformSales'),
+        value: '${metrics.saleCount}',
+        icon: Icons.point_of_sale_outlined,
+        color: AppTheme.dangerColor,
+      ),
+      (
+        label: language.translate('platformRevenue'),
+        value: NumberFormat.decimalPattern().format(metrics.totalRevenue),
+        icon: Icons.payments_outlined,
+        color: AppTheme.successColor,
+      ),
     ];
     return Wrap(
       spacing: 12,
@@ -427,8 +802,15 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(entry.value, style: Theme.of(context).textTheme.titleLarge),
-                        Text(entry.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(
+                          entry.value,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        Text(
+                          entry.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
@@ -467,43 +849,53 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
         ? ListView.separated(
             itemCount: pharmacies.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) => _buildPharmacyCard(pharmacies[index], language),
+            itemBuilder: (context, index) =>
+                _buildPharmacyCard(pharmacies[index], language),
           )
         : Card(
             margin: EdgeInsets.zero,
             clipBehavior: Clip.antiAlias,
             child: SingleChildScrollView(
               child: DataTable(
-          columns: [
-            DataColumn(label: Text(language.translate('name'))),
-            DataColumn(label: Text(language.translate('platformCode'))),
-            DataColumn(label: Text(language.translate('platformCity'))),
-            DataColumn(label: Text(language.translate('platformPlan'))),
-            DataColumn(label: Text(language.translate('platformMaxUsers'))),
-            DataColumn(label: Text(language.translate('status'))),
-            DataColumn(label: Text(language.translate('actions'))),
-          ],
-          rows: pharmacies.map((pharmacy) {
-            return DataRow(cells: [
-              DataCell(Text(pharmacy.name)),
-              DataCell(Text(pharmacy.code)),
-              DataCell(Text(pharmacy.city ?? '—')),
-              DataCell(Text(pharmacy.plan.toUpperCase())),
-              DataCell(Text('${pharmacy.maxUsers}')),
-              DataCell(Switch.adaptive(
-                value: pharmacy.isActive,
-                onChanged: (value) => _toggleStatus(pharmacy, value),
-              )),
-              DataCell(IconButton(
-                tooltip: language.translate('edit'),
-                onPressed: () => _showPharmacyForm(pharmacy: pharmacy),
-                icon: const Icon(Icons.edit_outlined),
-              )),
-            ]);
-          }).toList(),
-        ),
-      ),
-    );
+                columns: [
+                  DataColumn(label: Text(language.translate('name'))),
+                  DataColumn(label: Text(language.translate('platformCode'))),
+                  DataColumn(label: Text(language.translate('platformCity'))),
+                  DataColumn(label: Text(language.translate('platformPlan'))),
+                  DataColumn(
+                    label: Text(language.translate('platformMaxUsers')),
+                  ),
+                  DataColumn(label: Text(language.translate('status'))),
+                  DataColumn(label: Text(language.translate('actions'))),
+                ],
+                rows: pharmacies.map((pharmacy) {
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(pharmacy.name)),
+                      DataCell(Text(pharmacy.code)),
+                      DataCell(Text(pharmacy.city ?? '—')),
+                      DataCell(Text(pharmacy.plan.toUpperCase())),
+                      DataCell(Text('${pharmacy.maxUsers}')),
+                      DataCell(
+                        Switch.adaptive(
+                          value: pharmacy.isActive,
+                          onChanged: (value) => _toggleStatus(pharmacy, value),
+                        ),
+                      ),
+                      DataCell(
+                        IconButton(
+                          tooltip: language.translate('edit'),
+                          onPressed: () =>
+                              _showPharmacyForm(pharmacy: pharmacy),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          );
     return Column(
       children: [
         Expanded(child: list),
@@ -520,9 +912,12 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
                       : () => _load(page: _currentPage - 1),
                   icon: const Icon(Icons.chevron_left),
                 ),
-                Text(language.translate('platformPageStatus')
-                    .replaceAll('{page}', '$_currentPage')
-                    .replaceAll('{total}', '$_totalPages')),
+                Text(
+                  language
+                      .translate('platformPageStatus')
+                      .replaceAll('{page}', '$_currentPage')
+                      .replaceAll('{total}', '$_totalPages'),
+                ),
                 IconButton(
                   tooltip: language.translate('platformNextPage'),
                   onPressed: _isLoading || _currentPage >= _totalPages
@@ -549,7 +944,12 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
           children: [
             Row(
               children: [
-                Expanded(child: Text(pharmacy.name, style: Theme.of(context).textTheme.titleMedium)),
+                Expanded(
+                  child: Text(
+                    pharmacy.name,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
                 IconButton(
                   tooltip: language.translate('edit'),
                   onPressed: () => _showPharmacyForm(pharmacy: pharmacy),
@@ -563,7 +963,9 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
               children: [
                 Chip(label: Text(pharmacy.plan.toUpperCase())),
                 const SizedBox(width: 8),
-                Text('${pharmacy.maxUsers} ${language.translate('platformUsers').toLowerCase()}'),
+                Text(
+                  '${pharmacy.maxUsers} ${language.translate('platformUsers').toLowerCase()}',
+                ),
                 const Spacer(),
                 Switch.adaptive(
                   value: pharmacy.isActive,

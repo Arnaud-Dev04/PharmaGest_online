@@ -7,13 +7,22 @@ import 'package:frontend1/models/user.dart';
 class AuthService {
   final ApiService _apiService = ApiService();
 
-  /// Login avec username et password
+  /// Login avec username et password (et pharmacyCode optionnel pour le multi-tenant)
   /// Retourne un Map contenant le token, must_change_password et is_first_setup
-  Future<Map<String, dynamic>> login(String username, String password) async {
+  Future<Map<String, dynamic>> login(
+    String username,
+    String password, {
+    String? pharmacyCode,
+  }) async {
     try {
       // Préparer les données en format form-urlencoded
       // Le backend FastAPI attend ce format pour OAuth2PasswordRequestForm
-      final formData = {'username': username, 'password': password};
+      final formData = <String, dynamic>{
+        'username': username,
+        'password': password,
+        if (pharmacyCode != null && pharmacyCode.trim().isNotEmpty)
+          'pharmacy_code': pharmacyCode.trim(),
+      };
 
       final response = await _apiService.post(
         '/auth/login',

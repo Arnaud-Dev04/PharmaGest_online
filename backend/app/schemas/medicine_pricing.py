@@ -63,6 +63,8 @@ class MedicinePricingCreate(BaseModel):
 
     @model_validator(mode='after')
     def validate_dates(self):
+        if self.date_peremption and self.date_peremption < date.today():
+            raise ValueError("La date de péremption ne peut pas être passée")
         if self.date_reception and self.date_peremption:
             if self.date_peremption <= self.date_reception:
                 raise ValueError("La date de péremption doit être postérieure à la date de réception")
@@ -72,8 +74,8 @@ class MedicinePricingCreate(BaseModel):
     @model_validator(mode='after')
     def validate_pricing_mode(self):
         if self.prix_mode == PricingMode.PCT_MARGE:
-            if self.marge_pct is None:
-                raise ValueError("Le pourcentage de marge est requis pour le mode 'Pourcentage de marge'")
+            if self.marge_pct is None or self.marge_pct <= 0:
+                raise ValueError("Le pourcentage de marge doit être strictement positif pour le mode 'Pourcentage de marge'")
         elif self.prix_mode == PricingMode.MANUEL:
             if self.vente_carton <= 0:
                 raise ValueError("Le prix de vente du carton est requis pour le mode 'Manuel'")

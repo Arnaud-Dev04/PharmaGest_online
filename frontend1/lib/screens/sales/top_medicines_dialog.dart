@@ -548,21 +548,21 @@ class _TopMedicinesDialogState extends State<TopMedicinesDialog> {
       return const CircleAvatar(
         radius: 12,
         backgroundColor: Color(0xFFFFD700),
-        child: Text('🥇', style: TextStyle(fontSize: 12)),
+        child: Text('', style: TextStyle(fontSize: 12)),
       );
     }
     if (rank == 2) {
       return const CircleAvatar(
         radius: 12,
         backgroundColor: Color(0xFFC0C0C0),
-        child: Text('🥈', style: TextStyle(fontSize: 12)),
+        child: Text('', style: TextStyle(fontSize: 12)),
       );
     }
     if (rank == 3) {
       return const CircleAvatar(
         radius: 12,
         backgroundColor: Color(0xFFCD7F32),
-        child: Text('🥉', style: TextStyle(fontSize: 12)),
+        child: Text('', style: TextStyle(fontSize: 12)),
       );
     }
     return Container(

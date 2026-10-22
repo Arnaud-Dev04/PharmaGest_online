@@ -8,13 +8,46 @@ from typing import Optional
 
 from app.database import get_local_db
 from app.models.user import User
-from app.auth.dependencies import get_current_active_user
+from app.auth.dependencies import get_current_active_user, get_admin_user
 from app.core.license_guard import ensure_user_capacity
 from app.services import sales_service
 
-# For now, we focus on stats.
-
 router = APIRouter()
+
+@router.get(
+    "",
+    summary="List users in pharmacy (Admin only)"
+)
+async def list_users(
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_local_db)
+):
+    users = db.query(User).all()
+    return [{"id": u.id, "username": u.username, "role": u.role, "is_active": u.is_active} for u in users]
+
+
+@router.get(
+    "/{user_id}",
+    summary="Get user details by ID"
+)
+async def get_user_by_id(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db)
+):
+    if current_user.role not in ["admin", "super_admin"] and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return {"id": user.id, "username": user.username, "role": user.role, "is_active": user.is_active}
+
 
 @router.get(
     "/{user_id}/stats",

@@ -381,23 +381,23 @@ class _AddMedicineWizardState extends State<AddMedicineWizard>
   // ── Soumission ────────────────────────────────────────────────────────────
   Future<void> _submit() async {
     if (_achatCarton <= 0) {
-      _gotoStep(2, '⚠️ Veuillez saisir un prix d\'achat > 0');
+      _gotoStep(2, ' Veuillez saisir un prix d\'achat > 0');
       return;
     }
     if (_pricingMode == PricingMode.pctMarge && _marge == 0) {
-      _gotoStep(2, '⚠️ La marge est à 0% — le prix de vente sera égal au prix d\'achat');
+      _gotoStep(2, ' La marge est à 0% — le prix de vente sera égal au prix d\'achat');
       // Ne pas bloquer, juste avertir (retour retiré pour permettre la sauvegarde)
     }
     if (_pricingMode == PricingMode.pctMarge && _marge < 0) {
       // Marge négative = perte, on autorise mais on avertit
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('⚠️ Attention : Prix de vente inférieur au prix d\'achat (perte)'),
+        content: Text(' Attention : Prix de vente inférieur au prix d\'achat (perte)'),
         backgroundColor: Colors.orange,
         duration: Duration(seconds: 3),
       ));
     }
     if (_pricingMode == PricingMode.cartonFixe && _venteCarton <= 0) {
-      _gotoStep(2, '⚠️ Veuillez saisir un prix de vente > 0');
+      _gotoStep(2, ' Veuillez saisir un prix de vente > 0');
       return;
     }
 
@@ -606,7 +606,7 @@ class _AddMedicineWizardState extends State<AddMedicineWizard>
 
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader(bool isDark) {
-    const titles = ['🏷️  Identification','📦  Conditionnement','💰  Tarification','🏪  Stock & Alertes'];
+    const titles = ['  Identification','  Conditionnement','  Tarification','  Stock & Alertes'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 22, 16, 0),
       child: Row(children: [
@@ -1400,10 +1400,10 @@ class _StepCond extends StatelessWidget {
             border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15))),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             for (final item in [
-              ('📦','Carton',const Color(0xFF6366F1)),
-              ('🗂️','Boîtes',AppTheme.primaryColor),
-              ('💊','Plaquettes',AppTheme.warningColor),
-              ('⚪','Unités',AppTheme.successColor),
+              ('','Carton',const Color(0xFF6366F1)),
+              ('','Boîtes',AppTheme.primaryColor),
+              ('','Plaquettes',AppTheme.warningColor),
+              ('','Unités',AppTheme.successColor),
             ]) ...[
               Column(children: [
                 Text(item.$1, style: const TextStyle(fontSize: 22)),
@@ -1411,7 +1411,7 @@ class _StepCond extends StatelessWidget {
                 Text(item.$2, style: TextStyle(fontSize: 11,
                   fontWeight: FontWeight.w600, color: item.$3)),
               ]),
-              if (item.$1 != '⚪')
+              if (item.$1 != '')
                 Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
             ],
           ]),
@@ -1419,16 +1419,16 @@ class _StepCond extends StatelessWidget {
         const SizedBox(height: 18),
         _SecTitle('Quantités reçues', isDark),
         const SizedBox(height: 10),
-        _CondRow(emoji:'📦', label:'Nombre de cartons', sub:'Cartons reçus',
+        _CondRow(emoji:'', label:'Nombre de cartons', sub:'Cartons reçus',
           color:const Color(0xFF6366F1), ctrl:nbCartonsCtrl),
         const SizedBox(height: 10),
-        _CondRow(emoji:'🗂️', label:'Boîtes par carton', sub:'Boîtes dans 1 carton',
+        _CondRow(emoji:'', label:'Boîtes par carton', sub:'Boîtes dans 1 carton',
           color:AppTheme.primaryColor, ctrl:bpcCtrl),
         const SizedBox(height: 10),
-        _CondRow(emoji:'💊', label:'Plaquettes par boîte', sub:'Plaquettes dans 1 boîte',
+        _CondRow(emoji:'', label:'Plaquettes par boîte', sub:'Plaquettes dans 1 boîte',
           color:AppTheme.warningColor, ctrl:ppbCtrl),
         const SizedBox(height: 10),
-        _CondRow(emoji:'⚪', label:'Unités par plaquette', sub:'Comprimés / gélules…',
+        _CondRow(emoji:'', label:'Unités par plaquette', sub:'Comprimés / gélules…',
           color:AppTheme.successColor, ctrl:cppCtrl),
         const SizedBox(height: 14),
         Container(
@@ -1440,9 +1440,9 @@ class _StepCond extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.3))),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-            _Metric('🗂️', totalBoites.toString(), 'Total boîtes', AppTheme.primaryColor),
+            _Metric('', totalBoites.toString(), 'Total boîtes', AppTheme.primaryColor),
             Container(width: 1, height: 36, color: AppTheme.successColor.withValues(alpha: 0.2)),
-            _Metric('⚪', totalComprimes.toString(), 'Total unités', AppTheme.successColor),
+            _Metric('', totalComprimes.toString(), 'Total unités', AppTheme.successColor),
           ]),
         ),
       ]),
@@ -1511,7 +1511,7 @@ class _StepPrix extends StatelessWidget {
   });
 
   static const _niveaux = ['carton', 'boite', 'plaquette', 'comprime'];
-  static const _niveauEmojis = {'carton':'📦','boite':'🗂️','plaquette':'💊','comprime':'⚪'};
+  static const _niveauEmojis = {'carton':'','boite':'','plaquette':'','comprime':''};
 
   Widget _niveauBtn(String n, String current, ValueChanged<String> onChanged) {
     final sel = n == current;

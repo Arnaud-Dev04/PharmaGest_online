@@ -542,7 +542,7 @@ class InvoicePdfService {
                     border: pw.Border.all(color: _successColor),
                   ),
                   child: pw.Text(
-                    '★  ${sale.bonusEarned.toStringAsFixed(0)} points bonus gagnés',
+                    '  ${sale.bonusEarned.toStringAsFixed(0)} points bonus gagnés',
                     style: pw.TextStyle(
                       fontSize: 9,
                       fontWeight: pw.FontWeight.bold,

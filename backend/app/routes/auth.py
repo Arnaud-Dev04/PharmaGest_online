@@ -35,20 +35,42 @@ _limiter = Limiter(key_func=get_remote_address)
 # AUTHENTICATION HELPER
 # ============================================================================
 
-def authenticate_user(db: Session, username: str, password: str) -> User | None:
+def authenticate_user(
+    db: Session,
+    username: str,
+    password: str,
+    pharmacy_code: str | None = None
+) -> User | None:
     """
     Authenticate user by username and password.
-    
-    Args:
-        db: Database session
-        username: Username
-        password: Plain text password
-        
-    Returns:
-        User if authenticated, None otherwise
+    Supports optional pharmacy_code scoping for multi-tenant users.
     """
-    user = db.query(User).filter(User.username == username).first()
-    
+    from app.models.pharmacy import Pharmacy
+    user = None
+
+    if pharmacy_code:
+        pharmacy = db.query(Pharmacy).filter(Pharmacy.code == pharmacy_code).first()
+        if not pharmacy or not pharmacy.is_active:
+            return None
+        user = db.query(User).filter(
+            User.username == username,
+            User.pharmacy_id == pharmacy.id,
+        ).first()
+    else:
+        # Check if platform administrator
+        platform_user = db.query(User).filter(
+            User.username == username,
+            User.role == UserRole.PLATFORM_ADMIN,
+        ).first()
+        if platform_user:
+            user = platform_user
+        else:
+            candidates = db.query(User).filter(User.username == username).all()
+            if len(candidates) == 1:
+                user = candidates[0]
+            elif len(candidates) > 1:
+                return None
+
     if not user:
         return None
     
@@ -72,16 +94,14 @@ async def login(
     Login endpoint - Authenticate user and return JWT token.
     
     **OAuth2 compatible** - accepts form data with username and password.
-    
-    Returns:
-        Token: JWT access token with type "bearer"
-        
-    Raises:
-        HTTPException 401: If credentials are invalid
-        HTTPException 400: If user is inactive
+    Optional pharmacy_code via client_id or form parameter.
     """
-    # Authenticate user
-    user = authenticate_user(db, form_data.username, form_data.password)
+    form = await request.form()
+    pharmacy_code = form.get("pharmacy_code") or form_data.client_id
+    if isinstance(pharmacy_code, str):
+        pharmacy_code = pharmacy_code.strip() or None
+
+    user = authenticate_user(db, form_data.username, form_data.password, pharmacy_code=pharmacy_code)
     
     if not user:
         raise HTTPException(
@@ -97,10 +117,16 @@ async def login(
             detail="Inactive user account"
         )
     
-    # Create access token
+    # Create access token with tenant context
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_payload = {
+        "sub": user.username,
+        "user_id": user.id,
+        "pharmacy_id": user.pharmacy_id,
+        "role": user.role.value if hasattr(user.role, 'value') else user.role,
+    }
     access_token = create_access_token(
-        data={"sub": user.username},
+        data=token_payload,
         expires_delta=access_token_expires
     )
     
@@ -152,19 +178,22 @@ async def register(
             detail="Platform administrator accounts cannot be created by a pharmacy",
         )
 
-    # Check if username already exists
-    existing_user = db.query(User).filter(User.username == user_data.username).first()
+    if current_admin.pharmacy_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin is not assigned to a pharmacy",
+        )
+
+    # Check if username already exists in this pharmacy
+    existing_user = db.query(User).filter(
+        User.username == user_data.username,
+        User.pharmacy_id == current_admin.pharmacy_id,
+    ).first()
     
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Username '{user_data.username}' already exists"
-        )
-
-    if current_admin.pharmacy_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin is not assigned to a pharmacy",
         )
 
     if user_data.is_active:
@@ -578,6 +607,10 @@ async def change_initial_password(
         )
     
     # Update password and clear the flag
+    # A platform admin has no pharmacy tenant. Permit only this self-service
+    # account update; do not grant platform-wide scope to the request session.
+    if current_user.role == UserRole.PLATFORM_ADMIN:
+        db.info["pharmacy_scope_enabled"] = False
     current_user.password_hash = hash_password(password_data.new_password)
     current_user.must_change_password = False
     db.commit()

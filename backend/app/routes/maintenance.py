@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.auth.dependencies import get_super_admin_user
+from app.auth.dependencies import require_platform_admin
 import os
 import datetime
 
 router = APIRouter()
 
-# Marker file placed at project root to indicate maintenance mode
+# Marker file placed at project root to indicate platform-wide maintenance mode
 MAINT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'MAINTENANCE_MODE'))
 
 def _is_maintenance_enabled() -> bool:
@@ -16,7 +16,8 @@ async def maintenance_status():
     return { 'maintenance': _is_maintenance_enabled() }
 
 @router.post('/maintenance/enable')
-async def enable_maintenance(current_user = Depends(get_super_admin_user)):
+async def enable_maintenance(current_user = Depends(require_platform_admin)):
+    """Only platform administrators may place the server into maintenance mode."""
     try:
         with open(MAINT_FILE, 'w') as f:
             f.write(f"enabled_by={current_user.username}\n")
@@ -26,7 +27,8 @@ async def enable_maintenance(current_user = Depends(get_super_admin_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/maintenance/disable')
-async def disable_maintenance(current_user = Depends(get_super_admin_user)):
+async def disable_maintenance(current_user = Depends(require_platform_admin)):
+    """Only platform administrators may disable maintenance mode."""
     try:
         if os.path.exists(MAINT_FILE):
             os.remove(MAINT_FILE)

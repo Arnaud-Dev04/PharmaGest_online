@@ -87,13 +87,13 @@ class PrixCalculator {
   static String niveauEmoji(NiveauPrix niveau) {
     switch (niveau) {
       case NiveauPrix.comprime:
-        return '💎';
+        return '';
       case NiveauPrix.plaquette:
-        return '💊';
+        return '';
       case NiveauPrix.boite:
-        return '📦';
+        return '';
       case NiveauPrix.carton:
-        return '🏢';
+        return '';
     }
   }
 

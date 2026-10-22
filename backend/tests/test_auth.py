@@ -105,6 +105,40 @@ class TestLogin:
         assert resp.status_code == 422
 
 
+class TestInitialPasswordChange:
+    def test_platform_admin_can_change_initial_password(self, client, db):
+        """Changing a platform admin password must not require a pharmacy tenant."""
+        from app.models.user import User, UserRole
+        from app.utils.security import create_access_token, hash_password, verify_password
+
+        user = User(
+            username="platform_password_change",
+            password_hash=hash_password("Platform@Temp123!"),
+            role=UserRole.PLATFORM_ADMIN,
+            is_active=True,
+            must_change_password=True,
+            pharmacy_id=None,
+        )
+        db.add(user)
+        db.commit()
+        token = create_access_token(data={"sub": user.username})
+
+        response = client.post(
+            "/auth/change-initial-password",
+            json={
+                "new_password": "Platform@New123!",
+                "confirm_password": "Platform@New123!",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200, response.text
+        db.info["pharmacy_scope_enabled"] = False
+        updated_user = db.query(User).filter(User.username == user.username).one()
+        assert updated_user.must_change_password is False
+        assert verify_password("Platform@New123!", updated_user.password_hash)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # GET /auth/me
 # ═══════════════════════════════════════════════════════════════════════════════

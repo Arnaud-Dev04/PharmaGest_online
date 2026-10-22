@@ -272,7 +272,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Cliquez sur 👁 Visualiser pour prévisualiser le PDF dans le navigateur, puis téléchargez-le si besoin.',
+                    'Cliquez sur  Visualiser pour prévisualiser le PDF dans le navigateur, puis téléchargez-le si besoin.',
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark ? Colors.blue.shade200 : Colors.blue.shade800,
@@ -531,7 +531,7 @@ class _ReportsPageState extends State<ReportsPage> {
                             )
                           : const Icon(Icons.visibility_rounded, size: 20),
                       label: Text(
-                        isLoading ? 'Chargement...' : '👁 Visualiser le PDF',
+                        isLoading ? 'Chargement...' : ' Visualiser le PDF',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,

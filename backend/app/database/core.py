@@ -433,7 +433,7 @@ def _auto_repair_schema(bind_engine):
         "medicine_families", "medicine_types", "medicines", "pos_sales",
         "pos_sale_items", "restock_orders", "restock_items", "sales",
         "sale_items", "settings", "stock_movements", "suppliers",
-        "sync_logs", "sync_queue",
+        "sync_logs", "sync_queue", "users",
     )
     for table_name in tenant_tables:
         required_columns.setdefault(table_name, []).append(("pharmacy_id", "INT NULL"))
@@ -451,6 +451,26 @@ def _auto_repair_schema(bind_engine):
                         except Exception as e:
                             # Ignorer si deja presente sous un autre nom/syntaxe
                             pass
+
+        # Verification/mise a niveau contrainte composite multi-tenant sur 'users' (MySQL)
+        if "users" in existing_tables and _is_mysql_url(str(bind_engine.url)):
+            try:
+                indexes = inspector.get_indexes("users")
+                has_composite = any(
+                    set(idx.get("column_names") or []) == {"pharmacy_id", "username"}
+                    for idx in indexes
+                )
+                if not has_composite:
+                    for idx in indexes:
+                        if idx.get("column_names") == ["username"] and idx.get("unique") and idx.get("name"):
+                            conn.execute(text(f"ALTER TABLE users DROP INDEX {idx['name']}"))
+                            conn.commit()
+                            break
+                    conn.execute(text("ALTER TABLE users ADD CONSTRAINT uq_users_pharmacy_username UNIQUE (pharmacy_id, username)"))
+                    conn.commit()
+                    print("[AUTO-MIGRATE] Contrainte composite 'uq_users_pharmacy_username' ajoutee a 'users'")
+            except Exception:
+                pass
 
 
 # ============================================================

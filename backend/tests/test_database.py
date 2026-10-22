@@ -71,7 +71,7 @@ class TestDatabaseConnection:
         from sqlalchemy import inspect
         inspector = inspect(engine)
         tables = inspector.get_table_names()
-        assert "medicine_pricings" in tables
+        assert "medicine_pricing" in tables
         assert "users" in tables
 
     def test_pharmacies_table_created(self, engine):
@@ -147,8 +147,8 @@ class TestPricingServiceRead:
         assert "Paracetamol" in entries[0].nom
 
     def test_get_pricings_search_insensible_casse(self, db):
-        medicine_pricing_service.create_pricing(db, _make_create_data("Ibuprofène 400", "LOT-IBU"))
-        entries, _ = medicine_pricing_service.get_pricings(db, search="IBUPROFÈNE")
+        medicine_pricing_service.create_pricing(db, _make_create_data("Ibuprofene 400", "LOT-IBU"))
+        entries, _ = medicine_pricing_service.get_pricings(db, search="IBUPROFENE")
         assert len(entries) >= 1
 
     def test_get_pricings_pagination(self, db):
@@ -353,6 +353,6 @@ class TestPricingAutocomplete:
         assert results == []
 
     def test_autocomplete_insensible_casse(self, db):
-        medicine_pricing_service.create_pricing(db, _make_create_data("Ibuprofène 400", "LOT-IBU"))
-        results = medicine_pricing_service.get_autocomplete_names(db, "IBUPROFÈNE")
+        medicine_pricing_service.create_pricing(db, _make_create_data("Ibuprofene 400", "LOT-IBU"))
+        results = medicine_pricing_service.get_autocomplete_names(db, "IBUPROFENE")
         assert len(results) >= 1

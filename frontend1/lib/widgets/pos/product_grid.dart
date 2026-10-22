@@ -334,7 +334,7 @@ class _ProductGridState extends State<ProductGrid> {
           controller: _searchController,
           focusNode: _searchFocus,
           decoration: InputDecoration(
-            hintText: '🔍 Rechercher un médicament...',
+            hintText: ' Rechercher un médicament...',
             prefixIcon: const Icon(Icons.search, size: 22),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -541,7 +541,7 @@ class _ProductGridState extends State<ProductGrid> {
                   if (product.isOutOfStock)
                     _buildBadge('STOCK 0 (RUPTURE)', AppTheme.dangerColor)
                   else if (isExpiringSoon)
-                    _buildBadge('⚠ EXP < 7J', Colors.red),
+                    _buildBadge(' EXP < 7J', Colors.red),
                 ],
               ),
               const SizedBox(height: 6),
@@ -721,7 +721,7 @@ class _ProductGridState extends State<ProductGrid> {
                 _buildBadge('STOCK 0 (RUPTURE)', AppTheme.dangerColor),
               ] else if (isExpiringSoon) ...[
                 const SizedBox(width: 8),
-                _buildBadge('⚠ EXP', Colors.red),
+                _buildBadge(' EXP', Colors.red),
               ],
             ],
           ),
@@ -739,7 +739,7 @@ class _ProductGridState extends State<ProductGrid> {
           color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(5),
         ),
-        child: const Text('⚠ Aucun lot', style: TextStyle(fontSize: 11, color: Colors.orange)),
+        child: const Text(' Aucun lot', style: TextStyle(fontSize: 11, color: Colors.orange)),
       );
     }
 

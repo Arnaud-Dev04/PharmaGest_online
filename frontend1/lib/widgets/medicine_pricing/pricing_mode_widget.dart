@@ -259,10 +259,10 @@ class PricingModeWidget extends StatelessWidget {
                       color: AppTheme.primaryColor,
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'carton', child: Text('🏢 Carton')),
-                      DropdownMenuItem(value: 'boite', child: Text('📦 Boîte')),
-                      DropdownMenuItem(value: 'plaquette', child: Text('💊 Plaquette')),
-                      DropdownMenuItem(value: 'unite', child: Text('💎 Unité')),
+                      DropdownMenuItem(value: 'carton', child: Text(' Carton')),
+                      DropdownMenuItem(value: 'boite', child: Text(' Boîte')),
+                      DropdownMenuItem(value: 'plaquette', child: Text(' Plaquette')),
+                      DropdownMenuItem(value: 'unite', child: Text(' Unité')),
                     ],
                     onChanged: (v) {
                       if (v != null) {
@@ -297,26 +297,26 @@ class PricingModeWidget extends StatelessWidget {
     switch (referenceLevel) {
       case 'carton':
         label = 'Carton';
-        emoji = '🏢';
+        emoji = '';
         paCtrl = achatCartonController;
         pvCtrl = venteCartonController;
         break;
       case 'boite':
         label = 'Boîte';
-        emoji = '📦';
+        emoji = '';
         paCtrl = achatBoiteController;
         pvCtrl = venteBoiteController;
         break;
       case 'plaquette':
         label = 'Plaquette';
-        emoji = '💊';
+        emoji = '';
         paCtrl = achatPlaquetteController;
         pvCtrl = ventePlaquetteController;
         break;
       case 'unite':
       default:
         label = 'Unité';
-        emoji = '💎';
+        emoji = '';
         paCtrl = achatComprimeController;
         pvCtrl = venteComprimeController;
         break;
@@ -392,13 +392,13 @@ class PricingModeWidget extends StatelessWidget {
   /// Affiche les niveaux calculés automatiquement (hors niveau de référence)
   Widget _buildAutoCalculatedLevels(BuildContext context, bool isDark) {
     final levels = [
-      {'key': 'carton', 'label': 'Carton', 'emoji': '🏢',
+      {'key': 'carton', 'label': 'Carton', 'emoji': '',
        'pa': achatCartonController, 'pv': venteCartonController},
-      {'key': 'boite', 'label': 'Boîte', 'emoji': '📦',
+      {'key': 'boite', 'label': 'Boîte', 'emoji': '',
        'pa': achatBoiteController, 'pv': venteBoiteController},
-      {'key': 'plaquette', 'label': 'Plaquette', 'emoji': '💊',
+      {'key': 'plaquette', 'label': 'Plaquette', 'emoji': '',
        'pa': achatPlaquetteController, 'pv': ventePlaquetteController},
-      {'key': 'unite', 'label': 'Unité', 'emoji': '💎',
+      {'key': 'unite', 'label': 'Unité', 'emoji': '',
        'pa': achatComprimeController, 'pv': venteComprimeController},
     ];
 
@@ -560,13 +560,13 @@ class PricingModeWidget extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 8),
-          _buildPriceRow(context, '🏢 Carton',
+          _buildPriceRow(context, ' Carton',
               _fmtBIF(double.tryParse(venteCartonController.text) ?? 0)),
-          _buildPriceRow(context, '📦 Boîte',
+          _buildPriceRow(context, ' Boîte',
               _fmtBIF(double.tryParse(venteBoiteController.text) ?? 0)),
-          _buildPriceRow(context, '💊 Plaquette',
+          _buildPriceRow(context, ' Plaquette',
               _fmtBIF(double.tryParse(ventePlaquetteController.text) ?? 0)),
-          _buildPriceRow(context, '💎 Comprimé',
+          _buildPriceRow(context, ' Comprimé',
               _fmtBIF(double.tryParse(venteComprimeController.text) ?? 0)),
         ],
       ),

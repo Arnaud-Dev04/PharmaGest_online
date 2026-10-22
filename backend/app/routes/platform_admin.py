@@ -19,10 +19,14 @@ from app.schemas.pharmacy import (
     PharmacyResponse,
     PharmacyStatusRequest,
     PharmacyUpdateRequest,
+    PlatformAccountCreateRequest,
+    PlatformAccountResponse,
     PlatformMetricsResponse,
+    PlatformPasswordResetRequest,
     PlatformPharmacyMetricsResponse,
 )
 from app.utils.security import hash_password
+from app.utils.security import verify_password
 
 router = APIRouter()
 
@@ -221,3 +225,101 @@ async def get_pharmacy_metrics(
 ):
     pharmacy = _pharmacy_or_404(db, pharmacy_id)
     return {"pharmacy": pharmacy, **_metrics(db, pharmacy_id)}
+
+
+@router.get("/accounts", response_model=list[PlatformAccountResponse])
+async def list_platform_accounts(
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_local_db),
+):
+    """List platform admins and pharmacy admins without exposing credentials."""
+    accounts = (
+        db.query(User, Pharmacy.name)
+        .outerjoin(Pharmacy, User.pharmacy_id == Pharmacy.id)
+        .filter(User.role.in_([UserRole.PLATFORM_ADMIN, UserRole.ADMIN]))
+        .order_by(User.role.asc(), User.username.asc())
+        .all()
+    )
+    return [
+        {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role.value if isinstance(user.role, UserRole) else user.role,
+            "is_active": user.is_active,
+            "must_change_password": user.must_change_password,
+            "pharmacy_id": user.pharmacy_id,
+            "pharmacy_name": pharmacy_name,
+        }
+        for user, pharmacy_name in accounts
+    ]
+
+
+@router.post(
+    "/accounts/platform-admin",
+    response_model=PlatformAccountResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_platform_account(
+    payload: PlatformAccountCreateRequest,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_local_db),
+):
+    """Create a platform administrator with a forced first-login password change."""
+    if db.query(User).filter(User.username == payload.username).first():
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    user = User(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        role=UserRole.PLATFORM_ADMIN,
+        is_active=True,
+        must_change_password=True,
+        pharmacy_id=None,
+    )
+    db.add(user)
+    try:
+        db.commit()
+        db.refresh(user)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Username already exists") from exc
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": UserRole.PLATFORM_ADMIN.value,
+        "is_active": user.is_active,
+        "must_change_password": user.must_change_password,
+        "pharmacy_id": None,
+        "pharmacy_name": None,
+    }
+
+
+@router.put(
+    "/accounts/{user_id}/password",
+    status_code=status.HTTP_200_OK,
+)
+async def reset_admin_password(
+    user_id: int,
+    payload: PlatformPasswordResetRequest,
+    current_admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_local_db),
+):
+    """Set a temporary password for a platform or pharmacy administrator."""
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.role.in_([UserRole.PLATFORM_ADMIN, UserRole.ADMIN]),
+    ).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Administrator account not found")
+    if user.id == current_admin.id:
+        if not payload.current_password or not verify_password(
+            payload.current_password, current_admin.password_hash
+        ):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.password_hash = hash_password(payload.temporary_password)
+    user.must_change_password = True
+    db.info["pharmacy_scope_enabled"] = False
+    db.commit()
+    return {"message": "Temporary password set; change required at next login"}

@@ -1,8 +1,8 @@
-# 🏥 Pharmacy Management System
+#  Pharmacy Management System
 
 Système complet de gestion de pharmacie avec backend FastAPI (Python) et frontend Flutter (Dart).
 
-## 📋 Vue d'ensemble
+##  Vue d'ensemble
 
 Ce projet est un système de gestion de pharmacie complet avec :
 
@@ -10,7 +10,7 @@ Ce projet est un système de gestion de pharmacie complet avec :
 - **Frontend** : Application Flutter multiplateforme (Windows, Web, Android)
 - **Fonctionnalités** : Gestion de stock, POS, ventes, rapports, utilisateurs, synchronisation offline/online
 
-## 🏗️ Structure du Projet
+##  Structure du Projet
 
 ```
 Pharma_logiciels_version_01/
@@ -39,7 +39,7 @@ Pharma_logiciels_version_01/
 └── README.md            # Ce fichier
 ```
 
-## 🚀 Démarrage Rapide
+##  Démarrage Rapide
 
 ### Prérequis
 
@@ -82,37 +82,37 @@ flutter pub get
 flutter run
 ```
 
-## 📚 Documentation
+##  Documentation
 
 - **Backend** : Voir [`backend/README.md`](backend/README.md)
 - **Frontend** : Voir [`frontend1/README.md`](frontend1/README.md)
 
-## 🔧 Fonctionnalités
+##  Fonctionnalités
 
-### ✅ Backend (FastAPI)
+###  Backend (FastAPI)
 
-- ✅ Authentification JWT
-- ✅ Gestion de stock et fournisseurs
-- ✅ Point de vente (POS)
-- ✅ Gestion des ventes et historique
-- ✅ Dashboard avec statistiques
-- ✅ Rapports (PDF/Excel)
-- ✅ Gestion des utilisateurs et rôles
-- ✅ Support offline/online (SQLite + MySQL)
-- ✅ Système de licence
+-  Authentification JWT
+-  Gestion de stock et fournisseurs
+-  Point de vente (POS)
+-  Gestion des ventes et historique
+-  Dashboard avec statistiques
+-  Rapports (PDF/Excel)
+-  Gestion des utilisateurs et rôles
+-  Support offline/online (SQLite + MySQL)
+-  Système de licence
 
-### ✅ Frontend (Flutter)
+###  Frontend (Flutter)
 
-- ✅ Interface moderne avec Material Design
-- ✅ Authentification sécurisée
-- ✅ Gestion de stock
-- ✅ Point de vente
-- ✅ Dashboard interactif avec graphiques
-- ✅ Rapports et export
-- ✅ Support multilingue (FR/EN)
-- ✅ Thème clair/sombre
+-  Interface moderne avec Material Design
+-  Authentification sécurisée
+-  Gestion de stock
+-  Point de vente
+-  Dashboard interactif avec graphiques
+-  Rapports et export
+-  Support multilingue (FR/EN)
+-  Thème clair/sombre
 
-## 🔐 Sécurité
+##  Sécurité
 
 - Authentification JWT
 - Hashage des mots de passe (bcrypt)
@@ -120,19 +120,19 @@ flutter run
 - Gestion des rôles (Super Admin, Admin, Pharmacist)
 - Validation des entrées côté serveur
 
-## 🗄️ Base de Données
+##  Base de Données
 
 - **SQLite** : Base locale pour mode offline
 - **MySQL** : Base distante pour synchronisation online
 - **Modèles** : Utilisateurs, Médicaments, Ventes, Fournisseurs, Clients, etc.
 
-## 🌍 Internationalisation
+##  Internationalisation
 
 Support multilingue :
-- 🇫🇷 Français (FR)
-- 🇬🇧 Anglais (EN)
+-  Français (FR)
+-  Anglais (EN)
 
-## 📦 Technologies Utilisées
+##  Technologies Utilisées
 
 ### Backend
 - FastAPI 0.104.1
@@ -150,7 +150,7 @@ Support multilingue :
 - FL Chart (Graphiques)
 - Google Fonts
 
-## 🛠️ Développement
+##  Développement
 
 ### Structure Backend
 
@@ -177,15 +177,15 @@ frontend1/lib/
 └── widgets/     # Widgets réutilisables
 ```
 
-## 📝 Licence
+##  Licence
 
 [Spécifier votre licence]
 
-## 👥 Contributeurs
+##  Contributeurs
 
 [Liste des contributeurs]
 
-## 📞 Support
+##  Support
 
 Pour toute question ou problème, contactez [votre email/contact].
 

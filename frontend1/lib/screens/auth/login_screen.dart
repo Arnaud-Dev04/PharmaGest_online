@@ -16,13 +16,27 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _pharmacyCodeController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _showPassword = false;
   bool _rememberMe = false;
+  bool _isPlatformAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.pharmacyCode != null && auth.pharmacyCode!.isNotEmpty) {
+        _pharmacyCodeController.text = auth.pharmacyCode!;
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _pharmacyCodeController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -33,9 +47,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+    final pharmacyCode = _isPlatformAdmin ? null : _pharmacyCodeController.text.trim();
+
     final success = await authProvider.login(
       _usernameController.text.trim(),
       _passwordController.text,
+      pharmacyCode: pharmacyCode,
     );
 
     if (success && mounted) {
@@ -234,6 +251,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              // Champ Code Pharmacie (masqué si connexion Admin Plateforme)
+                              if (!_isPlatformAdmin) ...[
+                                _buildPharmacyCodeField(context, isDark),
+                                const SizedBox(height: 20),
+                              ],
+
                               // Champ Username
                               _buildUsernameField(context, isDark),
                               const SizedBox(height: 20),
@@ -242,8 +265,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               _buildPasswordField(context, isDark),
                               const SizedBox(height: 20),
 
-                              // Remember me
-                              _buildRememberMe(context, isDark),
+                              // Remember me & Toggle Admin Plateforme
+                              _buildOptionsRow(context, isDark),
                               const SizedBox(height: 24),
 
                               // Bouton de connexion
@@ -364,6 +387,55 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Widget _buildPharmacyCodeField(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              Provider.of<LanguageProvider>(context).translate('platformCode'),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+            Text(
+              'Officine',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isDark
+                    ? AppTheme.darkSidebarText.withValues(alpha: 0.6)
+                    : Colors.grey[600],
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _pharmacyCodeController,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: 'Ex: PHARM-001',
+            prefixIcon: Icon(
+              Icons.local_pharmacy_outlined,
+              color: isDark
+                  ? AppTheme.darkSidebarText.withValues(alpha: 0.6)
+                  : Colors.grey[600],
+            ),
+          ),
+          validator: (value) {
+            if (!_isPlatformAdmin && (value == null || value.trim().isEmpty)) {
+              return 'Code pharmacie requis';
+            }
+            return null;
+          },
+          enabled: !Provider.of<AuthProvider>(context).isLoading,
+        ),
+      ],
+    );
+  }
+
   Widget _buildUsernameField(BuildContext context, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,6 +530,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildRememberMe(BuildContext context, bool isDark) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: 20,
@@ -481,6 +554,56 @@ class _LoginScreenState extends State<LoginScreen> {
             color: isDark
                 ? AppTheme.darkSidebarText
                 : AppTheme.lightSidebarText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionsRow(BuildContext context, bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildRememberMe(context, isDark),
+        InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: Provider.of<AuthProvider>(context).isLoading
+              ? null
+              : () {
+                  setState(() {
+                    _isPlatformAdmin = !_isPlatformAdmin;
+                  });
+                },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isPlatformAdmin
+                      ? Icons.check_circle_rounded
+                      : Icons.admin_panel_settings_outlined,
+                  size: 16,
+                  color: _isPlatformAdmin
+                      ? AppTheme.primaryColor
+                      : (isDark
+                          ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
+                          : Colors.grey[600]),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _isPlatformAdmin ? 'Admin Plateforme' : 'Plateforme',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: _isPlatformAdmin ? FontWeight.w600 : FontWeight.normal,
+                    color: _isPlatformAdmin
+                        ? AppTheme.primaryColor
+                        : (isDark
+                            ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
+                            : Colors.grey[600]),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

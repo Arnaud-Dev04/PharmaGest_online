@@ -13,7 +13,7 @@ import time
 from app.database import get_local_db
 from app.models.pharmacy import Pharmacy
 from app.models.user import User, UserRole
-from app.utils.security import decode_token
+from app.utils.security import decode_token, verify_token
 from app.schemas.auth import TokenData
 
 # OAuth2 scheme for token extraction
@@ -109,19 +109,26 @@ async def get_current_user(
 
     cached = _token_to_username.get(key)
     if cached and now_ts - cached["ts"] < _TOKEN_CACHE_TTL:
-        username = cached["username"]
+        username = cached.get("username")
+        user_id = cached.get("user_id")
     else:
-        username = decode_token(token)
-        if username is None:
+        payload = verify_token(token)
+        if payload is None:
             raise credentials_exception
+        username = payload.get("sub")
+        user_id = payload.get("user_id")
         # Stocker dans le cache
-        _token_to_username[key] = {"username": username, "ts": now_ts}
+        _token_to_username[key] = {"username": username, "user_id": user_id, "ts": now_ts}
         # Nettoyage périodique
         if len(_token_to_username) > 500:
             _evict_expired()
 
-    # Toujours charger l'objet depuis la session courante
-    user = db.query(User).filter(User.username == username).first()
+    # Charger l'objet depuis la session courante (par ID si disponible, sinon par username)
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+    else:
+        user = db.query(User).filter(User.username == username).first()
+
     if user is None:
         # Token valide mais user supprimé → invalider le cache
         _token_to_username.pop(key, None)
@@ -277,11 +284,17 @@ async def get_super_admin_user_bypass_license(
     Get Super Admin user WITHOUT checking license status.
     This allows Super Admin to access license management even when license is expired.
     """
-    username = decode_token(token)
-    if username is None:
+    payload = verify_token(token)
+    if payload is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.username == username).first()
+    user_id = payload.get("user_id")
+    username = payload.get("sub")
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+    else:
+        user = db.query(User).filter(User.username == username).first()
+
     if user is None:
         raise credentials_exception
 

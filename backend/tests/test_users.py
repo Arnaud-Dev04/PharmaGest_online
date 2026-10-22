@@ -19,18 +19,18 @@ os.environ.setdefault("DB_URL_LOCAL", "sqlite:///:memory:")
 
 class TestUsersList:
     def test_admin_peut_lister_utilisateurs(self, client, admin_user, admin_headers):
-        resp = client.get("/users/", headers=admin_headers)
+        resp = client.get("/users", headers=admin_headers)
         assert resp.status_code in [200, 404]
 
     def test_pharmacien_ne_peut_pas_lister_utilisateurs(
         self, client, pharmacist_user, pharmacist_headers
     ):
-        resp = client.get("/users/", headers=pharmacist_headers)
+        resp = client.get("/users", headers=pharmacist_headers)
         # Doit être refusé : 403 ou 401
         assert resp.status_code in [403, 401, 404]
 
     def test_sans_token_retourne_401(self, client):
-        resp = client.get("/users/")
+        resp = client.get("/users")
         assert resp.status_code == 401
 
 
@@ -54,7 +54,7 @@ class TestUsersUpdate:
         user = User(
             username="target_user",
             password_hash=hash_password("Pass@123!"),
-            role=UserRole.PHARMACIEN,
+            role=UserRole.PHARMACIST,
             is_active=True,
         )
         db.add(user)
@@ -84,7 +84,7 @@ class TestUsersDelete:
         user = User(
             username="to_delete_user",
             password_hash=hash_password("Pass@123!"),
-            role=UserRole.PHARMACIEN,
+            role=UserRole.PHARMACIST,
             is_active=True,
         )
         db.add(user)

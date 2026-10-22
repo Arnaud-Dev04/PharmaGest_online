@@ -114,19 +114,6 @@ class TestCalculatePrices:
 
     def test_division_par_zero_retourne_zero(self):
         """Conditionnement à 0 ne doit pas lever d'exception."""
-        data = self._make_data(
-            prix_mode=PricingMode.CARTON_FIXE,
-            achat_carton=100000.0,
-            vente_carton=120000.0,
-            marge_pct=None,
-            boites_par_carton=0,  # Division par 0
-            plaquettes_par_boite=0,
-            comprimes_par_plaquette=0,
-        )
-        # Le modèle Pydantic valide > 0, donc ce test vérifie que le service
-        # gère le cas sans planter
-        # (ce payload ne passera pas la validation Pydantic normalement)
-        # On contourne en appelant directement la fonction avec un objet modifié
         import types
         mock = types.SimpleNamespace(
             prix_mode=types.SimpleNamespace(value="carton_fixe"),

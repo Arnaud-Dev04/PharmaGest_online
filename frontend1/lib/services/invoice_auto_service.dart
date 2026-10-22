@@ -132,11 +132,11 @@ class InvoiceAutoService {
       // Écrire le fichier
       final file = File(filePath);
       await file.writeAsBytes(bytes);
-      debugPrint('[InvoiceAuto] ✅ Facture sauvegardée: $filePath');
+      debugPrint('[InvoiceAuto]  Facture sauvegardée: $filePath');
 
       return filePath;
     } catch (e) {
-      debugPrint('[InvoiceAuto] ⚠️ Erreur sauvegarde disque: $e');
+      debugPrint('[InvoiceAuto]  Erreur sauvegarde disque: $e');
       return null;
     }
   }

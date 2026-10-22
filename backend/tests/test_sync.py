@@ -10,7 +10,8 @@ from app.database.core import Base
 from app.models.batch import Batch
 from app.models.cash_register import CashRegisterMovement, CashRegisterSession
 from app.models.customer import Customer
-from app.models.medicine import Medicine
+from app.models.medicine import Medicine, MedicineFamily, MedicineType
+from app.models.medicine_pricing import MedicinePricing
 from app.models.pharmacy import Pharmacy
 from app.models.pos_sale import POSSale, POSSaleItem
 from app.models.settings import Settings
@@ -364,3 +365,114 @@ def test_sync_status_cache_is_per_pharmacy(monkeypatch):
         second_db.close()
         setup_db.close()
         engine.dispose()
+
+
+def test_sync_down_pulls_catalog_batches_pricing_and_customers():
+    local_engine, local_db = _session()
+    remote_engine, remote_db = _session()
+    try:
+        # Pharmacies
+        local_pharmacy = Pharmacy(id=1, name="Pharmacie Centrale", code="PHARM-01", is_active=True)
+        remote_pharmacy = Pharmacy(id=10, name="Pharmacie Centrale Cloud", code="PHARM-01", is_active=True)
+        local_db.add(local_pharmacy)
+        remote_db.add(remote_pharmacy)
+        local_db.commit()
+        remote_db.commit()
+
+        # Remote catalog data
+        remote_family = MedicineFamily(id=5, name="Antibiotiques", pharmacy_id=10)
+        remote_type = MedicineType(id=7, name="Boîte", pharmacy_id=10)
+        remote_db.add_all([remote_family, remote_type])
+        remote_db.flush()
+
+        remote_medicine = Medicine(
+            id=100,
+            code="MED-AMOX-500",
+            name="Amoxicilline 500mg",
+            family_id=remote_family.id,
+            type_id=remote_type.id,
+            price_buy=1500.0,
+            price_sell=2200.0,
+            pharmacy_id=10,
+        )
+        remote_db.add(remote_medicine)
+        remote_db.flush()
+
+        remote_batch = Batch(
+            id=200,
+            batch_number="LOT-2026-X1",
+            medicine_id=remote_medicine.id,
+            expiration_date=date(2028, 6, 30),
+            quantity=100,
+            purchase_price=1500.0,
+            pharmacy_id=10,
+        )
+        remote_pricing = MedicinePricing(
+            id=300,
+            medicine_id=remote_medicine.id,
+            nom="Amoxicilline 500mg",
+            lot="LOT-2026-X1",
+            achat_boite=1500.0,
+            vente_boite=2200.0,
+            pharmacy_id=10,
+        )
+        remote_customer = Customer(
+            id=400,
+            first_name="Alice",
+            last_name="Kouassi",
+            phone="0505123456",
+            total_points=250,
+            pharmacy_id=10,
+        )
+        remote_db.add_all([remote_batch, remote_pricing, remote_customer])
+        remote_db.commit()
+
+        # Configure local scope
+        local_db.info.update({
+            "pharmacy_scope_enabled": True,
+            "pharmacy_id": local_pharmacy.id,
+            "is_platform_admin": False,
+        })
+        SyncManager._configure_remote_scope(local_db, remote_db)
+
+        # Run sync_down helpers
+        med_count = SyncManager._sync_medicines(local_db, remote_db)
+        batch_count = SyncManager._sync_batches(local_db, remote_db)
+        pricing_count = SyncManager._sync_pricing(local_db, remote_db)
+        customer_count = SyncManager._sync_customers(local_db, remote_db)
+
+        assert med_count == 1
+        assert batch_count == 1
+        assert pricing_count == 1
+        assert customer_count == 1
+
+        # Verify local DB content
+        local_fam = local_db.query(MedicineFamily).filter_by(name="Antibiotiques").first()
+        assert local_fam is not None
+        assert local_fam.pharmacy_id == local_pharmacy.id
+
+        local_med = local_db.query(Medicine).filter_by(code="MED-AMOX-500").first()
+        assert local_med is not None
+        assert local_med.name == "Amoxicilline 500mg"
+        assert local_med.family_id == local_fam.id
+        assert local_med.pharmacy_id == local_pharmacy.id
+
+        local_b = local_db.query(Batch).filter_by(batch_number="LOT-2026-X1").first()
+        assert local_b is not None
+        assert local_b.medicine_id == local_med.id
+        assert local_b.pharmacy_id == local_pharmacy.id
+
+        local_p = local_db.query(MedicinePricing).filter_by(lot="LOT-2026-X1").first()
+        assert local_p is not None
+        assert local_p.vente_boite == 2200.0
+        assert local_p.pharmacy_id == local_pharmacy.id
+
+        local_c = local_db.query(Customer).filter_by(phone="0505123456").first()
+        assert local_c is not None
+        assert local_c.total_points == 250
+        assert local_c.pharmacy_id == local_pharmacy.id
+    finally:
+        local_db.close()
+        remote_db.close()
+        local_engine.dispose()
+        remote_engine.dispose()

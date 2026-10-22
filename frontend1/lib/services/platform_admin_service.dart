@@ -43,4 +43,63 @@ class PlatformAdminService {
     );
     return Pharmacy.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<List<PlatformAccount>> getAccounts() async {
+    final response = await _api.get('/platform/accounts');
+    return (response.data as List<dynamic>)
+        .map((item) => PlatformAccount.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> createPlatformAccount({
+    required String username,
+    required String password,
+  }) async {
+    await _api.post(
+      '/platform/accounts/platform-admin',
+      data: {'username': username, 'password': password},
+    );
+  }
+
+  Future<void> resetAdminPassword({
+    required int userId,
+    required String temporaryPassword,
+    String? currentPassword,
+  }) async {
+    await _api.put(
+      '/platform/accounts/$userId/password',
+      data: {
+        'temporary_password': temporaryPassword,
+        if (currentPassword != null) 'current_password': currentPassword,
+      },
+    );
+  }
+}
+
+class PlatformAccount {
+  final int id;
+  final String username;
+  final String role;
+  final bool isActive;
+  final bool mustChangePassword;
+  final String? pharmacyName;
+
+  const PlatformAccount({
+    required this.id,
+    required this.username,
+    required this.role,
+    required this.isActive,
+    required this.mustChangePassword,
+    this.pharmacyName,
+  });
+
+  factory PlatformAccount.fromJson(Map<String, dynamic> json) =>
+      PlatformAccount(
+        id: (json['id'] as num).toInt(),
+        username: json['username']?.toString() ?? '',
+        role: json['role']?.toString() ?? '',
+        isActive: json['is_active'] as bool? ?? false,
+        mustChangePassword: json['must_change_password'] as bool? ?? false,
+        pharmacyName: json['pharmacy_name']?.toString(),
+      );
 }

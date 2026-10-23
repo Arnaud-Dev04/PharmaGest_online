@@ -52,7 +52,7 @@ def get_dashboard_stats(
     summary="Get detailed cancelled sales",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def get_cancelled_sales(
+def get_cancelled_sales(
     limit: int = 50,
     start_date: str = None,
     end_date: str = None,

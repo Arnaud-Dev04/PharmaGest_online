@@ -20,7 +20,7 @@ class LicenseResponse(BaseModel):
     days_remaining: Optional[int]
 
 @router.get("/license", response_model=LicenseResponse)
-async def get_license(
+def get_license(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -48,7 +48,7 @@ async def get_license(
     )
 
 @router.post("/license", response_model=LicenseResponse)
-async def update_license(
+def update_license(
     license_data: LicenseUpdate,
     current_user: User = Depends(get_super_admin_user),
     db: Session = Depends(get_local_db)
@@ -81,7 +81,7 @@ class ResetDataRequest(BaseModel):
     users: bool = False
 
 @router.post("/reset", status_code=status.HTTP_200_OK)
-async def reset_data(
+def reset_data(
     reset_data: ResetDataRequest,
     current_user: User = Depends(get_super_admin_user),
     db: Session = Depends(get_local_db)
@@ -154,7 +154,7 @@ async def reset_data(
 
 
 @router.get("/deletion-logs")
-async def get_deletion_logs(
+def get_deletion_logs(
     entity_type: Optional[str] = None,
     action: Optional[str] = None,
     entity_id: Optional[int] = None,

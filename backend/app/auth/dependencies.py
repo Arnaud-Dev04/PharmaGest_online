@@ -123,11 +123,17 @@ async def get_current_user(
         if len(_token_to_username) > 500:
             _evict_expired()
 
-    # Charger l'objet depuis la session courante (par ID si disponible, sinon par username)
-    if user_id:
-        user = db.query(User).filter(User.id == user_id).first()
-    else:
-        user = db.query(User).filter(User.username == username).first()
+    # Charger l'objet depuis la session courante (sans filtre tenant préalable afin de trouver l'utilisateur)
+    prev_scope = db.info.get("pharmacy_scope_enabled")
+    db.info["pharmacy_scope_enabled"] = False
+    try:
+        if user_id:
+            user = db.query(User).filter(User.id == user_id).first()
+        else:
+            user = db.query(User).filter(User.username == username).first()
+    finally:
+        if prev_scope is not None:
+            db.info["pharmacy_scope_enabled"] = prev_scope
 
     if user is None:
         # Token valide mais user supprimé → invalider le cache

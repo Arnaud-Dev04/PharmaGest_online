@@ -312,10 +312,11 @@ class SyncManager:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def sync_down(local_db: Session) -> Dict[str, Any]:
+    def sync_down(local_db: Session, since: Any = None, force_full: bool = False) -> Dict[str, Any]:
         """
         Recupere les parametres, catalogue medicaments, lots, prix et clients
         depuis la DB MySQL remote vers la base locale.
+        Supporte la synchronisation incrémentale par timestamp 'since'.
         """
         report = {
             "online": False,
@@ -325,6 +326,7 @@ class SyncManager:
             "pricing_synced": 0,
             "customers_synced": 0,
             "errors": 0,
+            "since": None,
         }
 
         if not _remote_available():
@@ -337,6 +339,21 @@ class SyncManager:
         try:
             SyncManager._configure_remote_scope(local_db, remote_db)
 
+            from app.models.settings import Settings
+            local_pharmacy_id = local_db.info.get("pharmacy_id")
+
+            last_sync_setting = None
+            if not force_full and since is None and local_pharmacy_id:
+                last_sync_setting = local_db.query(Settings).filter(
+                    Settings.pharmacy_id == local_pharmacy_id,
+                    Settings.key == "last_sync_down_timestamp",
+                ).first()
+                if last_sync_setting and last_sync_setting.value:
+                    try:
+                        since = datetime.fromisoformat(last_sync_setting.value)
+                    except Exception:
+                        since = None
+
             try:
                 report["settings_updated"] = SyncManager._sync_settings(local_db, remote_db)
             except Exception as e:
@@ -344,28 +361,42 @@ class SyncManager:
                 report["errors"] += 1
 
             try:
-                report["medicines_synced"] = SyncManager._sync_medicines(local_db, remote_db)
+                report["medicines_synced"] = SyncManager._sync_medicines(local_db, remote_db, since=since)
             except Exception as e:
                 logger.warning(f"[SyncDown] Medicines sync skipped: {e}")
                 report["errors"] += 1
 
             try:
-                report["batches_synced"] = SyncManager._sync_batches(local_db, remote_db)
+                report["batches_synced"] = SyncManager._sync_batches(local_db, remote_db, since=since)
             except Exception as e:
                 logger.warning(f"[SyncDown] Batches sync skipped: {e}")
                 report["errors"] += 1
 
             try:
-                report["pricing_synced"] = SyncManager._sync_pricing(local_db, remote_db)
+                report["pricing_synced"] = SyncManager._sync_pricing(local_db, remote_db, since=since)
             except Exception as e:
                 logger.warning(f"[SyncDown] Pricing sync skipped: {e}")
                 report["errors"] += 1
 
             try:
-                report["customers_synced"] = SyncManager._sync_customers(local_db, remote_db)
+                report["customers_synced"] = SyncManager._sync_customers(local_db, remote_db, since=since)
             except Exception as e:
                 logger.warning(f"[SyncDown] Customers sync skipped: {e}")
                 report["errors"] += 1
+
+            if local_pharmacy_id:
+                now_iso = datetime.utcnow().isoformat()
+                if last_sync_setting:
+                    last_sync_setting.value = now_iso
+                else:
+                    local_db.add(Settings(
+                        key="last_sync_down_timestamp",
+                        value=now_iso,
+                        pharmacy_id=local_pharmacy_id,
+                    ))
+                local_db.commit()
+
+            report["since"] = since.isoformat() if isinstance(since, datetime) else (str(since) if since else None)
 
         except Exception as e:
             logger.error(f"[SyncDown] Remote scope configuration failed: {e}")
@@ -509,7 +540,7 @@ class SyncManager:
         return len(remote_settings)
 
     @staticmethod
-    def _sync_medicines(local_db: Session, remote_db: Session) -> int:
+    def _sync_medicines(local_db: Session, remote_db: Session, since: Any = None) -> int:
         """Sync medicine catalog and classifications down from remote for this pharmacy."""
         from app.models.medicine import Medicine, MedicineFamily, MedicineType
 
@@ -548,10 +579,13 @@ class SyncManager:
                 local_db.flush()
             type_map[rt.id] = lt.id
 
-        # 3. Sync Medicines
-        remote_medicines = remote_db.query(Medicine).filter(
+        # 3. Sync Medicines (incrémental si since est défini)
+        query = remote_db.query(Medicine).filter(
             Medicine.pharmacy_id == remote_pharmacy_id
-        ).all()
+        )
+        if since:
+            query = query.filter(Medicine.updated_at >= since)
+        remote_medicines = query.all()
 
         synced_count = 0
         for rm in remote_medicines:
@@ -634,7 +668,7 @@ class SyncManager:
         return synced_count
 
     @staticmethod
-    def _sync_batches(local_db: Session, remote_db: Session) -> int:
+    def _sync_batches(local_db: Session, remote_db: Session, since: Any = None) -> int:
         """Sync batches down from remote for this pharmacy."""
         from app.models.batch import Batch
         from app.models.medicine import Medicine
@@ -642,9 +676,12 @@ class SyncManager:
         local_pharmacy_id = local_db.info.get("pharmacy_id")
         remote_pharmacy_id = remote_db.info.get("pharmacy_id")
 
-        remote_batches = remote_db.query(Batch).filter(
+        query = remote_db.query(Batch).filter(
             Batch.pharmacy_id == remote_pharmacy_id
-        ).all()
+        )
+        if since:
+            query = query.filter(Batch.updated_at >= since)
+        remote_batches = query.all()
 
         synced_count = 0
         for rb in remote_batches:
@@ -685,7 +722,7 @@ class SyncManager:
         return synced_count
 
     @staticmethod
-    def _sync_pricing(local_db: Session, remote_db: Session) -> int:
+    def _sync_pricing(local_db: Session, remote_db: Session, since: Any = None) -> int:
         """Sync medicine pricing entries down from remote for this pharmacy."""
         from app.models.medicine_pricing import MedicinePricing
         from app.models.medicine import Medicine
@@ -693,9 +730,12 @@ class SyncManager:
         local_pharmacy_id = local_db.info.get("pharmacy_id")
         remote_pharmacy_id = remote_db.info.get("pharmacy_id")
 
-        remote_pricing = remote_db.query(MedicinePricing).filter(
+        query = remote_db.query(MedicinePricing).filter(
             MedicinePricing.pharmacy_id == remote_pharmacy_id
-        ).all()
+        )
+        if since:
+            query = query.filter(MedicinePricing.updated_at >= since)
+        remote_pricing = query.all()
 
         synced_count = 0
         for rp in remote_pricing:
@@ -783,16 +823,19 @@ class SyncManager:
         return synced_count
 
     @staticmethod
-    def _sync_customers(local_db: Session, remote_db: Session) -> int:
+    def _sync_customers(local_db: Session, remote_db: Session, since: Any = None) -> int:
         """Sync customers down from remote for this pharmacy."""
         from app.models.customer import Customer
 
         local_pharmacy_id = local_db.info.get("pharmacy_id")
         remote_pharmacy_id = remote_db.info.get("pharmacy_id")
 
-        remote_customers = remote_db.query(Customer).filter(
+        query = remote_db.query(Customer).filter(
             Customer.pharmacy_id == remote_pharmacy_id
-        ).all()
+        )
+        if since:
+            query = query.filter(Customer.updated_at >= since)
+        remote_customers = query.all()
 
         synced_count = 0
         for rc in remote_customers:
@@ -819,6 +862,107 @@ class SyncManager:
 
         local_db.commit()
         return synced_count
+
+    @staticmethod
+    def process_batch_upload(
+        db: Session,
+        sales_payload: List[Any],
+        current_user: Any,
+    ) -> Dict[str, Any]:
+        """
+        Traite un lot de ventes POS reçues (batch upload) de manière idempotente.
+        """
+        from app.models.pos_sale import POSSale, POSSaleItem
+        from app.models.medicine import Medicine
+        from app.models.batch import Batch
+        from app.models.customer import Customer
+
+        pharmacy_id = current_user.pharmacy_id
+        results = {
+            "total_received": len(sales_payload),
+            "total_inserted": 0,
+            "total_skipped": 0,
+            "errors": [],
+        }
+
+        for item in sales_payload:
+            sale_data = item if isinstance(item, dict) else item.model_dump()
+            uuid = sale_data.get("sale_uuid")
+            if not uuid:
+                results["errors"].append({"error": "sale_uuid is required", "sale": sale_data.get("code")})
+                continue
+
+            existing = db.query(POSSale).filter(POSSale.sale_uuid == uuid).first()
+            if existing:
+                results["total_skipped"] += 1
+                continue
+
+            try:
+                cust_id = None
+                phone = sale_data.get("customer_phone")
+                if phone:
+                    cust = db.query(Customer).filter(Customer.phone == phone).first()
+                    if cust:
+                        cust_id = cust.id
+
+                sale_date = sale_data.get("date") or datetime.utcnow()
+                if isinstance(sale_date, str):
+                    try:
+                        sale_date = datetime.fromisoformat(sale_date)
+                    except Exception:
+                        sale_date = datetime.utcnow()
+
+                pos_sale = POSSale(
+                    sale_uuid=uuid,
+                    code=sale_data.get("code", f"POS-{uuid[:8]}"),
+                    total_amount=float(sale_data.get("total_amount", 0.0)),
+                    payment_method=sale_data.get("payment_method", "cash"),
+                    date=sale_date,
+                    user_id=current_user.id,
+                    customer_id=cust_id,
+                    customer_name=sale_data.get("customer_name"),
+                    customer_phone=phone,
+                    cash_session_uuid=sale_data.get("cash_session_uuid"),
+                    notes=sale_data.get("notes"),
+                    status="completed",
+                    sync_status="synced",
+                    synced_at=datetime.utcnow(),
+                    pharmacy_id=pharmacy_id,
+                )
+                db.add(pos_sale)
+                db.flush()
+
+                for raw_line in sale_data.get("items", []):
+                    med_code = raw_line.get("medicine_code")
+                    med = db.query(Medicine).filter(Medicine.code == med_code).first()
+                    if not med:
+                        continue
+
+                    batch_id = None
+                    batch_num = raw_line.get("batch_number")
+                    if batch_num:
+                        b = db.query(Batch).filter(Batch.batch_number == batch_num, Batch.medicine_id == med.id).first()
+                        if b:
+                            batch_id = b.id
+
+                    sale_item = POSSaleItem(
+                        sale_id=pos_sale.id,
+                        medicine_id=med.id,
+                        batch_id=batch_id,
+                        quantity=int(raw_line.get("quantity", 1)),
+                        unit_price=float(raw_line.get("unit_price", 0.0)),
+                        total_price=float(raw_line.get("total_price", 0.0)),
+                        pharmacy_id=pharmacy_id,
+                    )
+                    db.add(sale_item)
+
+                db.commit()
+                results["total_inserted"] += 1
+            except Exception as e:
+                db.rollback()
+                results["errors"].append({"sale_uuid": uuid, "error": str(e)})
+
+        return results
 
     # ------------------------------------------------------------------
     # STATUT — optimisé + cache

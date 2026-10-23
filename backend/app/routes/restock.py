@@ -20,7 +20,7 @@ router = APIRouter()
     response_model=RestockOrderResponse,
     summary="Create a draft restock order"
 )
-async def create_restock_order(
+def create_restock_order(
     order: RestockOrderCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -44,7 +44,7 @@ async def create_restock_order(
     response_model=RestockOrderResponse,
     summary="Confirm order and update stock"
 )
-async def confirm_restock_order(
+def confirm_restock_order(
     id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -61,7 +61,7 @@ async def confirm_restock_order(
     response_model=RestockOrderResponse,
     summary="Cancel a restock order"
 )
-async def cancel_restock_order(
+def cancel_restock_order(
     id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -78,7 +78,7 @@ async def cancel_restock_order(
     response_model=List[MedicineResponse],
     summary="Get medicines with low stock"
 )
-async def get_low_stock_medicines(
+def get_low_stock_medicines(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):

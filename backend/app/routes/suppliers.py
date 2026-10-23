@@ -21,7 +21,7 @@ router = APIRouter()
     response_model=PaginatedResponse[SupplierResponse],
     summary="List suppliers with pagination"
 )
-async def list_suppliers(
+def list_suppliers(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     current_user: User = Depends(get_current_active_user),
@@ -47,7 +47,7 @@ async def list_suppliers(
     response_model=SupplierResponse,
     summary="Get a specific supplier"
 )
-async def get_supplier(
+def get_supplier(
     supplier_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -73,7 +73,7 @@ async def get_supplier(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new supplier (Admin only)"
 )
-async def create_supplier(
+def create_supplier(
     supplier_data: SupplierCreate,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -92,7 +92,7 @@ async def create_supplier(
     response_model=SupplierResponse,
     summary="Update a supplier (Admin only)"
 )
-async def update_supplier(
+def update_supplier(
     supplier_id: int,
     supplier_data: SupplierUpdate,
     current_admin: User = Depends(get_admin_user),
@@ -118,7 +118,7 @@ async def update_supplier(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a supplier (Admin only)"
 )
-async def delete_supplier(
+def delete_supplier(
     supplier_id: int,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)

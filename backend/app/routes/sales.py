@@ -265,7 +265,7 @@ def enrich_sale_response(sale, db: Session) -> dict:
 
 )
 
-async def create_sale(
+def create_sale(
 
     sale_data: SaleCreate,
 
@@ -392,7 +392,7 @@ async def create_sale(
 
 )
 
-async def get_sales_history(
+def get_sales_history(
 
     page: int = 1,
 
@@ -612,7 +612,7 @@ async def get_sales_history(
 
 )
 
-async def cancel_sale(
+def cancel_sale(
 
     sale_id: int,
 
@@ -782,7 +782,7 @@ _MED_STATS_CACHE_TTL = 30  # secondes
     "/medicine-stats",
     summary="Get medicine sales statistics by period"
 )
-async def get_medicine_sales_stats(
+def get_medicine_sales_stats(
     start_date: str = None,
     end_date: str = None,
     limit: int = None,
@@ -871,7 +871,7 @@ async def get_medicine_sales_stats(
 
 )
 
-async def get_sale(
+def get_sale(
 
     sale_id: int,
 
@@ -918,7 +918,7 @@ async def get_sale(
 
 )
 
-async def download_invoice(
+def download_invoice(
 
     sale_id: int,
 

@@ -58,7 +58,7 @@ def enrich_medicine_response(medicine, batch_count: Optional[int] = None) -> dic
     response_model=PaginatedResponse[MedicineResponse],
     summary="List medicines with pagination and filters"
 )
-async def list_medicines(
+def list_medicines(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     search: Optional[str] = Query(None, description="Search by name or code"),
@@ -114,7 +114,7 @@ async def list_medicines(
     response_model=list[MedicineResponse],
     summary="Get medicines expiring soon (next 6 months)"
 )
-async def get_expiring_soon_medicines_path(
+def get_expiring_soon_medicines_path(
     days: int = Query(180, description="Days threshold"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -132,7 +132,7 @@ async def get_expiring_soon_medicines_path(
     response_model=MedicineResponse,
     summary="Get a specific medicine"
 )
-async def get_medicine(
+def get_medicine(
     medicine_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -157,7 +157,7 @@ async def get_medicine(
     response_model=list[MedicineResponse],
     summary="Get medicines expiring soon (next 6 months)"
 )
-async def get_expiring_soon_alias(
+def get_expiring_soon_alias(
     days: int = Query(180, description="Days threshold"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -176,7 +176,7 @@ async def get_expiring_soon_alias(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new medicine"
 )
-async def create_medicine(
+def create_medicine(
     medicine_data: MedicineCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -220,7 +220,7 @@ async def create_medicine(
     response_model=MedicineResponse,
     summary="Update a medicine (Admin & Pharmacist)"
 )
-async def update_medicine(
+def update_medicine(
     medicine_id: int,
     medicine_data: MedicineUpdate,
     current_user: User = Depends(get_pharmacist_user),
@@ -299,7 +299,7 @@ async def update_medicine(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a medicine (Admin & Pharmacist)"
 )
-async def delete_medicine(
+def delete_medicine(
     medicine_id: int,
     current_user: User = Depends(get_pharmacist_user),
     db: Session = Depends(get_local_db)
@@ -344,7 +344,7 @@ async def delete_medicine(
     response_model=StockAlertsResponse,
     summary="Get stock alerts (low stock + expired)"
 )
-async def get_stock_alerts(
+def get_stock_alerts(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -367,7 +367,7 @@ async def get_stock_alerts(
     response_model=dict,
     summary="Get lot/batch expiration alerts"
 )
-async def get_batch_alerts(
+def get_batch_alerts(
     days: int = Query(180, ge=1, description="Days threshold"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -382,7 +382,7 @@ async def get_batch_alerts(
     summary="Check stock total consistency between medicines and batches",
     dependencies=[Depends(require_feature("inventory_reconciliation"))],
 )
-async def get_stock_integrity(
+def get_stock_integrity(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -396,7 +396,7 @@ async def get_stock_integrity(
     summary="Fix stock totals from active batches (Admin only)",
     dependencies=[Depends(require_feature("inventory_reconciliation"))],
 )
-async def fix_stock_integrity(
+def fix_stock_integrity(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
 ):
@@ -409,7 +409,7 @@ async def fix_stock_integrity(
     summary="Get stock movements journal with filters",
     dependencies=[Depends(require_feature("stock_movements"))],
 )
-async def get_stock_movements(
+def get_stock_movements(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     medicine_id: Optional[int] = Query(None, description="Filter by medicine ID"),
@@ -516,7 +516,7 @@ async def get_stock_movements(
     summary="Get modification and deletion history for a specific medicine",
     dependencies=[Depends(require_feature("audit_logs"))],
 )
-async def get_medicine_audit_history(
+def get_medicine_audit_history(
     medicine_id: int,
     current_user: User = Depends(get_pharmacist_user),
     db: Session = Depends(get_local_db),
@@ -548,7 +548,7 @@ async def get_medicine_audit_history(
     summary="Get global stock audit logs (modifications and deletions)",
     dependencies=[Depends(require_feature("audit_logs"))],
 )
-async def get_stock_audit_logs(
+def get_stock_audit_logs(
     action: Optional[str] = None,
     search: Optional[str] = None,
     start_date: Optional[str] = None,
@@ -592,7 +592,7 @@ class BulkDeleteLogsRequest(BaseModel):
     summary="Delete a single audit log entry (Admin only)",
     dependencies=[Depends(require_feature("audit_logs"))],
 )
-async def delete_stock_audit_log(
+def delete_stock_audit_log(
     log_id: int,
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
@@ -616,7 +616,7 @@ async def delete_stock_audit_log(
     summary="Bulk delete audit log entries (Admin only)",
     dependencies=[Depends(require_feature("audit_logs"))],
 )
-async def bulk_delete_stock_audit_logs(
+def bulk_delete_stock_audit_logs(
     body: BulkDeleteLogsRequest,
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
@@ -628,6 +628,176 @@ async def bulk_delete_stock_audit_logs(
     from app.services import audit_service
     count = audit_service.delete_audit_logs(db, body.log_ids)
     return {"success": True, "deleted_count": count, "message": f"{count} log(s) d'audit supprimé(s)"}
+
+
+@router.get(
+    "/restock-suggestions",
+    summary="Suggestions de réapprovisionnement basées sur la vitesse des ventes",
+)
+def get_restock_suggestions(
+    days: int = Query(30, ge=7, le=180, description="Période d'analyse en jours"),
+    urgency_filter: Optional[str] = Query(None, description="critical, warning, normal"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db),
+):
+    from datetime import datetime, timedelta
+    from app.models.pos_sale import POSSale, POSSaleItem
+    from app.models.medicine import Medicine
+    from sqlalchemy import func
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    sales_data = (
+        db.query(
+            POSSaleItem.medicine_id,
+            func.sum(POSSaleItem.quantity).label("total_sold"),
+        )
+        .join(POSSale, POSSaleItem.sale_id == POSSale.id)
+        .filter(POSSale.date >= cutoff, POSSale.status == "completed")
+        .group_by(POSSaleItem.medicine_id)
+        .all()
+    )
+    sold_map = {med_id: float(total or 0) for med_id, total in sales_data}
+
+    medicines = db.query(Medicine).filter(Medicine.is_active == True).all()
+    suggestions = []
+
+    for med in medicines:
+        sold = sold_map.get(med.id, 0.0)
+        daily_rate = sold / float(days)
+        current_stock = float(med.quantity or 0)
+
+        if daily_rate > 0:
+            days_remaining = current_stock / daily_rate
+        else:
+            days_remaining = 999.0 if current_stock > 0 else 0.0
+
+        if days_remaining <= 7 or current_stock <= 0:
+            urgency = "critical"
+        elif days_remaining <= 15:
+            urgency = "warning"
+        else:
+            urgency = "normal"
+
+        if urgency_filter and urgency != urgency_filter:
+            continue
+
+        suggested_qty = max(0, int(daily_rate * 30 - current_stock))
+        if urgency in ("critical", "warning") and suggested_qty == 0:
+            suggested_qty = max(10, int(med.min_stock_alert * 2))
+
+        suggestions.append({
+            "medicine_id": med.id,
+            "medicine_code": med.code,
+            "medicine_name": med.name,
+            "current_stock": current_stock,
+            "min_stock_alert": med.min_stock_alert,
+            "total_sold_period": sold,
+            "daily_sales_rate": round(daily_rate, 2),
+            "days_until_stockout": round(days_remaining, 1) if days_remaining < 999 else None,
+            "urgency": urgency,
+            "suggested_order_quantity": suggested_qty,
+            "estimated_cost": round(suggested_qty * (med.price_buy or 0.0), 2),
+        })
+
+    urgency_order = {"critical": 0, "warning": 1, "normal": 2}
+    suggestions.sort(key=lambda s: (urgency_order[s["urgency"]], s["days_until_stockout"] or 999))
+
+    return {
+        "analysis_period_days": days,
+        "total_medicines_analyzed": len(medicines),
+        "total_suggestions": len(suggestions),
+        "critical_count": sum(1 for s in suggestions if s["urgency"] == "critical"),
+        "warning_count": sum(1 for s in suggestions if s["urgency"] == "warning"),
+        "suggestions": suggestions,
+    }
+
+
+@router.get(
+    "/predictions",
+    summary="Prédictions de rupture de stock",
+)
+def get_stock_predictions(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db),
+):
+    from datetime import datetime, timedelta
+    from app.models.pos_sale import POSSale, POSSaleItem
+    from app.models.medicine import Medicine
+    from sqlalchemy import func
+
+    now = datetime.utcnow()
+    last_30d = now - timedelta(days=30)
+    last_60d = now - timedelta(days=60)
+
+    recent_sales = dict(
+        db.query(POSSaleItem.medicine_id, func.sum(POSSaleItem.quantity))
+        .join(POSSale, POSSaleItem.sale_id == POSSale.id)
+        .filter(POSSale.date >= last_30d, POSSale.status == "completed")
+        .group_by(POSSaleItem.medicine_id)
+        .all()
+    )
+
+    prior_sales = dict(
+        db.query(POSSaleItem.medicine_id, func.sum(POSSaleItem.quantity))
+        .join(POSSale, POSSaleItem.sale_id == POSSale.id)
+        .filter(POSSale.date >= last_60d, POSSale.date < last_30d, POSSale.status == "completed")
+        .group_by(POSSaleItem.medicine_id)
+        .all()
+    )
+
+    predictions = []
+    medicines = db.query(Medicine).filter(Medicine.is_active == True).all()
+
+    for med in medicines:
+        recent = float(recent_sales.get(med.id) or 0.0)
+        prior = float(prior_sales.get(med.id) or 0.0)
+
+        daily_rate_30 = recent / 30.0
+        daily_rate_prior = prior / 30.0
+
+        trend = "stable"
+        if daily_rate_prior > 0:
+            growth = (daily_rate_30 - daily_rate_prior) / daily_rate_prior
+            if growth > 0.2:
+                trend = "increasing"
+            elif growth < -0.2:
+                trend = "decreasing"
+
+        current_stock = float(med.quantity or 0)
+        if daily_rate_30 > 0:
+            days_left = current_stock / daily_rate_30
+            stockout_date = (now + timedelta(days=days_left)).strftime("%Y-%m-%d")
+            confidence = min(0.95, round(0.5 + min(recent, 50) / 100.0, 2))
+        else:
+            days_left = None
+            stockout_date = None
+            confidence = 0.3
+
+        if days_left is not None and days_left <= 60:
+            predictions.append({
+                "medicine_id": med.id,
+                "name": med.name,
+                "code": med.code,
+                "current_stock": current_stock,
+                "daily_consumption": round(daily_rate_30, 2),
+                "trend": trend,
+                "estimated_stockout_date": stockout_date,
+                "days_until_stockout": round(days_left, 1),
+                "confidence_score": confidence,
+                "rupture_dans_7j": days_left <= 7,
+                "rupture_dans_30j": days_left <= 30,
+            })
+
+    predictions.sort(key=lambda p: p["days_until_stockout"])
+
+    return {
+        "generated_at": now.isoformat(),
+        "total_at_risk_within_60_days": len(predictions),
+        "at_risk_within_7_days": sum(1 for p in predictions if p["rupture_dans_7j"]),
+        "at_risk_within_30_days": sum(1 for p in predictions if p["rupture_dans_30j"]),
+        "predictions": predictions,
+    }
 
 
 

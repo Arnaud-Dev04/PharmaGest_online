@@ -25,7 +25,7 @@ router = APIRouter()
     "/stock/pdf",
     summary="Download stock report (PDF)"
 )
-async def download_stock_pdf(
+def download_stock_pdf(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -55,7 +55,7 @@ async def download_stock_pdf(
     "/stock/pdf/preview",
     summary="Preview stock report (PDF inline)"
 )
-async def preview_stock_pdf(
+def preview_stock_pdf(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -86,7 +86,7 @@ async def preview_stock_pdf(
     summary="Download stock report (Excel)",
     dependencies=[Depends(require_feature("report_exports"))],
 )
-async def download_stock_excel(
+def download_stock_excel(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -117,7 +117,7 @@ async def download_stock_excel(
     summary="Download stock report (Word)",
     dependencies=[Depends(require_feature("report_exports"))],
 )
-async def download_stock_word(
+def download_stock_word(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -152,7 +152,7 @@ async def download_stock_word(
     summary="Download sales report (PDF)",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def download_sales_pdf(
+def download_sales_pdf(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -186,7 +186,7 @@ async def download_sales_pdf(
     summary="Preview sales report (PDF inline)",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def preview_sales_pdf(
+def preview_sales_pdf(
     start_date: date = None,
     end_date: date = None,
     current_user: User = Depends(get_current_active_user),
@@ -218,7 +218,7 @@ async def preview_sales_pdf(
     summary="Download sales report (Excel)",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def download_sales_excel(
+def download_sales_excel(
     start_date: date,
     end_date: date,
     current_user: User = Depends(get_current_active_user),
@@ -245,7 +245,7 @@ async def download_sales_excel(
     summary="Download sales report (Word)",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def download_sales_word(
+def download_sales_word(
     start_date: date,
     end_date: date,
     current_user: User = Depends(get_current_active_user),
@@ -276,7 +276,7 @@ async def download_sales_word(
     summary="Download financial summary (PDF)",
     dependencies=[Depends(require_feature("financial_reports"))],
 )
-async def download_financial_pdf(
+def download_financial_pdf(
     start_date: date = Query(None, description="Start date for period filter"),
     end_date: date = Query(None, description="End date for period filter"),
     period: str = "month",
@@ -310,7 +310,7 @@ async def download_financial_pdf(
     summary="Preview financial summary (PDF inline)",
     dependencies=[Depends(require_feature("financial_reports"))],
 )
-async def preview_financial_pdf(
+def preview_financial_pdf(
     start_date: date = Query(None, description="Start date for period filter"),
     end_date: date = Query(None, description="End date for period filter"),
     period: str = "month",
@@ -347,7 +347,7 @@ async def preview_financial_pdf(
     summary="Download treasury tracking (PDF)",
     dependencies=[Depends(require_feature("financial_reports"))],
 )
-async def download_treasury_pdf(
+def download_treasury_pdf(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -372,7 +372,7 @@ async def download_treasury_pdf(
     summary="Preview treasury tracking (PDF inline)",
     dependencies=[Depends(require_feature("financial_reports"))],
 )
-async def preview_treasury_pdf(
+def preview_treasury_pdf(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):

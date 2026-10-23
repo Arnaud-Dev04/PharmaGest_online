@@ -20,8 +20,12 @@ from app.models.stock_movement import StockMovement
 from app.models.medicine_pricing import MedicinePricing
 from app.models.audit_log import DeletionLog
 from app.models.cash_register import CashRegisterSession, CashRegisterMovement
+from app.models.customer_credit import CustomerCredit, CustomerCreditPayment
 
 __all__ = [
+    # Customer Credit
+    "CustomerCredit",
+    "CustomerCreditPayment",
     # Audit
     "DeletionLog",
     "CashRegisterSession",

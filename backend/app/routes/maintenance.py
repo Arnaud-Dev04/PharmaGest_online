@@ -12,11 +12,11 @@ def _is_maintenance_enabled() -> bool:
     return os.path.exists(MAINT_FILE)
 
 @router.get('/maintenance/status')
-async def maintenance_status():
+def maintenance_status():
     return { 'maintenance': _is_maintenance_enabled() }
 
 @router.post('/maintenance/enable')
-async def enable_maintenance(current_user = Depends(require_platform_admin)):
+def enable_maintenance(current_user = Depends(require_platform_admin)):
     """Only platform administrators may place the server into maintenance mode."""
     try:
         with open(MAINT_FILE, 'w') as f:
@@ -27,7 +27,7 @@ async def enable_maintenance(current_user = Depends(require_platform_admin)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/maintenance/disable')
-async def disable_maintenance(current_user = Depends(require_platform_admin)):
+def disable_maintenance(current_user = Depends(require_platform_admin)):
     """Only platform administrators may disable maintenance mode."""
     try:
         if os.path.exists(MAINT_FILE):

@@ -475,4 +475,149 @@ def test_sync_down_pulls_catalog_batches_pricing_and_customers():
         local_db.close()
         remote_db.close()
         local_engine.dispose()
+        remote_engine.dispose()
+
+
+def test_batch_upload_sales_idempotent(client, db, admin_user, admin_headers, pharmacy):
+    from app.models.medicine import Medicine
+    from app.models.pos_sale import POSSale
+
+    pharmacy.plan = "pro"
+    db.commit()
+
+    # Créer un médicament pour la vente
+    med = Medicine(
+        code="BATCH-MED-01",
+        name="Paracétamol Batch 500mg",
+        price_buy=500,
+        price_sell=800,
+        quantity=100,
+        pharmacy_id=pharmacy.id,
+    )
+    db.add(med)
+    db.commit()
+
+    batch_payload = {
+        "sales": [
+            {
+                "sale_uuid": "batch-uuid-test-001",
+                "code": "POS-BATCH-001",
+                "total_amount": 1600.0,
+                "payment_method": "cash",
+                "customer_name": "Client Batch A",
+                "customer_phone": "+25779123456",
+                "items": [
+                    {
+                        "medicine_code": "BATCH-MED-01",
+                        "quantity": 2,
+                        "unit_price": 800.0,
+                        "total_price": 1600.0,
+                    }
+                ],
+            },
+            {
+                "sale_uuid": "batch-uuid-test-002",
+                "code": "POS-BATCH-002",
+                "total_amount": 800.0,
+                "payment_method": "ecocash",
+                "items": [
+                    {
+                        "medicine_code": "BATCH-MED-01",
+                        "quantity": 1,
+                        "unit_price": 800.0,
+                        "total_price": 800.0,
+                    }
+                ],
+            },
+        ]
+    }
+
+    # 1er envoi : les 2 ventes doivent être insérées
+    resp1 = client.post("/sync/batch-up", json=batch_payload, headers=admin_headers)
+    assert resp1.status_code == 200, resp1.text
+    data1 = resp1.json()
+    assert data1["total_received"] == 2
+    assert data1["total_inserted"] == 2
+    assert data1["total_skipped"] == 0
+
+    # Vérification DB
+    s1 = db.query(POSSale).filter(POSSale.sale_uuid == "batch-uuid-test-001").first()
+    assert s1 is not None
+    assert s1.total_amount == 1600.0
+    assert len(s1.items) == 1
+
+    # 2eme envoi des mêmes ventes : idempotence totale, 0 doublon inséré
+    resp2 = client.post("/sync/batch-push", json=batch_payload, headers=admin_headers)
+    assert resp2.status_code == 200, resp2.text
+    data2 = resp2.json()
+    assert data2["total_received"] == 2
+    assert data2["total_inserted"] == 0
+    assert data2["total_skipped"] == 2
+
+
+def test_incremental_sync_down_filters_by_since():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.database.core import Base
+    from app.sync.sync_manager import SyncManager
+    from app.models.medicine import Medicine
+    from app.models.pharmacy import Pharmacy
+    from datetime import datetime, timedelta
+
+    local_engine = create_engine("sqlite:///:memory:")
+    remote_engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=local_engine)
+    Base.metadata.create_all(bind=remote_engine)
+
+    SessionLocal = sessionmaker(bind=local_engine)
+    SessionRemoteFactory = sessionmaker(bind=remote_engine)
+    local_db = SessionLocal()
+    remote_db = SessionRemoteFactory()
+
+    try:
+        pharma = Pharmacy(id=1, name="Pharma Incr", code="PHARMA-INCR")
+        remote_db.add(pharma)
+        remote_db.commit()
+
+        local_pharma = Pharmacy(id=1, name="Pharma Incr", code="PHARMA-INCR")
+        local_db.add(local_pharma)
+        local_db.commit()
+        local_db.info.update({"pharmacy_scope_enabled": True, "pharmacy_id": 1})
+        remote_db.info.update({"pharmacy_scope_enabled": True, "pharmacy_id": 1})
+
+        # Médicament ancien (hier)
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        med_old = Medicine(
+            code="MED-OLD",
+            name="Ancien Médicament",
+            price_buy=100,
+            price_sell=150,
+            pharmacy_id=1,
+            updated_at=yesterday,
+        )
+        # Médicament récent (aujourd'hui)
+        med_new = Medicine(
+            code="MED-NEW",
+            name="Nouveau Médicament",
+            price_buy=200,
+            price_sell=300,
+            pharmacy_id=1,
+            updated_at=datetime.utcnow(),
+        )
+        remote_db.add_all([med_old, med_new])
+        remote_db.commit()
+
+        # Sync avec since = 1 heure avant maintenant (ne doit prendre QUE le nouveau)
+        since_cutoff = datetime.utcnow() - timedelta(hours=1)
+        count = SyncManager._sync_medicines(local_db, remote_db, since=since_cutoff)
+        assert count == 1
+
+        local_med_new = local_db.query(Medicine).filter_by(code="MED-NEW").first()
+        assert local_med_new is not None
+        local_med_old = local_db.query(Medicine).filter_by(code="MED-OLD").first()
+        assert local_med_old is None
+    finally:
+        local_db.close()
+        remote_db.close()
+        local_engine.dispose()
         remote_engine.dispose()

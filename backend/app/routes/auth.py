@@ -160,7 +160,7 @@ async def login(
     summary="Register new user (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def register(
+def register(
     user_data: UserCreate,
     db: Session = Depends(get_local_db),
     current_admin: User = Depends(get_admin_user)
@@ -233,7 +233,7 @@ async def register(
     response_model=UserResponse,
     summary="Get current user information"
 )
-async def get_me(
+def get_me(
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -266,7 +266,7 @@ from app.schemas.auth import UserUpdatePassword
     response_model=List[UserResponse],
     summary="List all users (Admin only)",
 )
-async def get_users(
+def get_users(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
 ):
@@ -286,7 +286,7 @@ async def get_users(
     summary="Change user password (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def change_user_password(
+def change_user_password(
     user_id: int,
     password_data: UserUpdatePassword,
     db: Session = Depends(get_local_db)
@@ -309,7 +309,7 @@ async def change_user_password(
     summary="Delete a user (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def delete_user(
+def delete_user(
     user_id: int,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -353,7 +353,7 @@ async def delete_user(
     summary="Toggle user active status (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def toggle_user_status(
+def toggle_user_status(
     user_id: int,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -403,7 +403,7 @@ from datetime import datetime, timedelta
     summary="Get user sales statistics (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def get_user_sales_stats(
+def get_user_sales_stats(
     user_id: int,
     start_date: TypingOptional[str] = None,
     end_date: TypingOptional[str] = None,
@@ -525,7 +525,7 @@ async def get_user_sales_stats(
     summary="Get all users sales performance comparison (Admin only)",
     dependencies=[Depends(get_admin_user)]
 )
-async def get_users_performance(
+def get_users_performance(
     start_date: TypingOptional[str] = None,
     end_date: TypingOptional[str] = None,
     db: Session = Depends(get_local_db)
@@ -591,7 +591,7 @@ async def get_users_performance(
     "/change-initial-password",
     summary="Change password on first login (required for new users)"
 )
-async def change_initial_password(
+def change_initial_password(
     password_data: ChangeInitialPassword,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -643,7 +643,7 @@ from app.auth.dependencies import get_super_admin_user
     "/complete-setup",
     summary="Mark first-time setup as complete (Super Admin only)"
 )
-async def complete_setup(
+def complete_setup(
     current_user: User = Depends(get_super_admin_user),
     db: Session = Depends(get_local_db)
 ):
@@ -676,7 +676,7 @@ class ChangePasswordRequest(_BaseModel):
 
 
 @router.post("/change-password")
-async def change_password(
+def change_password(
     data: ChangePasswordRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),

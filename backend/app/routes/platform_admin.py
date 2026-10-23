@@ -68,7 +68,7 @@ def _metrics(db: Session, pharmacy_id: int | None = None) -> dict:
 
 
 @router.get("/pharmacies", response_model=PaginatedResponse[PharmacyResponse])
-async def list_pharmacies(
+def list_pharmacies(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     search: str | None = Query(None, max_length=100),
@@ -101,7 +101,7 @@ async def list_pharmacies(
 
 
 @router.get("/pharmacies/{pharmacy_id}", response_model=PharmacyResponse)
-async def get_pharmacy(
+def get_pharmacy(
     pharmacy_id: int,
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
@@ -114,7 +114,7 @@ async def get_pharmacy(
     response_model=PharmacyOnboardResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def onboard_pharmacy(
+def onboard_pharmacy(
     payload: PharmacyOnboardRequest,
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
@@ -158,7 +158,7 @@ async def onboard_pharmacy(
 
 
 @router.put("/pharmacies/{pharmacy_id}", response_model=PharmacyResponse)
-async def update_pharmacy(
+def update_pharmacy(
     pharmacy_id: int,
     payload: PharmacyUpdateRequest,
     _admin: User = Depends(require_platform_admin),
@@ -193,7 +193,7 @@ async def update_pharmacy(
 
 
 @router.patch("/pharmacies/{pharmacy_id}/status", response_model=PharmacyResponse)
-async def set_pharmacy_status(
+def set_pharmacy_status(
     pharmacy_id: int,
     payload: PharmacyStatusRequest,
     _admin: User = Depends(require_platform_admin),
@@ -207,7 +207,7 @@ async def set_pharmacy_status(
 
 
 @router.get("/metrics", response_model=PlatformMetricsResponse)
-async def get_platform_metrics(
+def get_platform_metrics(
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
 ):
@@ -218,7 +218,7 @@ async def get_platform_metrics(
     "/pharmacies/{pharmacy_id}/metrics",
     response_model=PlatformPharmacyMetricsResponse,
 )
-async def get_pharmacy_metrics(
+def get_pharmacy_metrics(
     pharmacy_id: int,
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
@@ -228,7 +228,7 @@ async def get_pharmacy_metrics(
 
 
 @router.get("/accounts", response_model=list[PlatformAccountResponse])
-async def list_platform_accounts(
+def list_platform_accounts(
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
 ):
@@ -259,7 +259,7 @@ async def list_platform_accounts(
     response_model=PlatformAccountResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_platform_account(
+def create_platform_account(
     payload: PlatformAccountCreateRequest,
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
@@ -299,7 +299,7 @@ async def create_platform_account(
     "/accounts/{user_id}/password",
     status_code=status.HTTP_200_OK,
 )
-async def reset_admin_password(
+def reset_admin_password(
     user_id: int,
     payload: PlatformPasswordResetRequest,
     current_admin: User = Depends(require_platform_admin),

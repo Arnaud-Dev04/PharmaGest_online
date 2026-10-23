@@ -18,7 +18,7 @@ router = APIRouter()
     "",
     summary="List users in pharmacy (Admin only)"
 )
-async def list_users(
+def list_users(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
 ):
@@ -30,7 +30,7 @@ async def list_users(
     "/{user_id}",
     summary="Get user details by ID"
 )
-async def get_user_by_id(
+def get_user_by_id(
     user_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -53,7 +53,7 @@ async def get_user_by_id(
     "/{user_id}/stats",
     summary="Get user sales statistics"
 )
-async def get_user_stats(
+def get_user_stats(
     user_id: int,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -77,7 +77,7 @@ class PasswordUpdate(BaseModel):
     "/{user_id}/password",
     summary="Update user password (Admin only)"
 )
-async def update_user_password(
+def update_user_password(
     user_id: int,
     password_data: PasswordUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -131,7 +131,7 @@ class UserUpdate(BaseModel):
     summary="Update user details",
     response_model=dict
 )
-async def update_user(
+def update_user(
     user_id: int,
     user_data: UserUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -208,7 +208,7 @@ async def update_user(
     }
 
 @router.post("/{user_id}/toggle-status")
-async def toggle_user_status(
+def toggle_user_status(
     user_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -234,7 +234,7 @@ async def toggle_user_status(
     return {"message": "Status updated", "is_active": user.is_active}
 
 @router.delete("/{user_id}")
-async def delete_user(
+def delete_user(
     user_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)

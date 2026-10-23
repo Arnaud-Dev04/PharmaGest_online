@@ -28,7 +28,7 @@ router = APIRouter()
     response_model=List[MedicineFamilyResponse],
     summary="List all medicine families"
 )
-async def list_families(
+def list_families(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -47,7 +47,7 @@ async def list_families(
     status_code=status.HTTP_201_CREATED,
     summary="Create a medicine family (Admin only)"
 )
-async def create_family(
+def create_family(
     family_data: MedicineFamilyCreate,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -75,7 +75,7 @@ async def create_family(
     response_model=MedicineFamilyResponse,
     summary="Update a medicine family (Admin only)"
 )
-async def update_family(
+def update_family(
     family_id: int,
     family_data: MedicineFamilyUpdate,
     current_admin: User = Depends(get_admin_user),
@@ -100,7 +100,7 @@ async def update_family(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a medicine family (Admin only)"
 )
-async def delete_family(
+def delete_family(
     family_id: int,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -127,7 +127,7 @@ async def delete_family(
     response_model=List[MedicineTypeResponse],
     summary="List all medicine types"
 )
-async def list_types(
+def list_types(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -146,7 +146,7 @@ async def list_types(
     status_code=status.HTTP_201_CREATED,
     summary="Create a medicine type (Admin only)"
 )
-async def create_type(
+def create_type(
     type_data: MedicineTypeCreate,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)
@@ -174,7 +174,7 @@ async def create_type(
     response_model=MedicineTypeResponse,
     summary="Update a medicine type (Admin only)"
 )
-async def update_type(
+def update_type(
     type_id: int,
     type_data: MedicineTypeUpdate,
     current_admin: User = Depends(get_admin_user),
@@ -199,7 +199,7 @@ async def update_type(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a medicine type (Admin only)"
 )
-async def delete_type(
+def delete_type(
     type_id: int,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db)

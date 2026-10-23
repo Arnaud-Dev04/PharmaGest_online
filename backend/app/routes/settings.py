@@ -19,7 +19,7 @@ router = APIRouter()
     response_model=SettingsResponse,
     summary="Get all settings"
 )
-async def get_settings(
+def get_settings(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -70,7 +70,7 @@ async def get_settings(
     response_model=SettingsResponse,
     summary="Update settings"
 )
-async def update_settings(
+def update_settings(
     settings_update: SettingsUpdate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -97,4 +97,4 @@ async def update_settings(
     db.commit()
     
     # Return updated state
-    return await get_settings(current_user, db)
+    return get_settings(current_user, db)

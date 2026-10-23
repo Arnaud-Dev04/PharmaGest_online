@@ -15,7 +15,11 @@ import os
 # Tests must not inherit developer/production credentials or database URLs.
 # Assign these before importing the application, which loads dotenv and builds engines.
 os.environ["SECRET_KEY"] = "test-secret-key-pharmagestion-32chars!!"
-os.environ["DB_URL_LOCAL"] = "sqlite:///:memory:"
+test_mysql_url = os.environ.get("PHARMAGEST_TEST_MYSQL_URL")
+if test_mysql_url:
+    os.environ["DB_URL_LOCAL"] = test_mysql_url
+else:
+    os.environ["DB_URL_LOCAL"] = "sqlite:///:memory:"
 os.environ["DB_URL_REMOTE"] = ""
 os.environ.pop("DB_URL", None)
 os.environ.pop("DATABASE_URL", None)
@@ -42,11 +46,15 @@ from render_main import app
 
 @pytest.fixture(scope="session")
 def engine():
-    """Crée un engine SQLite en mémoire pour toute la session de test."""
-    _engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-    )
+    """Crée un engine (SQLite en mémoire par défaut, ou MySQL réel si PHARMAGEST_TEST_MYSQL_URL est défini)."""
+    test_url = os.environ.get("PHARMAGEST_TEST_MYSQL_URL")
+    if test_url:
+        _engine = create_engine(test_url, pool_pre_ping=True)
+    else:
+        _engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+        )
     Base.metadata.create_all(bind=_engine)
     yield _engine
     Base.metadata.drop_all(bind=_engine)
@@ -67,7 +75,8 @@ def db(engine):
     yield session
 
     session.close()
-    transaction.rollback()
+    if transaction.is_active:
+        transaction.rollback()
     connection.close()
 
 

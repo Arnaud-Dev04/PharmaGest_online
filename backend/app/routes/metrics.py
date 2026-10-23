@@ -17,7 +17,7 @@ router = APIRouter()
     summary="Protected test endpoint",
     description="Test endpoint to verify authentication is working correctly"
 )
-async def get_metrics(
+def get_metrics(
     current_user: User = Depends(get_current_active_user)
 ):
     """

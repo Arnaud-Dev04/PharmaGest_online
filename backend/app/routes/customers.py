@@ -24,7 +24,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new customer"
 )
-async def create_customer(
+def create_customer(
     customer_data: CustomerCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -40,7 +40,7 @@ async def create_customer(
     response_model=PaginatedResponse[CustomerResponse],
     summary="Get customers list"
 )
-async def get_customers(
+def get_customers(
     page: int = 1,
     page_size: int = 50,
     search: Optional[str] = None,
@@ -70,7 +70,7 @@ async def get_customers(
     response_model=CustomerResponse,
     summary="Get customer details"
 )
-async def get_customer(
+def get_customer(
     customer_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -85,7 +85,7 @@ async def get_customer(
     response_model=CustomerResponse,
     summary="Update customer details"
 )
-async def update_customer(
+def update_customer(
     customer_id: int,
     customer_data: CustomerUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -103,7 +103,7 @@ async def update_customer(
     "/{customer_id}",
     summary="Delete customer"
 )
-async def delete_customer(
+def delete_customer(
     customer_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)

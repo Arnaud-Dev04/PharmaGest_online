@@ -26,7 +26,7 @@ logger = logging.getLogger("sync_routes")
     summary="Pousser les ventes locales vers la DB MySQL remote",
     dependencies=[Depends(require_feature("cloud_sync"))],
 )
-async def sync_push(
+def sync_push(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
 ):
@@ -51,23 +51,56 @@ async def sync_push(
         return {"success": False, "error": str(e), "synced": 0, "online": False}
 
 
+from app.schemas.sync import SyncBatchUpRequest, SyncBatchUpResponse
+
+@router.post(
+    "/batch-up",
+    response_model=SyncBatchUpResponse,
+    summary="Envoi groupé de ventes POS vers le cloud (batch upload)",
+    dependencies=[Depends(require_feature("cloud_sync"))],
+)
+@router.post(
+    "/batch-push",
+    response_model=SyncBatchUpResponse,
+    summary="Alias d'envoi groupé de ventes POS vers le cloud",
+    dependencies=[Depends(require_feature("cloud_sync"))],
+)
+def batch_upload_sales(
+    payload: SyncBatchUpRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db),
+):
+    """
+    Reçoit un lot de ventes POS (jusqu'à 100 ventes par requête).
+    Traitement idempotent par sale_uuid :
+    - Les ventes déjà existantes sont sautées sans erreur.
+    - Les nouvelles ventes et leurs lignes sont insérées atomiquement.
+    """
+    return SyncManager.process_batch_upload(
+        db=db,
+        sales_payload=payload.sales,
+        current_user=current_user,
+    )
+
+
 @router.get(
     "/pull",
     summary="Recuperer les mises a jour depuis la DB MySQL remote",
     dependencies=[Depends(require_feature("cloud_sync"))],
 )
-async def sync_pull(
+def sync_pull(
+    force_full: bool = False,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
 ):
     """
     Recupere les parametres et medicaments depuis la DB MySQL remote vers la base locale.
 
-    Utile apres une installation fraiche ou pour synchroniser les
-    parametres de la pharmacie modifies depuis un autre poste.
+    Par défaut incrémental (depuis le dernier timestamp de sync).
+    Passer ?force_full=true pour forcer un rechargement complet.
     """
     try:
-        report = SyncManager.sync_down(local_db=db)
+        report = SyncManager.sync_down(local_db=db, force_full=force_full)
         return {
             "success": True,
             "message": f"{report.get('settings_updated', 0)} parametre(s) mis a jour",
@@ -79,7 +112,7 @@ async def sync_pull(
 
 
 @router.get("/status", summary="Etat de la synchronisation")
-async def sync_status(
+def sync_status(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
 ):

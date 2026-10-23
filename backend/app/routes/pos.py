@@ -11,7 +11,7 @@ Endpoints:
     GET  /pos/batches/{med_id}  — Get batches for a medicine
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -54,7 +54,7 @@ logger = logging.getLogger("pos_routes")
     "/sync-stock",
     summary="Sync legacy stock — auto-create batches for medicines without any"
 )
-async def sync_stock(
+def sync_stock(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -87,7 +87,7 @@ def invalidate_pos_cache(pharmacy_id: Optional[int] = None):
     response_model=list[ProductSearchResult],
     summary="Search products for POS (with batch info)"
 )
-async def search_products(
+def search_products(
     q: str = Query("", description="Search query (name or code). Empty = all products"),
     limit: int = Query(1000, ge=1, le=2000, description="Max results"),
     current_user: User = Depends(get_current_active_user),
@@ -114,7 +114,7 @@ async def search_products(
     response_model=list[ProductSearchResult],
     summary="Get top/frequent products"
 )
-async def get_top_products(
+def get_top_products(
     limit: int = Query(10, ge=1, le=20, description="Max results"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -149,7 +149,7 @@ async def get_top_products(
     response_model=CartAddResponse,
     summary="Calculate FEFO allocation for cart item"
 )
-async def cart_add(
+def cart_add(
     request: CartAddRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -184,7 +184,7 @@ async def cart_add(
     "/cart/remove",
     summary="Remove item from cart (frontend-managed)"
 )
-async def cart_remove(
+def cart_remove(
     medicine_id: int,
     current_user: User = Depends(get_current_active_user),
 ):
@@ -207,7 +207,7 @@ async def cart_remove(
     status_code=status.HTTP_201_CREATED,
     summary="Finalize POS sale — deduct stock per batch"
 )
-async def checkout(
+def checkout(
     checkout_data: POSCheckoutRequest,
     current_user: User = Depends(get_current_active_user),
     pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
@@ -299,7 +299,7 @@ async def checkout(
     response_model=dict,
     summary="Get POS sale details"
 )
-async def get_pos_sale(
+def get_pos_sale(
     sale_id: int,
     current_user: User = Depends(get_current_active_user),
     pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
@@ -328,12 +328,46 @@ async def get_pos_sale(
     )
 
 
+@router.get(
+    "/sale/{sale_id}/ticket",
+    summary="Générer un ticket thermique (texte, ESC/POS, JSON)",
+)
+def get_sale_ticket(
+    sale_id: int,
+    format: str = Query("text", pattern="^(text|escpos|json)$"),
+    width: int = Query(58),
+    current_user: User = Depends(get_current_active_user),
+    pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
+    db: Session = Depends(get_local_db),
+):
+    sale = pos_service.get_pos_sale_by_id(db, sale_id)
+    if not sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vente POS avec ID {sale_id} introuvable",
+        )
+    ensure_sales_record_access(pharmacy_context, sale.date)
+    enriched = pos_service.enrich_pos_sale_response(sale)
+    pharma_name = pharmacy_context.pharmacy.name if pharmacy_context.pharmacy else "Ma Pharmacie"
+
+    if format == "json":
+        return enriched
+
+    from app.services import thermal_printer_service
+    if format == "escpos":
+        raw_bytes = thermal_printer_service.generate_escpos_receipt(enriched, pharma_name, width_mm=width)
+        return Response(content=raw_bytes, media_type="application/octet-stream")
+
+    text_receipt = thermal_printer_service.generate_text_receipt(enriched, pharma_name, width_mm=width)
+    return Response(content=text_receipt, media_type="text/plain; charset=utf-8")
+
+
 @router.post(
     "/sale/{sale_id}/cancel",
     response_model=dict,
     summary="Cancel POS sale and restore batch stock"
 )
-async def cancel_pos_sale(
+def cancel_pos_sale(
     sale_id: int,
     current_user: User = Depends(get_current_active_user),
     pharmacy_context: PharmacyContext = Depends(get_current_pharmacy_context),
@@ -378,7 +412,7 @@ async def cancel_pos_sale(
     "/history",
     summary="Get POS sales history"
 )
-async def get_pos_history(
+def get_pos_history(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
@@ -431,7 +465,7 @@ async def get_pos_history(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new batch/lot for a medicine"
 )
-async def create_batch(
+def create_batch(
     batch_data: BatchCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
@@ -470,7 +504,7 @@ async def create_batch(
     response_model=list[BatchResponse],
     summary="Get batches for a medicine"
 )
-async def get_batches(
+def get_batches(
     medicine_id: int,
     include_empty: bool = Query(False, description="Include empty batches"),
     current_user: User = Depends(get_current_active_user),
@@ -509,7 +543,7 @@ async def get_batches(
     summary="Get user sales performance by period (self or all accounts for admin)",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def get_user_sales_summary(
+def get_user_sales_summary(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     user_id: Optional[int] = Query(None, description="Filter specific user (Admin only for other users)"),
@@ -676,7 +710,7 @@ async def get_user_sales_summary(
     summary="Get top selling medicines by volume and profitability across all accounts",
     dependencies=[Depends(require_feature("sales_reports"))],
 )
-async def get_top_medicines_report(
+def get_top_medicines_report(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     sort_by: str = Query("quantity", pattern="^(quantity|profit|revenue)$", description="Sort by: quantity, profit, or revenue"),

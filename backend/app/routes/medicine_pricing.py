@@ -72,7 +72,7 @@ def invalidate_pricing_cache(pharmacy_id: Optional[int] = None):
     response_model=PaginatedResponse[MedicinePricingResponse],
     summary="List pricing entries with pagination and search",
 )
-async def list_pricing_entries(
+def list_pricing_entries(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Items per page"),
     search: Optional[str] = Query(None, description="Search by name, lot, supplier, or DCI"),
@@ -109,7 +109,7 @@ async def list_pricing_entries(
     response_model=MedicinePricingResponse,
     summary="Get a specific pricing entry",
 )
-async def get_pricing_entry(
+def get_pricing_entry(
     entry_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
@@ -134,7 +134,7 @@ async def get_pricing_entry(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new pricing entry (Admin only)",
 )
-async def create_pricing_entry(
+def create_pricing_entry(
     data: MedicinePricingCreate,
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
@@ -154,7 +154,7 @@ async def create_pricing_entry(
     response_model=MedicinePricingResponse,
     summary="Update a pricing entry (Admin & Pharmacist)",
 )
-async def update_pricing_entry(
+def update_pricing_entry(
     entry_id: int,
     data: MedicinePricingUpdate,
     current_user: User = Depends(get_pharmacist_user),
@@ -224,7 +224,7 @@ async def update_pricing_entry(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a pricing entry (Admin only)",
 )
-async def delete_pricing_entry(
+def delete_pricing_entry(
     entry_id: int,
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_local_db),
@@ -270,7 +270,7 @@ async def delete_pricing_entry(
     "/alerts",
     summary="Get pricing alerts (expiring soon + low stock)",
 )
-async def get_pricing_alerts(
+def get_pricing_alerts(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
 ):
@@ -303,7 +303,7 @@ async def get_pricing_alerts(
     "/autocomplete",
     summary="Autocomplete medication names",
 )
-async def autocomplete_names(
+def autocomplete_names(
     q: str = Query(..., min_length=1, description="Search query"),
     limit: int = Query(10, ge=1, le=50),
     current_user: User = Depends(get_current_active_user),

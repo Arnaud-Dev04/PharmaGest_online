@@ -20,7 +20,7 @@ from app.core.license_guard import PLAN_FEATURES
 router = APIRouter()
 
 @router.get("/status")
-async def get_license_status(
+def get_license_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_local_db),
 ):
@@ -77,7 +77,7 @@ async def get_license_status(
 
 
 @router.put("/update", summary="Update license (Super Admin only)")
-async def update_license(
+def update_license(
     expiration_date: str = Body(..., description="New expiration date (YYYY-MM-DD)"),
     warning_days: Optional[int] = Body(90, description="Warning threshold in days"),
     warning_message: Optional[str] = Body(None, description="Custom warning message"),

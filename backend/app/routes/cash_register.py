@@ -18,7 +18,7 @@ router = APIRouter()
 
 
 @router.get("/current", response_model=CashSessionResponse | None)
-async def get_current_cash_session(
+def get_current_cash_session(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
 ):
@@ -26,7 +26,7 @@ async def get_current_cash_session(
 
 
 @router.post("/open", response_model=CashSessionResponse, status_code=status.HTTP_201_CREATED)
-async def open_cash_session(
+def open_cash_session(
     payload: CashSessionOpenRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db),
@@ -40,7 +40,7 @@ async def open_cash_session(
 
 
 @router.post("/{session_id}/movements", response_model=CashSessionResponse)
-async def create_cash_movement(
+def create_cash_movement(
     session_id: int,
     payload: CashMovementCreate,
     current_user: User = Depends(get_current_active_user),
@@ -57,7 +57,7 @@ async def create_cash_movement(
 
 
 @router.post("/{session_id}/close", response_model=CashSessionResponse)
-async def close_cash_session(
+def close_cash_session(
     session_id: int,
     payload: CashSessionCloseRequest,
     current_user: User = Depends(get_current_active_user),
@@ -73,7 +73,7 @@ async def close_cash_session(
 
 
 @router.get("/sessions")
-async def list_cash_sessions(
+def list_cash_sessions(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     status_filter: str | None = Query(None, pattern="^(open|closed)$"),

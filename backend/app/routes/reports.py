@@ -28,6 +28,7 @@ router = APIRouter()
 def download_stock_pdf(
     start_date: date = None,
     end_date: date = None,
+    limit: int = Query(1000, ge=1, le=5000),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -35,7 +36,7 @@ def download_stock_pdf(
     Generate and download stock status as PDF with optional date filtering.
     """
     try:
-        pdf_file = report_service.generate_stock_pdf(db, start_date=start_date, end_date=end_date)
+        pdf_file = report_service.generate_stock_pdf(db, start_date=start_date, end_date=end_date, limit=limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -58,6 +59,7 @@ def download_stock_pdf(
 def preview_stock_pdf(
     start_date: date = None,
     end_date: date = None,
+    limit: int = Query(1000, ge=1, le=5000),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_local_db)
 ):
@@ -65,7 +67,7 @@ def preview_stock_pdf(
     Generate and display stock PDF inline in the browser with optional date filtering.
     """
     try:
-        pdf_file = report_service.generate_stock_pdf(db, start_date=start_date, end_date=end_date)
+        pdf_file = report_service.generate_stock_pdf(db, start_date=start_date, end_date=end_date, limit=limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

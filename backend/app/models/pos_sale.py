@@ -69,6 +69,15 @@ class POSSale(Base, BaseModelMixin, PharmacyScopedMixin):
     sync_status = Column(String(20), default="local_only", nullable=False, index=True)
     synced_at = Column(DateTime, nullable=True)
 
+    # Champs fiscaux & OBR EBMS Burundi
+    obr_invoice_number = Column(String(100), nullable=True, index=True)
+    obr_signature = Column(String(255), nullable=True)
+    obr_electronic_signature = Column(String(500), nullable=True)
+    obr_qr_code = Column(String(500), nullable=True)
+    obr_sync_status = Column(String(20), default="local_only", nullable=False, index=True)
+    obr_synced_at = Column(DateTime, nullable=True)
+    obr_error_message = Column(String(500), nullable=True)
+
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
     cancelled_by_user = relationship("User", foreign_keys=[cancelled_by])
@@ -79,7 +88,7 @@ class POSSale(Base, BaseModelMixin, PharmacyScopedMixin):
     def __repr__(self):
         return (
             f"<POSSale(id={self.id}, uuid='{self.sale_uuid}', code='{self.code}', "
-            f"total={self.total_amount} FBu, status='{self.status}', sync='{self.sync_status}')>"
+            f"total={self.total_amount} FBu, status='{self.status}', sync='{self.sync_status}', obr='{self.obr_sync_status}')>"
         )
 
 
@@ -100,6 +109,12 @@ class POSSaleItem(Base, BaseModelMixin, PharmacyScopedMixin):
     total_price = Column(Float, nullable=False)
     sale_type = Column(String(20), default="packaging", nullable=True)
     discount_percent = Column(Float, default=0.0, nullable=True)
+
+    # Détails fiscaux OBR par ligne
+    tax_rate = Column(Float, default=0.0, nullable=False)  # 0.0 ou 18.0
+    tax_amount = Column(Float, default=0.0, nullable=False)  # Montant TVA calculé
+    price_nvat = Column(Float, default=0.0, nullable=False)  # Montant Net Hors TVA
+    price_wvat = Column(Float, default=0.0, nullable=False)  # Montant Avec TVA (TTC)
 
     # Relationships
     sale = relationship("POSSale", back_populates="items")

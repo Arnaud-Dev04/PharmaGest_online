@@ -502,8 +502,8 @@ class _MedicineFormDialogState extends State<MedicineFormDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? Colors.grey[850] : Colors.blue.shade50;
     final borderColor = isDark
-        ? Colors.blueGrey.withOpacity(0.35)
-        : AppTheme.primaryColor.withOpacity(0.35);
+        ? Colors.blueGrey.withValues(alpha: 0.35)
+        : AppTheme.primaryColor.withValues(alpha: 0.35);
 
     final initialDate = _expiryDateController.text.isNotEmpty
         ? DateFormat('yyyy-MM-dd').parse(_expiryDateController.text)

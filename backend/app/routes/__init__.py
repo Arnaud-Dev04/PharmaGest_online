@@ -1,7 +1,6 @@
 """Routes package."""
 
 from .auth import router as auth_router
-from .metrics import router as metrics_router
 from .stock import router as stock_router
 from .config import router as config_router
 from .suppliers import router as suppliers_router
@@ -19,10 +18,14 @@ from .pos import router as pos_router
 from .sync import router as sync_router
 from .platform_admin import router as platform_admin_router
 from .cash_register import router as cash_register_router
+from .customer_credits import router as customer_credits_router
+from .search import router as search_router
+from .accounting import router as accounting_router
+from .restock import router as restock_router
+from .obr import router as obr_router
 
 __all__ = [
     "auth_router",
-    "metrics_router",
     "stock_router",
     "config_router",
     "suppliers_router",
@@ -40,5 +43,9 @@ __all__ = [
     "sync_router",
     "platform_admin_router",
     "cash_register_router",
+    "customer_credits_router",
+    "search_router",
+    "accounting_router",
+    "restock_router",
+    "obr_router",
 ]
-

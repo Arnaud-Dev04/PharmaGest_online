@@ -1,5 +1,5 @@
-/// Service centralisé de calcul de prix multi-niveaux.
-/// Utilisé par la Liste, le POS et le Dashboard.
+// Service centralisé de calcul de prix multi-niveaux.
+// Utilisé par la Liste, le POS et le Dashboard.
 import 'package:frontend1/models/medicine_pricing.dart';
 import 'package:intl/intl.dart';
 

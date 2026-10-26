@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:frontend1/services/api_service.dart';
 import 'package:frontend1/models/user.dart';
@@ -32,6 +33,7 @@ class AuthService {
 
       return {
         'access_token': response.data['access_token'] as String,
+        'refresh_token': response.data['refresh_token'] as String?,
         'must_change_password': response.data['must_change_password'] as bool? ?? false,
         'is_first_setup': response.data['is_first_setup'] as bool? ?? false,
       };
@@ -106,6 +108,54 @@ class AuthService {
     try {
       await _apiService.post('/auth/complete-setup');
     } on DioException catch (e) {
+      throw Exception('Erreur: ${e.message}');
+    }
+  }
+
+  /// Rafraîchir le token d'accès via le refresh token
+  Future<Map<String, dynamic>> refreshAccessToken(String refreshToken) async {
+    try {
+      final response = await _apiService.post(
+        '/auth/refresh',
+        data: {'refresh_token': refreshToken},
+      );
+      return {
+        'access_token': response.data['access_token'] as String,
+        'refresh_token': response.data['refresh_token'] as String?,
+      };
+    } on DioException catch (e) {
+      debugPrint('[AuthService] Erreur refreshAccessToken: ${e.message}');
+      throw Exception('Session expirée ou jeton de rafraîchissement invalide');
+    }
+  }
+
+  /// Demander un lien de réinitialisation de mot de passe
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _apiService.post(
+        '/auth/forgot-password',
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      throw Exception('Erreur: ${e.message}');
+    }
+  }
+
+  /// Réinitialiser le mot de passe avec un token
+  Future<void> resetPassword(String token, String newPassword) async {
+    try {
+      await _apiService.post(
+        '/auth/reset-password',
+        data: {
+          'token': token,
+          'new_password': newPassword,
+        },
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        final detail = e.response?.data['detail'] ?? 'Token invalide ou expiré';
+        throw Exception(detail);
+      }
       throw Exception('Erreur: ${e.message}');
     }
   }

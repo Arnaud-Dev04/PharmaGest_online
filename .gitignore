@@ -33,6 +33,8 @@ _ARCHIVE/
 !.gitignore
 !render.yaml
 !build.sh
+!deploy.bat
+!deploy.ps1
 
 # ----------------------------------------------------------------------------
 # 2. Python / Backend Exclusions

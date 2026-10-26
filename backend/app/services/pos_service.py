@@ -20,10 +20,13 @@ import logging
 from app.models.medicine import Medicine
 from app.models.batch import Batch
 from app.models.customer import Customer
+from app.models.pharmacy import Pharmacy
 from app.models.pos_sale import POSSale, POSSaleItem
 from app.models.cash_register import CashRegisterSession
 from app.models.medicine_pricing import MedicinePricing
 from app.models.stock_movement import StockMovement
+from app.services.tax_calculator import TaxCalculator
+from app.services.obr_client import OBRClient
 from app.schemas.pos import (
     CartAddRequest, CartAddResponse,
     BatchAllocation, BatchInfo,
@@ -738,16 +741,32 @@ def checkout(
             base_units = validated["base_units"]
             price_per_base_unit = line_total / base_units if base_units else 0.0
             
+            tax_rate = float(getattr(medicine, 'tax_rate', 0.0) or 0.0)
+            
             for alloc in item.allocations:
-                # Create sale item per batch allocation
+                item_alloc_total = price_per_base_unit * alloc.quantity
+                tax_data = TaxCalculator.compute_item_tax(
+                    unit_price=price_per_base_unit,
+                    quantity=alloc.quantity,
+                    tax_rate=tax_rate,
+                    discount_percent=item.discount_percent or 0.0,
+                    item_ct=float(getattr(medicine, 'item_ct', 0.0) or 0.0),
+                    item_tl=float(getattr(medicine, 'item_tl', 0.0) or 0.0),
+                )
+
+                # Create sale item per batch allocation with fiscal fields
                 sale_item = POSSaleItem(
                     sale_id=sale.id,
                     medicine_id=medicine.id,
                     batch_id=alloc.batch_id,
                     quantity=alloc.quantity,
                     unit_price=price_per_base_unit,
-                    total_price=price_per_base_unit * alloc.quantity,
+                    total_price=item_alloc_total,
                     discount_percent=item.discount_percent or 0.0,
+                    tax_rate=tax_data["tax_rate"],
+                    tax_amount=tax_data["vat_amount"],
+                    price_nvat=tax_data["item_price_nvat"],
+                    price_wvat=tax_data["item_price_wvat"],
                 )
                 db.add(sale_item)
                 
@@ -793,6 +812,44 @@ def checkout(
 
         if customer is not None and bonus_earned > 0:
             customer.total_points += bonus_earned
+
+        # Phase 3.5: Scellement fiscal & Signature EBMS OBR
+        db.flush()
+        pharmacy = db.query(Pharmacy).filter(Pharmacy.id == sale.pharmacy_id).first()
+        if pharmacy:
+            obr_items_payload = []
+            for s_item in sale.items:
+                m_name = getattr(s_item.medicine, 'name', '') if s_item.medicine else 'Article'
+                obr_items_payload.append({
+                    "name": m_name,
+                    "quantity": s_item.quantity,
+                    "unit_price": s_item.unit_price,
+                    "total_price": s_item.total_price,
+                    "tax_rate": s_item.tax_rate,
+                    "tax_amount": s_item.tax_amount,
+                    "price_nvat": s_item.price_nvat,
+                    "price_wvat": s_item.price_wvat,
+                })
+
+            obr_client = OBRClient(pharmacy)
+            c_tin = getattr(customer, 'customer_nif', None) if customer else None
+            c_name = checkout_data.customer_name or (f"{customer.first_name} {customer.last_name}" if customer else None)
+            
+            obr_res = obr_client.send_invoice(
+                invoice_code=sale.code,
+                sale_date=sale.date,
+                total_amount=sale.total_amount,
+                items=obr_items_payload,
+                customer_tin=c_tin,
+                customer_name=c_name,
+                payment_method=checkout_data.payment_method,
+            )
+            sale.obr_invoice_number = obr_res.get("obr_invoice_number")
+            sale.obr_signature = obr_res.get("obr_signature")
+            sale.obr_electronic_signature = obr_res.get("obr_electronic_signature")
+            sale.obr_qr_code = obr_res.get("obr_qr_code")
+            sale.obr_sync_status = obr_res.get("sync_status", "local_only")
+            sale.obr_synced_at = datetime.now()
         
         # Phase 4: Commit
         db.commit()

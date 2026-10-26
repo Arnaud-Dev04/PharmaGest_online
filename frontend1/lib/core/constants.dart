@@ -9,15 +9,15 @@ class AppConstants {
   // ── Backend URL ────────────────────────────────────────────────────────────
   // Local (Windows desktop) : http://127.0.0.1:8000
   // Cloud (Render)          : https://pharmagest-pnn8.onrender.com
-  static const String _localApi  = 'http://127.0.0.1:8000';
-  static const String _remoteApi = 'https://pharmagest-pnn8.onrender.com';
+  static const String localApiUrl  = 'http://127.0.0.1:8000';
+  static const String remoteApiUrl = 'https://pharmagest-pnn8.onrender.com';
 
   // ── Mode actif ─────────────────────────────────────────────────────────────
-  // LOCAL  → _localApi  (backend Python sur ce PC, port 8000)
-  // CLOUD  → _remoteApi (backend Render Frankfurt, même région qu'Aiven)
+  // LOCAL  → localApiUrl  (backend Python sur ce PC, port 8000)
+  // CLOUD  → remoteApiUrl (backend Render Frankfurt, même région qu'Aiven)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: _remoteApi,
+    defaultValue: remoteApiUrl,
   );
 
   // ============================================================================

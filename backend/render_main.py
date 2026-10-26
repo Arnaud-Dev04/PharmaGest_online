@@ -11,12 +11,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from contextlib import asynccontextmanager
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-
-# Rate limiter global — partagé avec les routes
-limiter = Limiter(key_func=get_remote_address)
+from app.core.limiter import limiter
 
 # SENTRY APM & ERROR TRACKING (OPTIONAL IN PRODUCTION)
 _sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
@@ -35,7 +32,8 @@ if _sentry_dsn:
 
 # ── Import des routes ─────────────────────────────────────────────────────────
 from app.routes.auth import router as auth_router
-from app.routes.metrics import router as metrics_router
+from app.routes.maintenance import router as maintenance_router
+from app.routes.restock import router as restock_router
 from app.routes.stock import router as stock_router
 from app.routes.config import router as config_router
 from app.routes.suppliers import router as suppliers_router
@@ -53,6 +51,7 @@ from app.routes.platform_admin import router as platform_admin_router
 from app.routes.customer_credits import router as customer_credits_router
 from app.routes.search import router as search_router
 from app.routes.accounting import router as accounting_router
+from app.routes.obr import router as obr_router
 
 # Routers optionnels (peuvent ne pas exister sur Render selon la version)
 try:
@@ -164,7 +163,6 @@ else:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 app.include_router(auth_router,             prefix="/auth",     tags=["Auth"])
-app.include_router(metrics_router,                              tags=["Metrics"])
 app.include_router(stock_router,            prefix="/stock",    tags=["Stock"])
 app.include_router(config_router,           prefix="/config",   tags=["Config"])
 app.include_router(suppliers_router,        prefix="/suppliers",tags=["Suppliers"])
@@ -173,6 +171,7 @@ app.include_router(dashboard_router,        prefix="/dashboard",tags=["Dashboard
 app.include_router(reports_router,          prefix="/reports",  tags=["Reports"])
 app.include_router(settings_router,         prefix="/settings", tags=["Settings"])
 app.include_router(admin_router,            prefix="/admin",    tags=["Admin"])
+app.include_router(maintenance_router,      prefix="/admin",    tags=["Admin"])
 app.include_router(users_router,            prefix="/users",    tags=["Users"])
 app.include_router(customers_router,        prefix="/customers",tags=["Customers"])
 app.include_router(medicine_pricing_router, prefix="/pricing",  tags=["Pricing"])
@@ -182,6 +181,8 @@ app.include_router(platform_admin_router,   prefix="/platform", tags=["Platform 
 app.include_router(customer_credits_router, prefix="/credits",  tags=["Customer Credits"])
 app.include_router(search_router)
 app.include_router(accounting_router)
+app.include_router(restock_router,          prefix="/restock",  tags=["Restock"])
+app.include_router(obr_router)
 if _has_license and license_router:
     app.include_router(license_router,      prefix="/license",  tags=["License"])
 if _has_sync and sync_router:

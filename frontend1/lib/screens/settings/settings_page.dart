@@ -6,7 +6,6 @@ import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/providers/auth_provider.dart';
-import 'package:frontend1/core/error_helper.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

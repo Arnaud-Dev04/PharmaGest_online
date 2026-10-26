@@ -28,6 +28,10 @@ class Customer(Base, BaseModelMixin, PharmacyScopedMixin):
     phone = Column(String(20), nullable=False, index=True)
     total_points = Column(Integer, default=0, nullable=False)
     
+    # Informations fiscales OBR
+    customer_nif = Column(String(50), nullable=True, index=True)
+    customer_tax_center = Column(String(50), nullable=True)
+    
     # Relationships
     sales = relationship("Sale", back_populates="customer")
     

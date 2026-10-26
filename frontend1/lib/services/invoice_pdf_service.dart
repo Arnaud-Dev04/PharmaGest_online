@@ -115,6 +115,12 @@ class InvoicePdfService {
                   sale.paymentMethod == 'insurance_card')
                 _buildInsuranceBlock(sale),
 
+              // ══════════════════════════════════════════════════════════
+              // CERTIFICATION FISCALE OBR BURUNDI (QR Code & Signature)
+              // ══════════════════════════════════════════════════════════
+              _buildObrFiscalBlock(sale),
+              pw.SizedBox(height: 8),
+
               pw.Spacer(),
 
               // ══════════════════════════════════════════════════════════
@@ -630,6 +636,91 @@ class InvoicePdfService {
           pw.Text(
             'Carte/Matricule: ${sale.insuranceCardId ?? "-"}   |   Couverture: ${sale.coveragePercent.toStringAsFixed(0)}%',
             style: const pw.TextStyle(fontSize: 9),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Bloc certification et QR Code officiel OBR
+  static pw.Widget _buildObrFiscalBlock(Sale sale) {
+    final qrData = sale.obrQrCode ??
+        'https://obr.gov.bi/ebms/check?inv=${sale.code}&sig=${sale.obrSignature ?? "LOCAL"}';
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFF9FAFB),
+        borderRadius: pw.BorderRadius.circular(6),
+        border: pw.Border.all(color: _borderColor, width: 0.8),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          // QR Code OBR officiel
+          pw.Container(
+            width: 54,
+            height: 54,
+            padding: const pw.EdgeInsets.all(3),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.white,
+              borderRadius: pw.BorderRadius.circular(4),
+              border: pw.Border.all(color: _borderColor, width: 0.5),
+            ),
+            child: pw.BarcodeWidget(
+              barcode: pw.Barcode.qrCode(),
+              data: qrData,
+              drawText: false,
+            ),
+          ),
+          pw.SizedBox(width: 12),
+          // Mentions légales fiscales
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'CONFORME EBMS - OBR BURUNDI',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _primaryColor,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: pw.BoxDecoration(
+                        color: const PdfColor.fromInt(0xFFE8F8F5),
+                        borderRadius: pw.BorderRadius.circular(3),
+                      ),
+                      child: pw.Text(
+                        sale.obrSyncStatus == 'synced' ? 'TRANSMIS' : 'SIGNÉ LOCAL',
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          fontWeight: pw.FontWeight.bold,
+                          color: _successColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  'N° Enregistrement Fiscal: ${sale.obrInvoiceNumber ?? sale.code}',
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'Signature Électronique: ${sale.obrSignature ?? "VALIDÉE"}',
+                  style: pw.TextStyle(fontSize: 7, color: _textMuted, fontStyle: pw.FontStyle.italic),
+                  maxLines: 1,
+                ),
+              ],
+            ),
           ),
         ],
       ),

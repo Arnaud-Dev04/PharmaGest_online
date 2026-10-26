@@ -27,10 +27,20 @@ class LicenseService:
         # Try to get from DB if session is provided
         if db:
             try:
-                # 1. Expiration Date
-                setting = db.query(Settings).filter(Settings.key == "license_expiry_date").first()
-                if setting and setting.value:
-                    expiration_date_str = setting.value
+                pharmacy = None
+                if pharmacy_id:
+                    from app.models.pharmacy import Pharmacy
+                    pharmacy = db.query(Pharmacy).filter(Pharmacy.id == pharmacy_id).first()
+
+                if pharmacy and pharmacy.license_expires_at:
+                    expiration_date_str = pharmacy.license_expires_at.strftime("%Y-%m-%d")
+                    if pharmacy.license_is_trial:
+                        warning_msg = "Votre période d'essai expire bientôt. Veuillez souscrire à un abonnement."
+                else:
+                    # 1. Expiration Date from Settings fallback
+                    setting = db.query(Settings).filter(Settings.key == "license_expiry_date").first()
+                    if setting and setting.value:
+                        expiration_date_str = setting.value
 
                 # 2. Warning Days Threshold
                 setting = db.query(Settings).filter(Settings.key == "license_warning_bdays").first()

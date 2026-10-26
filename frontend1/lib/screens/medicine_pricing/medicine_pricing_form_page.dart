@@ -760,7 +760,7 @@ class _MedicinePricingFormPageState extends State<MedicinePricingFormPage> {
             Expanded(
               flex: 2,
               child: DropdownButtonFormField<String>(
-                value: _seuilNiveau,
+                initialValue: _seuilNiveau,
                 decoration: const InputDecoration(
                   labelText: 'Niveau du seuil',
                   prefixIcon: Icon(Icons.layers, size: 18),
@@ -834,7 +834,7 @@ class _MedicinePricingFormPageState extends State<MedicinePricingFormPage> {
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<OrdonnanceType>(
-                value: _ordonnance,
+                initialValue: _ordonnance,
                 decoration: const InputDecoration(
                   labelText: 'Type d\'ordonnance',
                   prefixIcon: Icon(Icons.description, size: 18),
@@ -858,7 +858,7 @@ class _MedicinePricingFormPageState extends State<MedicinePricingFormPage> {
 
   // --- Autocomplete loader ---
   Future<void> _loadAutocompleteSuggestions(String query) async {
-    if (query.length < 1) return;
+    if (query.isEmpty) return;
     try {
       final results = await _service.autocompleteNames(query);
       if (mounted) {

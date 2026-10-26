@@ -602,7 +602,7 @@ class _UserSalesPerformanceDialogState extends State<UserSalesPerformanceDialog>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: dailyList.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (ctx, i) {
                   final item = dailyList[i];
                   final d = item['date'] as String? ?? '';
@@ -650,7 +650,7 @@ class _UserSalesPerformanceDialogState extends State<UserSalesPerformanceDialog>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: recentSales.take(15).length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (ctx, i) {
                   final s = recentSales[i];
                   final code = s['code'] as String? ?? 'N/A';

@@ -2,21 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
-
 import 'package:frontend1/services/reports_service.dart';
 import 'package:open_file/open_file.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/providers/license_provider.dart';
-
-// ══════════════════════════════════════════════════════════════════
-// Imports conditionnels pour le téléchargement web
-// ══════════════════════════════════════════════════════════════════
-import 'package:frontend1/services/reports_service_web.dart'
-    if (dart.library.io) 'package:frontend1/services/reports_service_io.dart'
-    as platform_save;
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});

@@ -29,7 +29,7 @@ class ApiService {
     );
 
     // Ajouter les intercepteurs
-    _dio.interceptors.add(_AuthInterceptor(_secureStorage));
+    _dio.interceptors.add(_AuthInterceptor(_secureStorage, _dio));
     _dio.interceptors.add(_ErrorInterceptor());
     _dio.interceptors.add(
       LogInterceptor(
@@ -121,11 +121,12 @@ class ApiService {
   }
 }
 
-/// Intercepteur pour ajouter le token JWT aux requêtes
-class _AuthInterceptor extends Interceptor {
+/// Intercepteur pour ajouter le token JWT aux requêtes et renouveler automatiquement les sessions expirées (401)
+class _AuthInterceptor extends QueuedInterceptor {
   final FlutterSecureStorage _storage;
+  final Dio _dio;
 
-  _AuthInterceptor(this._storage);
+  _AuthInterceptor(this._storage, this._dio);
 
   @override
   Future<void> onRequest(
@@ -141,6 +142,65 @@ class _AuthInterceptor extends Interceptor {
     }
 
     handler.next(options);
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    if (err.response?.statusCode == 401) {
+      final path = err.requestOptions.path;
+      // Ne pas renouveler si la requête est déjà une tentative d'authentification
+      if (!path.contains('/auth/login') &&
+          !path.contains('/auth/refresh') &&
+          !path.contains('/auth/forgot-password')) {
+        final refreshToken = await _storage.read(key: 'refresh_token');
+
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          try {
+            // Instance séparée pour éviter les boucles d'interception
+            final refreshDio = Dio(
+              BaseOptions(
+                baseUrl: AppConstants.apiBaseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 15),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+              ),
+            );
+
+            final response = await refreshDio.post(
+              '/auth/refresh',
+              data: {'refresh_token': refreshToken},
+            );
+
+            if (response.statusCode == 200 && response.data != null) {
+              final newAccessToken = response.data['access_token'] as String;
+              final newRefreshToken = response.data['refresh_token'] as String?;
+
+              await _storage.write(key: 'auth_token', value: newAccessToken);
+              if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+                await _storage.write(key: 'refresh_token', value: newRefreshToken);
+              }
+
+              // Mettre à jour le header de la requête en échec et la relancer
+              err.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+              final clonedResponse = await _dio.fetch(err.requestOptions);
+              return handler.resolve(clonedResponse);
+            }
+          } catch (e) {
+            debugPrint('[_AuthInterceptor] Échec du rafraîchissement automatique: $e');
+            await _storage.delete(key: 'auth_token');
+            await _storage.delete(key: 'refresh_token');
+          }
+        }
+      }
+    }
+
+    handler.next(err);
   }
 }
 
@@ -170,12 +230,20 @@ class _ErrorInterceptor extends Interceptor {
     Color bgColor = Colors.red;
 
     if (err.response != null) {
-      if (err.response?.statusCode == 400) bgColor = Colors.orange;
-      else if (err.response?.statusCode == 401) bgColor = Colors.blueGrey;
-      else if (err.response?.statusCode == 403) bgColor = Colors.orangeAccent;
-      else if (err.response?.statusCode == 404) bgColor = Colors.grey;
-      else if (err.response?.statusCode == 422) bgColor = Colors.orange;
-      else if (err.response?.statusCode == 500) bgColor = Colors.red[900]!;
+      final code = err.response?.statusCode;
+      if (code == 400) {
+        bgColor = Colors.orange;
+      } else if (code == 401) {
+        bgColor = Colors.blueGrey;
+      } else if (code == 403) {
+        bgColor = Colors.orangeAccent;
+      } else if (code == 404) {
+        bgColor = Colors.grey;
+      } else if (code == 422) {
+        bgColor = Colors.orange;
+      } else if (code == 500) {
+        bgColor = Colors.red[900]!;
+      }
     }
 
     // Afficher le message (si la vue est montée)

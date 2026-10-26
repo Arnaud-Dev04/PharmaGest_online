@@ -145,8 +145,8 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
     if (result == true) {
       _loadEntries();
       // Refresh inventory totals after adding a new pricing entry
-      try { Provider.of<InventoryProvider>(context, listen: false).loadTotals(); } catch (_) {}
       if (mounted) {
+        try { Provider.of<InventoryProvider>(context, listen: false).loadTotals(); } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Row(children: [
             Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
@@ -396,18 +396,24 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
 
   // ==================== CONTENT ====================
   Widget _buildContent(bool isAdmin, bool isSuperAdmin, bool isDark) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Icon(Icons.error_outline, size: 64, color: AppTheme.dangerColor),
-      const SizedBox(height: 16), const Text('Erreur de chargement'),
-      const SizedBox(height: 16),
-      ElevatedButton.icon(onPressed: _loadEntries, icon: const Icon(Icons.refresh), label: const Text('Réessayer')),
-    ]));
-    if (_entries.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.price_change, size: 64, color: AppTheme.primaryColor.withValues(alpha: 0.4)),
-      const SizedBox(height: 16), const Text('Aucune entrée de prix'),
-      const SizedBox(height: 8), Text('Cliquez sur "Nouveau" pour commencer', style: Theme.of(context).textTheme.bodySmall),
-    ]));
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Icon(Icons.error_outline, size: 64, color: AppTheme.dangerColor),
+        const SizedBox(height: 16), const Text('Erreur de chargement'),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(onPressed: _loadEntries, icon: const Icon(Icons.refresh), label: const Text('Réessayer')),
+      ]));
+    }
+    if (_entries.isEmpty) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.price_change, size: 64, color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+        const SizedBox(height: 16), const Text('Aucune entrée de prix'),
+        const SizedBox(height: 8), Text('Cliquez sur "Nouveau" pour commencer', style: Theme.of(context).textTheme.bodySmall),
+      ]));
+    }
 
     return Card(child: Column(children: [
       // ─── EN-TÊTES DE COLONNES (FIXES) ───
@@ -477,7 +483,7 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
     final groups = _grouped;
     return ListView.separated(
       itemCount: groups.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+      separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
       itemBuilder: (context, index) {
         final name = groups.keys.elementAt(index);
         final lots = groups[name]!;
@@ -766,7 +772,7 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
       Text(
         'CRT ${_fmtQty(totalCartons)} • BTE ${_fmtQty(totalBoites)} • PLQ ${_fmtQty(totalPlaquettes)} • U ${_fmtQty(totalUnites)}',
         textAlign: TextAlign.right,
-        style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8)),
+        style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8)),
       ),
     ]);
   }
@@ -788,7 +794,7 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
       Text(
         'CRT ${_fmtQty(carton)} • BTE ${_fmtQty(boite)} • PLQ ${_fmtQty(plaquette)} • U ${_fmtQty(unite)}',
         textAlign: TextAlign.right,
-        style: TextStyle(fontSize: 9, color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.75)),
+        style: TextStyle(fontSize: 9, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75)),
       ),
     ]);
   }
@@ -824,18 +830,27 @@ class _MedicinePricingPageState extends State<MedicinePricingPage> {
 
     if (anyExpired) badges.add(_badge('PÉRIMÉ', AppTheme.dangerColor));
     if (anyExpiring) badges.add(_badge('EXP.3M', AppTheme.warningColor));
-    if (anyRupture) badges.add(_badge('RUPTURE', AppTheme.dangerColor));
-    else if (anyLowStock) badges.add(_badge('STOCK↓', Colors.orange));
+    if (anyRupture) {
+      badges.add(_badge('RUPTURE', AppTheme.dangerColor));
+    } else if (anyLowStock) {
+      badges.add(_badge('STOCK↓', Colors.orange));
+    }
     if (badges.isEmpty) badges.add(_badge('OK', AppTheme.successColor));
     return Wrap(spacing: 4, runSpacing: 2, children: badges);
   }
 
   Widget _buildEntryBadges(MedicinePricing e) {
     final badges = <Widget>[];
-    if (PrixCalculator.estPerime(e)) badges.add(_badge('PÉRIMÉ', AppTheme.dangerColor));
-    else if (PrixCalculator.expireDans(e, 90)) badges.add(_badge('EXP.3M', AppTheme.warningColor));
-    if (e.totalComprimes <= 0) badges.add(_badge('RUPTURE', AppTheme.dangerColor));
-    else if (e.totalComprimes < e.seuilAlerte) badges.add(_badge('STOCK↓', Colors.orange));
+    if (PrixCalculator.estPerime(e)) {
+      badges.add(_badge('PÉRIMÉ', AppTheme.dangerColor));
+    } else if (PrixCalculator.expireDans(e, 90)) {
+      badges.add(_badge('EXP.3M', AppTheme.warningColor));
+    }
+    if (e.totalComprimes <= 0) {
+      badges.add(_badge('RUPTURE', AppTheme.dangerColor));
+    } else if (e.totalComprimes < e.seuilAlerte) {
+      badges.add(_badge('STOCK↓', Colors.orange));
+    }
     if (badges.isEmpty) badges.add(_badge('OK', AppTheme.successColor));
     return Wrap(spacing: 4, runSpacing: 2, children: badges);
   }

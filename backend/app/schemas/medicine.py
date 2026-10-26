@@ -100,7 +100,11 @@ class MedicineCreate(BaseModel):
     boxes_per_carton: int = Field(default=1, ge=1, description="Number of boxes per carton")
     blisters_per_box: int = Field(default=1, ge=1, description="Number of blisters/plaquettes per box")
     units_per_blister: int = Field(default=1, ge=1, description="Number of units per blister")
-    units_per_packaging: Optional[int] = Field(default=1, ge=1, description="Total units per box (Auto-calculated if not provided)")
+    # Fiscalité OBR
+    tax_rate: float = Field(default=0.0, ge=0.0, description="Taux de TVA en % (0.0 pour exonéré, 18.0 pour standard)")
+    tax_category: str = Field(default="exempt", description="Catégorie fiscale: exempt, standard, zero")
+    item_ct: float = Field(default=0.0, ge=0.0, description="Taxe de consommation")
+    item_tl: float = Field(default=0.0, ge=0.0, description="Taxe de loterie / prélèvement")
     
     model_config = {
         "json_schema_extra": {
@@ -113,7 +117,9 @@ class MedicineCreate(BaseModel):
                     "price_sell": 800.0,
                     "dosage_form": "Comprimé",
                     "packaging": "Plaquette",
-                    "units_per_packaging": 10
+                    "units_per_packaging": 10,
+                    "tax_rate": 0.0,
+                    "tax_category": "exempt"
                 }
             ]
         }
@@ -139,6 +145,10 @@ class MedicineUpdate(BaseModel):
     units_per_packaging: Optional[int] = Field(None, ge=1)
     carton_type: Optional[str] = None
     boxes_per_carton: Optional[int] = Field(None, ge=1)
+    tax_rate: Optional[float] = Field(None, ge=0.0)
+    tax_category: Optional[str] = None
+    item_ct: Optional[float] = Field(None, ge=0.0)
+    item_tl: Optional[float] = Field(None, ge=0.0)
 
 
 class MedicineResponse(BaseModel):
@@ -177,6 +187,12 @@ class MedicineResponse(BaseModel):
     prix_vente_boite: float = 0.0
     prix_achat_carton: float = 0.0
     prix_vente_carton: float = 0.0
+
+    # Fiscalité OBR
+    tax_rate: float = 0.0
+    tax_category: str = "exempt"
+    item_ct: float = 0.0
+    item_tl: float = 0.0
     
     created_at: datetime
     updated_at: datetime

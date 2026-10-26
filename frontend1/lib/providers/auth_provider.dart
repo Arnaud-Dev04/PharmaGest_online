@@ -104,12 +104,16 @@ class AuthProvider with ChangeNotifier {
         pharmacyCode: pharmacyCode,
       );
       final accessToken = loginResult['access_token'] as String;
+      final refreshToken = loginResult['refresh_token'] as String?;
       _token = accessToken;
       _mustChangePassword = loginResult['must_change_password'] as bool;
       _isFirstSetup = loginResult['is_first_setup'] as bool;
 
-      // 2. Sauvegarder le token et les flags
+      // 2. Sauvegarder les tokens et les flags
       await _secureStorage.write(key: 'auth_token', value: accessToken);
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await _secureStorage.write(key: 'refresh_token', value: refreshToken);
+      }
       await _secureStorage.write(
         key: 'must_change_password',
         value: _mustChangePassword.toString(),
@@ -222,6 +226,32 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Rafraîchir la session via le refresh_token
+  Future<bool> refreshToken() async {
+    try {
+      final savedRefreshToken = await _secureStorage.read(key: 'refresh_token');
+      if (savedRefreshToken == null || savedRefreshToken.isEmpty) {
+        return false;
+      }
+      final res = await _authService.refreshAccessToken(savedRefreshToken);
+      final newAccessToken = res['access_token'] as String?;
+      final newRefreshToken = res['refresh_token'] as String?;
+      if (newAccessToken != null) {
+        _token = newAccessToken;
+        await _secureStorage.write(key: 'auth_token', value: newAccessToken);
+      }
+      if (newRefreshToken != null) {
+        await _secureStorage.write(key: 'refresh_token', value: newRefreshToken);
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[AuthProvider] Erreur lors du refresh token: $e');
+      await logout();
+      return false;
+    }
+  }
+
   /// Supprimer toutes les données d'authentification
   Future<void> _clearAuthData() async {
     _user = null;
@@ -230,6 +260,7 @@ class AuthProvider with ChangeNotifier {
     _mustChangePassword = false;
     _isFirstSetup = false;
     await _secureStorage.delete(key: 'auth_token');
+    await _secureStorage.delete(key: 'refresh_token');
     await _secureStorage.delete(key: 'user_data');
     await _secureStorage.delete(key: 'must_change_password');
     await _secureStorage.delete(key: 'is_first_setup');

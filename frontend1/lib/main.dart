@@ -25,6 +25,11 @@ import 'package:frontend1/screens/admin/super_admin_page.dart';
 import 'package:frontend1/screens/admin/platform_admin_page.dart';
 import 'package:frontend1/screens/suppliers/suppliers_page.dart';
 import 'package:frontend1/screens/users/users_page.dart';
+import 'package:frontend1/screens/stock/stock_page.dart';
+import 'package:frontend1/screens/users/user_stats_page.dart';
+import 'package:frontend1/screens/restock/restock_list_page.dart';
+import 'package:frontend1/screens/restock/restock_form_page.dart';
+import 'package:frontend1/models/supplier.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -89,13 +94,15 @@ class PharmacApp extends StatelessWidget {
                 // Page initiale basée sur l'état d'authentification
                 home: const AuthWrapper(),
 
-                // Routes nommées pour navigation
+                // Routes nommées pour navigation statique
                 routes: {
                   '/login': (context) => const LoginScreen(),
                   '/dashboard': (context) =>
                       const MainLayout(child: DashboardPage()),
                   '/stock': (context) =>
-                      const MainLayout(child: _StockWrapper()),
+                      const MainLayout(child: StockPage()),
+                  '/pricing': (context) =>
+                      const MainLayout(child: MedicinePricingPage()),
                   '/pos': (context) =>
                       const MainLayout(noPadding: true, child: POSPage()),
                   '/cash-register': (context) =>
@@ -107,7 +114,6 @@ class PharmacApp extends StatelessWidget {
                   '/suppliers': (context) =>
                       const MainLayout(child: SuppliersPage()),
                   '/users': (context) => const MainLayout(child: UsersPage()),
-
                   '/settings': (context) =>
                       const MainLayout(child: SettingsPage()),
                   '/super-admin': (context) =>
@@ -118,6 +124,36 @@ class PharmacApp extends StatelessWidget {
                   '/change-password': (context) => const ChangePasswordScreen(),
                   '/stock-movements': (context) =>
                       const MainLayout(child: StockMovementsPage()),
+                },
+
+                // Routes dynamiques acceptant des arguments
+                onGenerateRoute: (settings) {
+                  if (settings.name == '/user-stats') {
+                    final args = settings.arguments;
+                    final userId = (args is int)
+                        ? args
+                        : (args is Map ? args['userId'] as int? : null) ?? 0;
+                    return MaterialPageRoute(
+                      builder: (_) => MainLayout(child: UserStatsPage(userId: userId)),
+                    );
+                  }
+                  if (settings.name == '/restock') {
+                    final args = settings.arguments;
+                    if (args is Supplier) {
+                      return MaterialPageRoute(
+                        builder: (_) => MainLayout(child: RestockListPage(supplier: args)),
+                      );
+                    }
+                  }
+                  if (settings.name == '/restock/new') {
+                    final args = settings.arguments;
+                    if (args is Supplier) {
+                      return MaterialPageRoute(
+                        builder: (_) => MainLayout(child: RestockFormPage(supplier: args)),
+                      );
+                    }
+                  }
+                  return null;
                 },
               );
             },
@@ -217,12 +253,3 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-/// Wrapper pour afficher MedicinePricingPage comme page Stock par défaut
-class _StockWrapper extends StatelessWidget {
-  const _StockWrapper();
-
-  @override
-  Widget build(BuildContext context) {
-    return const MedicinePricingPage();
-  }
-}

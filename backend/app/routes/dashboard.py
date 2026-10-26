@@ -69,3 +69,22 @@ def get_cancelled_sales(
         end_date=end_date
     )
 
+
+@router.get(
+    "/alerts",
+    summary="Get proactive inventory, expiration, and license alerts",
+)
+def get_dashboard_alerts(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_local_db)
+):
+    """
+    Get all active alerts:
+    - Low stock products
+    - Batches expiring soon or expired
+    - License expiration warnings
+    """
+    from app.services.notification_service import get_pending_alerts
+    return get_pending_alerts(db, pharmacy_id=current_user.pharmacy_id)
+
+

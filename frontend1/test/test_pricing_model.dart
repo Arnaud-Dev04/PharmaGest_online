@@ -15,7 +15,7 @@ void main() {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Map<String, dynamic> _validJson({Map<String, dynamic>? overrides}) {
+  Map<String, dynamic> validJson({Map<String, dynamic>? overrides}) {
     final base = <String, dynamic>{
       'id': 1,
       'medicine_id': 10,
@@ -67,7 +67,7 @@ void main() {
 
   group('MedicinePricing.fromJson()', () {
     test('désérialise un JSON valide complet', () {
-      final model = MedicinePricing.fromJson(_validJson());
+      final model = MedicinePricing.fromJson(validJson());
       expect(model.id, equals(1));
       expect(model.nom, equals('Amoxicilline 500mg'));
       expect(model.dci, equals('Amoxicilline'));
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('désérialise les prix correctement', () {
-      final model = MedicinePricing.fromJson(_validJson());
+      final model = MedicinePricing.fromJson(validJson());
       expect(model.achatCarton, equals(120000.0));
       expect(model.venteCarton, equals(150000.0));
       expect(model.margePct, equals(25.0));
@@ -88,7 +88,7 @@ void main() {
     });
 
     test('désérialise les champs optionnels null', () {
-      final json = _validJson(overrides: {
+      final json = validJson(overrides: {
         'dci': null,
         'forme': null,
         'dosage': null,
@@ -109,7 +109,7 @@ void main() {
     });
 
     test('désérialise les dates au bon format', () {
-      final model = MedicinePricing.fromJson(_validJson());
+      final model = MedicinePricing.fromJson(validJson());
       expect(model.dateReception, isA<DateTime>());
       expect(model.datePeremption, isA<DateTime>());
       expect(model.dateReception?.year, equals(2026));
@@ -117,7 +117,7 @@ void main() {
     });
 
     test('désérialise les booléens', () {
-      final model = MedicinePricing.fromJson(_validJson(overrides: {
+      final model = MedicinePricing.fromJson(validJson(overrides: {
         'alerte_peremption': false,
         'expire_bientot': true,
         'stock_faible': true,
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('prix par défaut à 0.0 si absent du JSON', () {
-      final json = _validJson();
+      final json = validJson();
       json.remove('achat_boite');
       json.remove('achat_plaquette');
       json.remove('achat_comprime');
@@ -144,7 +144,7 @@ void main() {
 
   group('MedicinePricing.toJson()', () {
     test('sérialise les champs obligatoires', () {
-      final model = MedicinePricing.fromJson(_validJson());
+      final model = MedicinePricing.fromJson(validJson());
       final json = model.toJson();
       expect(json['nom'], equals('Amoxicilline 500mg'));
       expect(json['lot'], equals('LOT-001'));
@@ -152,7 +152,7 @@ void main() {
     });
 
     test('roundtrip fromJson → toJson → fromJson conserve les valeurs', () {
-      final original = MedicinePricing.fromJson(_validJson());
+      final original = MedicinePricing.fromJson(validJson());
       final json = original.toJson();
       final restored = MedicinePricing.fromJson(json);
 
@@ -218,7 +218,7 @@ void main() {
 
   group('Champs calculés MedicinePricing', () {
     test('total_comprimes = cartons × boites × plaquettes × comprimes', () {
-      final model = MedicinePricing.fromJson(_validJson());
+      final model = MedicinePricing.fromJson(validJson());
       final expected = model.nbCartons *
           model.boitesParCarton *
           model.plaquettesParBoite *

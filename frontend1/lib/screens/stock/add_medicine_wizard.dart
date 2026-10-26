@@ -1005,7 +1005,7 @@ class _MedicinePickerDialogState extends State<_MedicinePickerDialog> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     itemCount: displayed.length,
-                    separatorBuilder: (_, __) => Divider(height: 1,
+                    separatorBuilder: (context, index) => Divider(height: 1,
                       color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
                     itemBuilder: (_, i) {
                       final e = displayed[i];
@@ -2024,7 +2024,9 @@ class _DateField extends StatelessWidget {
                         surface: Colors.white,
                         onSurface: Colors.black87,
                       ),
-                dialogBackgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+                dialogTheme: DialogThemeData(
+                  backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+                ),
                 textButtonTheme: TextButtonThemeData(
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.primaryColor,

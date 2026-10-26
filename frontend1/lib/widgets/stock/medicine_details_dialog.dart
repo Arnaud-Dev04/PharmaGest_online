@@ -32,8 +32,8 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _batches = [];
-  MedicinePricing? _latestPricing;
   List<Map<String, dynamic>> _auditLogs = [];
+  MedicinePricing? _pricing;
   int _selectedTab = 0;
 
   @override
@@ -73,8 +73,8 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
       if (mounted) {
         setState(() {
           _batches = batchesList;
-          _latestPricing = matchedPricing;
           _auditLogs = auditList;
+          _pricing = matchedPricing;
           _loading = false;
         });
       }
@@ -547,7 +547,7 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _batches.length,
-              separatorBuilder: (_, __) => Divider(
+              separatorBuilder: (context, index) => Divider(
                 height: 1,
                 color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
               ),
@@ -567,7 +567,7 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
                 }
 
                 final isExpired = expDate != null && expDate.isBefore(todayDate);
-                final daysLeft = expDate != null ? expDate.difference(todayDate).inDays : null;
+                final daysLeft = expDate?.difference(todayDate).inDays;
 
                 // Statut visuel du lot
                 Color badgeColor;
@@ -709,7 +709,12 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
                   Text('Conditionnement & Prix par niveau', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                 ],
               ),
-              if (med.fournisseur != null && med.fournisseur!.isNotEmpty)
+              if (_pricing != null)
+                Text(
+                  'Tarif : ${PricingMode.fromString(_pricing!.prixMode).label}',
+                  style: const TextStyle(fontSize: 11, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
+                )
+              else if (med.fournisseur != null && med.fournisseur!.isNotEmpty)
                 Text(
                   'Fournisseur : ${med.fournisseur}',
                   style: TextStyle(fontSize: 11, color: Colors.grey[500], fontStyle: FontStyle.italic),
@@ -900,7 +905,7 @@ class _MedicineDetailsDialogState extends State<MedicineDetailsDialog> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _auditLogs.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (ctx, i) {
                 final log = _auditLogs[i];
                 final action = log['action'] as String? ?? 'MODIFICATION';

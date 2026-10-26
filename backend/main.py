@@ -37,6 +37,7 @@ if getattr(sys, "frozen", False):
         sys.stdout = log_file
         sys.stderr = log_file
     except Exception:
+        pass
 # SENTRY APM & ERROR TRACKING (OPTIONAL IN PRODUCTION)
 _sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
 if _sentry_dsn:
@@ -93,6 +94,14 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+
+# Rate limiting — protection anti-brute-force
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.limiter import limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Maintenance marker file path (project root)
 MAINT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'MAINTENANCE_MODE'))
@@ -212,7 +221,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 from app.routes import (
     auth_router,
-    metrics_router,
     stock_router,
     config_router,
     suppliers_router,
@@ -230,10 +238,14 @@ from app.routes import (
     cash_register_router,
     sync_router,
     platform_admin_router,
+    customer_credits_router,
+    search_router,
+    accounting_router,
+    restock_router,
+    obr_router,
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-app.include_router(metrics_router, tags=["Metrics"])
 app.include_router(stock_router, prefix="/stock", tags=["Stock"])
 app.include_router(config_router, prefix="/config", tags=["Configuration"])
 app.include_router(suppliers_router, prefix="/suppliers", tags=["Suppliers"])
@@ -251,6 +263,11 @@ app.include_router(pos_router, prefix="/pos", tags=["POS"])
 app.include_router(cash_register_router, prefix="/cash-register", tags=["Cash Register"])
 app.include_router(sync_router, prefix="/sync", tags=["Sync"])
 app.include_router(platform_admin_router, prefix="/platform", tags=["Platform Admin"])
+app.include_router(customer_credits_router, prefix="/credits", tags=["Customer Credits"])
+app.include_router(search_router)
+app.include_router(accounting_router)
+app.include_router(restock_router, prefix="/restock", tags=["Restock"])
+app.include_router(obr_router)
 
 
 # =========================

@@ -8,10 +8,26 @@ class UserService {
 
   Future<List<User>> getUsers() async {
     try {
-      final response = await _apiService.get('/auth/users');
+      final response = await _apiService.get('/users');
       return (response.data as List).map((i) => User.fromJson(i)).toList();
     } catch (e) {
       debugPrint('[UserService] Erreur getUsers: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getUsersPerformance({String? startDate, String? endDate}) async {
+    try {
+      final Map<String, dynamic> params = {};
+      if (startDate != null) params['start_date'] = startDate;
+      if (endDate != null) params['end_date'] = endDate;
+      final response = await _apiService.get(
+        '/users/sales-performance',
+        queryParameters: params,
+      );
+      return response.data as List;
+    } catch (e) {
+      debugPrint('[UserService] Erreur getUsersPerformance: $e');
       rethrow;
     }
   }

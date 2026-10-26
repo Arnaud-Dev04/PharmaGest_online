@@ -201,7 +201,7 @@ class _StockPageState extends State<StockPage> {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
-    final role = user?.role?.toLowerCase();
+    final role = user?.role.toLowerCase();
     final isAdmin = user?.isAdmin == true || role == 'pharmacien' || role == 'pharmacist';
 
     return Column(
@@ -682,90 +682,6 @@ class _StockPageState extends State<StockPage> {
         priceLine('Plaq.', Colors.indigo, medicine.prixVentePlaquette),
         priceLine('Boîte', Colors.deepPurple, medicine.prixVenteBoite),
         priceLine('Carton', Colors.brown, medicine.prixVenteCarton),
-      ],
-    );
-  }
-
-  /// Calcule et affiche le bénéfice (marge) par niveau de conditionnement
-  Widget _buildMarginColumn(Medicine medicine) {
-    String fmt(double v) {
-      if (v <= 0) return '-';
-      if (v >= 1000) return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k';
-      return v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1);
-    }
-
-    // Calcul marge par unité (base)
-    double margeUnite = 0;
-    if (medicine.prixVenteUnite > 0 && medicine.prixAchatUnite > 0) {
-      margeUnite = medicine.prixVenteUnite - medicine.prixAchatUnite;
-    }
-
-    // Bénéfice total estimé = marge par unité × quantité totale
-    final beneficeTotal = margeUnite * medicine.quantity;
-    final margePercent = medicine.prixAchatUnite > 0
-        ? (margeUnite / medicine.prixAchatUnite * 100)
-        : 0.0;
-
-    final isPositive = beneficeTotal > 0;
-    final color = isPositive ? AppTheme.successColor : AppTheme.dangerColor;
-
-    if (margeUnite <= 0 && beneficeTotal <= 0) {
-      return Text(
-        '-',
-        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Marge par unité
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isPositive ? Icons.trending_up : Icons.trending_down,
-              size: 14,
-              color: color,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${fmt(margeUnite)} /u',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        // Pourcentage de marge
-        Text(
-          '${margePercent.toStringAsFixed(1)}%',
-          style: TextStyle(
-            fontSize: 10,
-            color: color.withValues(alpha: 0.8),
-          ),
-        ),
-        const SizedBox(height: 2),
-        // Bénéfice total
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            '${fmt(beneficeTotal)} FBu',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ),
       ],
     );
   }

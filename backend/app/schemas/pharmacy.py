@@ -1,6 +1,6 @@
 """Schemas for platform-managed pharmacies."""
 
-from datetime import datetime
+from datetime import datetime, date as PyDate
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
@@ -22,6 +22,17 @@ class PharmacyResponse(BaseModel):
     is_active: bool
     plan: str
     max_users: int
+    license_expires_at: Optional[PyDate] = None
+    license_is_trial: bool = False
+    notes: Optional[str] = None
+    # Fiscalité OBR
+    nif: Optional[str] = None
+    rc_number: Optional[str] = None
+    tax_center: Optional[str] = None
+    obr_enabled: bool = False
+    obr_environment: str = "sandbox"
+    obr_system_id: Optional[str] = None
+    obr_api_username: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -37,6 +48,17 @@ class PharmacyOnboardRequest(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     plan: LicensePlan = "basic"
     max_users: int = Field(default=3, ge=1, le=10000)
+    license_expires_at: Optional[PyDate] = None
+    license_is_trial: bool = False
+    notes: Optional[str] = Field(default=None, max_length=500)
+    nif: Optional[str] = Field(default=None, max_length=50)
+    rc_number: Optional[str] = Field(default=None, max_length=100)
+    tax_center: Optional[str] = Field(default=None, max_length=50)
+    obr_enabled: bool = False
+    obr_environment: str = "sandbox"
+    obr_system_id: Optional[str] = Field(default=None, max_length=100)
+    obr_api_username: Optional[str] = Field(default=None, max_length=100)
+    obr_api_password: Optional[str] = Field(default=None, max_length=255)
     admin_username: str = Field(min_length=3, max_length=50)
     admin_password: str = Field(min_length=8, max_length=128)
 
@@ -58,6 +80,17 @@ class PharmacyUpdateRequest(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     plan: Optional[LicensePlan] = None
     max_users: Optional[int] = Field(default=None, ge=1, le=10000)
+    license_expires_at: Optional[PyDate] = None
+    license_is_trial: Optional[bool] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
+    nif: Optional[str] = Field(default=None, max_length=50)
+    rc_number: Optional[str] = Field(default=None, max_length=100)
+    tax_center: Optional[str] = Field(default=None, max_length=50)
+    obr_enabled: Optional[bool] = None
+    obr_environment: Optional[str] = None
+    obr_system_id: Optional[str] = Field(default=None, max_length=100)
+    obr_api_username: Optional[str] = Field(default=None, max_length=100)
+    obr_api_password: Optional[str] = Field(default=None, max_length=255)
 
 
 class PharmacyStatusRequest(BaseModel):

@@ -134,6 +134,7 @@ class _ProductGridState extends State<ProductGrid> {
       builder: (ctx) => LevelSelectionDialog(product: product),
     );
     if (result == null) return; // cancelled
+    if (!mounted) return;
 
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     cartProvider.addToCartWithLevel(
@@ -379,7 +380,7 @@ class _ProductGridState extends State<ProductGrid> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _topProducts.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, i) => _buildTopProductChip(_topProducts[i], isDark),
             ),
           ),
@@ -495,7 +496,7 @@ class _ProductGridState extends State<ProductGrid> {
   Widget _buildListView(bool isDark) {
     return ListView.separated(
       itemCount: _products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, i) => _buildProductListTile(_products[i], isDark),
     );
   }
@@ -749,8 +750,11 @@ class _ProductGridState extends State<ProductGrid> {
     final isSoon = daysLeft < 90 && !isUrgent;
 
     Color chipColor = Colors.teal;
-    if (isUrgent) chipColor = Colors.red;
-    else if (isSoon) chipColor = Colors.orange;
+    if (isUrgent) {
+      chipColor = Colors.red;
+    } else if (isSoon) {
+      chipColor = Colors.orange;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),

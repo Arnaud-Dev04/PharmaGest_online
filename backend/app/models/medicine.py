@@ -113,6 +113,12 @@ class Medicine(Base, BaseModelMixin, PharmacyScopedMixin):
     prix_vente_carton = Column(Float, default=0.0)
     prix_achat_plaquette = Column(Float, default=0.0)
     prix_vente_plaquette = Column(Float, default=0.0)
+
+    # --- Fiscalité & Conformité OBR Burundi ---
+    tax_rate = Column(Float, default=0.0, nullable=False)  # TVA : 0.0 (exonéré) ou 18.0 (standard)
+    tax_category = Column(String(20), default="exempt", nullable=False)  # 'exempt', 'standard', 'zero'
+    item_ct = Column(Float, default=0.0, nullable=False)  # Taxe de consommation
+    item_tl = Column(Float, default=0.0, nullable=False)  # Taxe de loterie / prélèvement forfaitaire
     
     # Relationships
     family = relationship("MedicineFamily", back_populates="medicines")

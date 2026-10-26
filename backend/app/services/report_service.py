@@ -216,7 +216,8 @@ def _format_stock_qty(total_comprimes: int, comprimes_par_boite: int) -> str:
 def generate_stock_pdf(
     db: Session,
     start_date: Optional[date] = None,
-    end_date: Optional[date] = None
+    end_date: Optional[date] = None,
+    limit: Optional[int] = 1000
 ) -> BytesIO:
     """Rapport de Stock - État d'Inventaire et Double Valorisation.
     Format A4 Portrait. Affiche clairement :
@@ -266,6 +267,9 @@ def generate_stock_pdf(
                 and_(MedicinePricing.date_reception.is_(None), cast(MedicinePricing.created_at, Date) <= end_date)
             )
         )
+
+    if limit:
+        query = query.limit(limit)
 
     entries = query.order_by(MedicinePricing.dci, MedicinePricing.nom).all()
 

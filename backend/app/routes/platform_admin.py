@@ -134,6 +134,9 @@ def onboard_pharmacy(
         city=payload.city,
         plan=payload.plan,
         max_users=payload.max_users,
+        license_expires_at=payload.license_expires_at,
+        license_is_trial=payload.license_is_trial,
+        notes=payload.notes,
         is_active=True,
     )
     db.add(pharmacy)

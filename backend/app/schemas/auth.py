@@ -38,6 +38,10 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Username (unique)")
     password: str = Field(..., min_length=4, description="Password")
     role: UserRole = Field(default=UserRole.PHARMACIST, description="User role")
+    first_name: Optional[str] = Field(None, max_length=60, description="Prénom")
+    last_name: Optional[str] = Field(None, max_length=60, description="Nom")
+    email: Optional[str] = Field(None, max_length=120, description="Adresse email")
+    phone: Optional[str] = Field(None, max_length=30, description="Numéro de téléphone")
     is_active: bool = Field(default=True, description="Account active status")
     
     model_config = {
@@ -47,6 +51,10 @@ class UserCreate(BaseModel):
                     "username": "pharmacist1",
                     "password": "securepass123",
                     "role": "pharmacist",
+                    "first_name": "Jean",
+                    "last_name": "Dupont",
+                    "email": "jean@pharmacie.com",
+                    "phone": "+243810000000",
                     "is_active": True
                 }
             ]
@@ -61,6 +69,7 @@ class UserCreate(BaseModel):
 class Token(BaseModel):
     """Schema for JWT token response."""
     access_token: str = Field(..., description="JWT access token")
+    refresh_token: Optional[str] = Field(None, description="JWT refresh token (long lived)")
     token_type: str = Field(default="bearer", description="Token type")
     must_change_password: bool = Field(default=False, description="User must change password on first login")
     is_first_setup: bool = Field(default=False, description="System is in first-time setup mode")
@@ -70,6 +79,7 @@ class Token(BaseModel):
             "examples": [
                 {
                     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                     "token_type": "bearer",
                     "must_change_password": False,
                     "is_first_setup": False
@@ -77,6 +87,22 @@ class Token(BaseModel):
             ]
         }
     }
+
+
+class RefreshTokenRequest(BaseModel):
+    """Schema for refreshing an expired access token."""
+    refresh_token: str = Field(..., description="JWT refresh token")
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema for password reset request."""
+    email: str = Field(..., description="Adresse email de l'utilisateur")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for setting a new password using reset token."""
+    token: str = Field(..., description="Token de réinitialisation")
+    new_password: str = Field(..., min_length=6, description="Nouveau mot de passe")
 
 
 class TokenData(BaseModel):
@@ -93,6 +119,10 @@ class UserResponse(BaseModel):
     id: int
     username: str
     role: UserRole
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     is_active: bool
     must_change_password: bool = False
     created_at: datetime

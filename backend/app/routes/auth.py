@@ -8,27 +8,34 @@ from fastapi.requests import Request
 from sqlalchemy.orm import Session
 from app.models.pharmacy import Pharmacy
 from datetime import timedelta
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.core.limiter import limiter
 
 from app.database import get_local_db
 from app.models.user import User, UserRole
 from app.models.settings import Settings
-from app.schemas.auth import Token, UserCreate, UserResponse, UserLogin, ChangeInitialPassword
+from app.schemas.auth import (
+    Token,
+    UserCreate,
+    UserResponse,
+    UserLogin,
+    ChangeInitialPassword,
+    RefreshTokenRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+)
 from app.utils.security import (
     verify_password,
     hash_password,
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    create_refresh_token,
+    verify_refresh_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from app.auth.dependencies import get_current_user, get_current_active_user, get_admin_user
 from app.core.license_guard import ensure_user_capacity
 
 # Create router
 router = APIRouter()
-
-# Rate limiter — protège les endpoints sensibles
-_limiter = Limiter(key_func=get_remote_address)
 
 
 # ============================================================================
@@ -85,6 +92,7 @@ def authenticate_user(
 # ============================================================================
 
 @router.post("/login", response_model=Token, summary="Login to get access token")
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -137,17 +145,144 @@ async def login(
         data=token_payload,
         expires_delta=access_token_expires
     )
-    
+    refresh_token = create_refresh_token(data=token_payload)
+
     # Check if this is the first setup
     first_setup_setting = db.query(Settings).filter(Settings.key == "is_first_setup").first()
     is_first_setup = first_setup_setting.value == "true" if first_setup_setting else False
-    
+
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "must_change_password": user.must_change_password,
         "is_first_setup": is_first_setup
     }
+
+
+@router.post("/refresh", response_model=Token, summary="Refresh access token using refresh token")
+@limiter.limit("30/minute")
+async def refresh_access_token(
+    request: Request,
+    payload: RefreshTokenRequest,
+    db: Session = Depends(get_local_db)
+):
+    """
+    Generate a new access token using a valid refresh token.
+    Enables persistent session without frequent re-login.
+    """
+    token_data = verify_refresh_token(payload.refresh_token)
+    if not token_data or not token_data.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token invalide ou expiré",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    username = token_data.get("sub")
+    user_id = token_data.get("user_id")
+    pharmacy_id = token_data.get("pharmacy_id")
+
+    query = db.query(User).filter(User.username == username)
+    if user_id:
+        query = query.filter(User.id == user_id)
+    if pharmacy_id:
+        query = query.filter(User.pharmacy_id == pharmacy_id)
+    user = query.first()
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte utilisateur inactif ou introuvable",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    new_token_payload = {
+        "sub": user.username,
+        "user_id": user.id,
+        "pharmacy_id": user.pharmacy_id,
+        "role": user.role.value if hasattr(user.role, 'value') else user.role,
+    }
+    new_access_token = create_access_token(
+        data=new_token_payload,
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    new_refresh_token = create_refresh_token(data=new_token_payload)
+
+    first_setup_setting = db.query(Settings).filter(Settings.key == "is_first_setup").first()
+    is_first_setup = first_setup_setting.value == "true" if first_setup_setting else False
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+        "must_change_password": user.must_change_password,
+        "is_first_setup": is_first_setup,
+    }
+
+
+@router.post("/forgot-password", summary="Demande de réinitialisation de mot de passe")
+@limiter.limit("5/minute")
+async def forgot_password(
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_local_db)
+):
+    """
+    Envoie un token de réinitialisation si l'email existe.
+    """
+    user = db.query(User).filter(User.email == payload.email.strip()).first()
+    if user and user.is_active:
+        reset_payload = {
+            "sub": user.username,
+            "user_id": user.id,
+            "type": "reset_password",
+        }
+        reset_token = create_access_token(
+            data=reset_payload,
+            expires_delta=timedelta(minutes=15)
+        )
+        print(f"[SECURITY] Reset token generated for user {user.username} ({user.email}): {reset_token}")
+
+    return {
+        "message": "Si cette adresse email est associée à un compte, un lien de réinitialisation a été envoyé."
+    }
+
+
+@router.post("/reset-password", summary="Réinitialisation du mot de passe avec token")
+@limiter.limit("10/minute")
+async def reset_password(
+    request: Request,
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_local_db)
+):
+    """
+    Réinitialise le mot de passe à l'aide d'un token valide.
+    """
+    token_data = verify_token(payload.token) if "verify_token" in globals() else None
+    if not token_data:
+        from app.utils.security import verify_token
+        token_data = verify_token(payload.token)
+
+    if not token_data or token_data.get("type") != "reset_password":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de réinitialisation invalide ou expiré"
+        )
+
+    user_id = token_data.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur introuvable ou inactif"
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    db.commit()
+
+    return {"message": "Mot de passe réinitialisé avec succès"}
 
 
 # ============================================================================
@@ -252,335 +387,6 @@ def get_me(
         )
     print(f"[DEBUG] /auth/me endpoint reached for {current_user.username}")
     return current_user
-
-
-# ============================================================================
-# USER MANAGEMENT (Admin Only)
-# ============================================================================
-
-from typing import List
-from app.schemas.auth import UserUpdatePassword
-
-@router.get(
-    "/users",
-    response_model=List[UserResponse],
-    summary="List all users (Admin only)",
-)
-def get_users(
-    current_user: User = Depends(get_admin_user),
-    db: Session = Depends(get_local_db)
-):
-    """List all registered users."""
-    query = db.query(User)
-    
-    # Hide super admins from regular admins
-    if current_user.role != UserRole.SUPER_ADMIN:
-        query = query.filter(User.role != UserRole.SUPER_ADMIN)
-        
-    users = query.all()
-    return users
-
-
-@router.put(
-    "/users/{user_id}/password",
-    summary="Change user password (Admin only)",
-    dependencies=[Depends(get_admin_user)]
-)
-def change_user_password(
-    user_id: int,
-    password_data: UserUpdatePassword,
-    db: Session = Depends(get_local_db)
-):
-    """Change user password."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-        
-    user.password_hash = hash_password(password_data.password)
-    db.commit()
-    return {"message": "Password updated successfully"}
-
-
-@router.delete(
-    "/users/{user_id}",
-    summary="Delete a user (Admin only)",
-    dependencies=[Depends(get_admin_user)]
-)
-def delete_user(
-    user_id: int,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_local_db)
-):
-    """Delete a user account."""
-    if user_id == current_admin.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete your own admin account"
-        )
-        
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Check if user has sales relations preventing deletion?
-    # For now, let's assume we keep sales history even if user deleted (or set null).
-    # But usually sales.user_id is FK. We might need Soft Delete or check usage.
-    # To be safe, we might just set is_active=False instead of DELETE.
-    # But user asked for delete. Let's try Delete, if it fails due to FK, we catch it.
-    
-    try:
-        db.delete(user)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        # Fallback to soft delete if FK constraint fails
-        user.is_active = False
-        db.commit()
-        return {"message": "User deactivated (could not delete due to existing records)"}
-        
-    return {"message": "User deleted successfully"}
-
-
-@router.put(
-    "/users/{user_id}/toggle-status",
-    response_model=UserResponse,
-    summary="Toggle user active status (Admin only)",
-    dependencies=[Depends(get_admin_user)]
-)
-def toggle_user_status(
-    user_id: int,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_local_db)
-):
-    """
-    Toggle a user's active status (activate or deactivate).
-    Useful for suspending users during leave or for disciplinary reasons.
-    """
-    if user_id == current_admin.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot deactivate your own admin account"
-        )
-        
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Toggle status
-    if not user.is_active:
-        ensure_user_capacity(db, current_admin.pharmacy_id)
-    user.is_active = not user.is_active
-    db.commit()
-    db.refresh(user)
-    
-    return user
-
-
-# ============================================================================
-# USER SALES STATISTICS
-# ============================================================================
-
-from app.schemas.user_stats import UserSalesStats, UserPerformance, TopProductSold
-from app.models.sales import Sale, SaleItem
-from app.models.medicine import Medicine
-from sqlalchemy import func, desc
-from typing import Optional as TypingOptional
-from datetime import datetime, timedelta
-
-
-@router.get(
-    "/users/{user_id}/sales-stats",
-    response_model=UserSalesStats,
-    summary="Get user sales statistics (Admin only)",
-    dependencies=[Depends(get_admin_user)]
-)
-def get_user_sales_stats(
-    user_id: int,
-    start_date: TypingOptional[str] = None,
-    end_date: TypingOptional[str] = None,
-    db: Session = Depends(get_local_db)
-):
-    """
-    Get detailed sales statistics for a specific user.
-    
-    Query Parameters:
-        - start_date: Start date (YYYY-MM-DD), defaults to 30 days ago
-        - end_date: End date (YYYY-MM-DD), defaults to today
-    """
-    # Get user
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Parse dates
-    if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    else:
-        end_dt = datetime.now()
-    
-    if start_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    else:
-        start_dt = end_dt - timedelta(days=30)
-    
-    # Get sales for this user
-    sales_query = db.query(Sale).filter(
-        Sale.user_id == user_id,
-        Sale.date >= start_dt,
-        Sale.date <= end_dt
-    )
-    
-    sales = sales_query.all()
-    total_sales = len(sales)
-    total_revenue = sum(sale.total_amount for sale in sales)
-    average_sale = total_revenue / total_sales if total_sales > 0 else 0
-    
-    # Count unique customers
-    customers_served = db.query(func.count(func.distinct(Sale.customer_id))).filter(
-        Sale.user_id == user_id,
-        Sale.date >= start_dt,
-        Sale.date <= end_dt,
-        Sale.customer_id.isnot(None)
-    ).scalar() or 0
-    
-    # Top products sold
-    top_products_query = db.query(
-        Medicine.id,
-        Medicine.name,
-        Medicine.code,
-        func.sum(SaleItem.quantity).label('total_quantity'),
-        func.sum(SaleItem.total_price).label('total_revenue')
-    ).join(
-        SaleItem, SaleItem.medicine_id == Medicine.id
-    ).join(
-        Sale, Sale.id == SaleItem.sale_id
-    ).filter(
-        Sale.user_id == user_id,
-        Sale.date >= start_dt,
-        Sale.date <= end_dt
-    ).group_by(
-        Medicine.id, Medicine.name, Medicine.code
-    ).order_by(
-        desc('total_quantity')
-    ).limit(10)
-    
-    top_products = []
-    for prod in top_products_query.all():
-        top_products.append(TopProductSold(
-            medicine_id=prod.id,
-            medicine_name=prod.name,
-            medicine_code=prod.code,
-            quantity_sold=prod.total_quantity,
-            revenue_generated=prod.total_revenue
-        ))
-    
-    # Sales by date for chart
-    sales_by_date_query = db.query(
-        func.date(Sale.date).label('sale_date'),
-        func.count(Sale.id).label('count'),
-        func.sum(Sale.total_amount).label('revenue')
-    ).filter(
-        Sale.user_id == user_id,
-        Sale.date >= start_dt,
-        Sale.date <= end_dt
-    ).group_by(
-        func.date(Sale.date)
-    ).order_by('sale_date')
-    
-    sales_by_date = []
-    for row in sales_by_date_query.all():
-        sales_by_date.append({
-            'date': row.sale_date.isoformat() if row.sale_date else None,
-            'count': row.count,
-            'revenue': row.revenue
-        })
-    
-    return UserSalesStats(
-        user_id=user.id,
-        username=user.username,
-        total_sales=total_sales,
-        total_revenue=total_revenue,
-        average_sale_amount=average_sale,
-        customers_served=customers_served,
-        top_products=top_products,
-        sales_by_date=sales_by_date
-    )
-
-
-@router.get(
-    "/users/sales-performance",
-    response_model=List[UserPerformance],
-    summary="Get all users sales performance comparison (Admin only)",
-    dependencies=[Depends(get_admin_user)]
-)
-def get_users_performance(
-    start_date: TypingOptional[str] = None,
-    end_date: TypingOptional[str] = None,
-    db: Session = Depends(get_local_db)
-):
-    """
-    Get sales performance comparison for all users.
-    Ranked by total revenue.
-    
-    Query Parameters:
-        - start_date: Start date (YYYY-MM-DD), defaults to 30 days ago
-        - end_date: End date (YYYY-MM-DD), defaults to today
-    """
-    # Parse dates
-    if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    else:
-        end_dt = datetime.now()
-    
-    if start_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    else:
-        start_dt = end_dt - timedelta(days=30)
-    
-    # Get all users
-    users = db.query(User).all()
-    
-    performances = []
-    for user in users:
-        # Get sales stats for this user
-        sales = db.query(Sale).filter(
-            Sale.user_id == user.id,
-            Sale.date >= start_dt,
-            Sale.date <= end_dt
-        ).all()
-        
-        total_sales = len(sales)
-        total_revenue = sum(sale.total_amount for sale in sales)
-        average_sale = total_revenue / total_sales if total_sales > 0 else 0
-        
-        performances.append(UserPerformance(
-            user_id=user.id,
-            username=user.username,
-            role=user.role,
-            is_active=user.is_active,
-            total_sales=total_sales,
-            total_revenue=total_revenue,
-            average_sale_amount=average_sale
-        ))
-    
-    # Sort by revenue and assign ranks
-    performances.sort(key=lambda x: x.total_revenue, reverse=True)
-    for idx, perf in enumerate(performances, start=1):
-        perf.rank = idx
-    
-    return performances
 
 
 # ============================================================================

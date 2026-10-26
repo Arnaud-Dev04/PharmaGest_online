@@ -225,10 +225,12 @@ class _DashboardPageState extends State<DashboardPage> {
                         await Provider.of<InventoryProvider>(context, listen: false)
                             .loadTotals();
                         await _loadDashboardStats();
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Rafraîchi')),
                         );
                       } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Erreur: $e')),
                         );
@@ -809,8 +811,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 try {
                   await Provider.of<InventoryProvider>(context, listen: false).loadTotals();
                   await _loadDashboardStats();
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rafraîchi')));
                 } catch (e) {
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
                 }
               },
@@ -841,8 +845,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 try {
                   await Provider.of<InventoryProvider>(context, listen: false).loadTotals();
                   await _loadDashboardStats();
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rafraîchi')));
                 } catch (e) {
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
                 }
               },

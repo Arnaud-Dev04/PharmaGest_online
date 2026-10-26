@@ -1,6 +1,6 @@
-/// Barrel file — Re-exports all screen pages for convenience.
-///
-/// Import this single file to access any screen page in the app.
+// Barrel file — Re-exports all screen pages for convenience.
+//
+// Import this single file to access any screen page in the app.
 
 // Auth
 export 'auth/login_screen.dart';
@@ -24,5 +24,10 @@ export 'users/users_page.dart';
 export 'users/user_stats_page.dart';
 export 'settings/settings_page.dart';
 export 'admin/super_admin_page.dart';
+export 'admin/platform_admin_page.dart';
+export 'cash_register/cash_register_page.dart';
+export 'stock/stock_audit_dialog.dart';
+export 'stock/add_medicine_wizard.dart';
 export 'restock/restock_form_page.dart';
 export 'restock/restock_list_page.dart';
+

@@ -17,6 +17,12 @@ class Sale {
   final String? insuranceProvider;
   final String? insuranceCardId;
   final double coveragePercent;
+  // Champs fiscaux & OBR EBMS Burundi
+  final String? obrInvoiceNumber;
+  final String? obrSignature;
+  final String? obrElectronicSignature;
+  final String? obrQrCode;
+  final String? obrSyncStatus;
 
   Sale({
     required this.id,
@@ -37,6 +43,11 @@ class Sale {
     this.insuranceProvider,
     this.insuranceCardId,
     this.coveragePercent = 0.0,
+    this.obrInvoiceNumber,
+    this.obrSignature,
+    this.obrElectronicSignature,
+    this.obrQrCode,
+    this.obrSyncStatus,
   });
 
 
@@ -65,6 +76,11 @@ class Sale {
       insuranceProvider: json['insurance_provider'] as String?,
       insuranceCardId: json['insurance_card_id'] as String?,
       coveragePercent: (json['coverage_percent'] as num?)?.toDouble() ?? 0.0,
+      obrInvoiceNumber: json['obr_invoice_number'] as String?,
+      obrSignature: json['obr_signature'] as String?,
+      obrElectronicSignature: json['obr_electronic_signature'] as String?,
+      obrQrCode: json['obr_qr_code'] as String?,
+      obrSyncStatus: json['obr_sync_status'] as String?,
     );
   }
 }
@@ -126,6 +142,10 @@ class SaleItem {
   final double unitPrice;
   final double totalPrice;
   final double discountPercent; // % remise appliquee
+  final double taxRate;
+  final double taxAmount;
+  final double priceNvat;
+  final double priceWvat;
 
   SaleItem({
     required this.id,
@@ -136,18 +156,29 @@ class SaleItem {
     required this.unitPrice,
     required this.totalPrice,
     this.discountPercent = 0.0,
+    this.taxRate = 0.0,
+    this.taxAmount = 0.0,
+    this.priceNvat = 0.0,
+    this.priceWvat = 0.0,
   });
 
   factory SaleItem.fromJson(Map<String, dynamic> json) {
+    final qty = (json['quantity'] as num).toInt();
+    final uPrice = (json['unit_price'] as num).toDouble();
+    final totPrice = (json['total_price'] as num).toDouble();
     return SaleItem(
       id: json['id'],
       medicineId: json['medicine_id'],
       medicineName: json['medicine_name'] ?? '',
       medicineCode: json['medicine_code'] ?? '',
-      quantity: (json['quantity'] as num).toInt(),
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      totalPrice: (json['total_price'] as num).toDouble(),
+      quantity: qty,
+      unitPrice: uPrice,
+      totalPrice: totPrice,
       discountPercent: (json['discount_percent'] as num?)?.toDouble() ?? 0.0,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      priceNvat: (json['price_nvat'] as num?)?.toDouble() ?? totPrice,
+      priceWvat: (json['price_wvat'] as num?)?.toDouble() ?? totPrice,
     );
   }
 }

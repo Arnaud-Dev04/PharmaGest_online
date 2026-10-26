@@ -34,6 +34,8 @@ class Medicine {
   final int? familyId;
   final int? typeId;
   final int batchCount; // Nombre de lots actifs
+  final double taxRate; // Taux TVA (0.0 exonéré, 18.0 standard)
+  final String taxCategory; // 'exempt', 'standard', 'zero'
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -71,6 +73,8 @@ class Medicine {
     this.familyId,
     this.typeId,
     this.batchCount = 0,
+    this.taxRate = 0.0,
+    this.taxCategory = 'exempt',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -152,6 +156,8 @@ class Medicine {
       familyId: json['family_id'] as int?,
       typeId: json['type_id'] as int?,
       batchCount: json['batch_count'] as int? ?? 0,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      taxCategory: json['tax_category'] as String? ?? 'exempt',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -182,6 +188,8 @@ class Medicine {
       'family_id': familyId,
       'type_id': typeId,
       'batch_count': batchCount,
+      'tax_rate': taxRate,
+      'tax_category': taxCategory,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

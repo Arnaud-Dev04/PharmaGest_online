@@ -35,7 +35,7 @@ class PricingModeWidget extends StatelessWidget {
   final TextEditingController achatPlaquetteController;
   final TextEditingController achatComprimeController;
 
-  PricingModeWidget({
+  const PricingModeWidget({
     super.key,
     required this.selectedMode,
     required this.onModeChanged,

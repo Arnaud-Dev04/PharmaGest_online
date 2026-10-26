@@ -208,7 +208,7 @@ class _StockMovementsPageState extends State<StockMovementsPage> {
             SizedBox(
               width: 200,
               child: DropdownButtonFormField<String>(
-                value: _selectedType ?? '',
+                initialValue: _selectedType ?? '',
                 decoration: InputDecoration(
                   labelText: 'Type',
                   border: OutlineInputBorder(

@@ -3,7 +3,7 @@ Restock schemas.
 """
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date as PyDate
 from enum import Enum
 
 # Shared Enums (matching models)
@@ -19,7 +19,7 @@ class RestockItemCreate(BaseModel):
     medicine_id: int
     quantity: int = Field(..., gt=0)
     price_buy: float = Field(..., ge=0)
-    expiry_date: Optional[date] = None
+    expiry_date: Optional[PyDate] = None
 
 
 class RestockItemResponse(BaseModel):
@@ -28,7 +28,7 @@ class RestockItemResponse(BaseModel):
     medicine_name: str # Enriched in service
     quantity: int
     price_buy: float
-    expiry_date: Optional[date] = None
+    expiry_date: Optional[PyDate] = None
     
     class Config:
         from_attributes = True
@@ -38,7 +38,7 @@ class RestockItemResponse(BaseModel):
 
 class RestockOrderCreate(BaseModel):
     supplier_id: int
-    date: date = Field(default_factory=date.today)
+    date: PyDate = Field(default_factory=PyDate.today)
     items: List[RestockItemCreate]
 
 
@@ -47,7 +47,7 @@ class RestockOrderResponse(BaseModel):
     supplier_id: int
     supplier_name: Optional[str] = None # Enriched
     status: RestockStatus
-    date: date
+    date: PyDate
     total_amount: float
     items: List[RestockItemResponse] = []
     

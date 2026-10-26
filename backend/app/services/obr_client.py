@@ -8,7 +8,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-import httpx
+import requests
 
 from app.models.pharmacy import Pharmacy
 
@@ -44,12 +44,13 @@ class OBRClient:
             return None
 
         try:
-            with httpx.Client(timeout=10.0, verify=False) as client:
-                res = client.post(
-                    f"{self.base_url}/auth/login",
-                    json={"username": self.username, "password": self.password},
-                )
-                if res.status_code == 200:
+            res = requests.post(
+                f"{self.base_url}/auth/login",
+                json={"username": self.username, "password": self.password},
+                timeout=10.0,
+                verify=False,
+            )
+            if res.status_code == 200:
                     data = res.json()
                     return data.get("token") or data.get("access_token")
         except Exception as e:
@@ -167,9 +168,14 @@ class OBRClient:
         if token:
             try:
                 headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-                with httpx.Client(timeout=15.0, verify=False) as client:
-                    resp = client.post(f"{self.base_url}/invoices/add", json=payload, headers=headers)
-                    if resp.status_code in [200, 201]:
+                resp = requests.post(
+                    f"{self.base_url}/invoices/add",
+                    json=payload,
+                    headers=headers,
+                    timeout=15.0,
+                    verify=False,
+                )
+                if resp.status_code in [200, 201]:
                         res_data = resp.json()
                         signature = res_data.get("invoice_signature") or res_data.get("signature")
                         electronic_sig = res_data.get("electronic_signature") or signature

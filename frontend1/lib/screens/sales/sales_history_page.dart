@@ -8,6 +8,7 @@ import 'package:frontend1/models/app_settings.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/services/sales_service.dart';
 import 'package:frontend1/services/pos_service.dart';
+import 'package:frontend1/services/obr_service.dart';
 import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/services/invoice_auto_service.dart';
 import 'package:frontend1/core/error_helper.dart';
@@ -231,12 +232,28 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   }
 
   Future<void> _cancelSale(Sale sale, LanguageProvider lp) async {
+    final motifController = TextEditingController(text: 'Erreur de saisie / Annulation vente');
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(lp.translate('cancelSale')),
-        content: Text(
-          '${lp.translate('cancelSaleConfirm')} #${sale.code} ?\n${lp.translate('stockWillBeRestored')}.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${lp.translate('cancelSaleConfirm')} #${sale.code} ?\n${lp.translate('stockWillBeRestored')}.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: motifController,
+              decoration: const InputDecoration(
+                labelText: 'Motif d\'annulation (Requis pour l\'OBR)',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -259,6 +276,18 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
         } else {
           await _salesService.cancelSale(sale.id);
         }
+
+        // Notification fiscale OBR EBMS V0.5
+        try {
+          await ObrService().cancelInvoice(
+            invoiceCode: sale.code,
+            invoiceIdentifier: sale.invoiceIdentifier,
+            motif: motifController.text.trim(),
+          );
+        } catch (obrErr) {
+          debugPrint('[OBR] Erreur annulation OBR (non-bloquant): $obrErr');
+        }
+
         _loadSales();
         _loadStats();
         if (mounted) {
@@ -904,6 +933,75 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Bloc Certification OBR Burundi EBMS V0.5
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.verified, color: Color(0xFF16A34A), size: 28),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'EBMS - OBR BURUNDI',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: Color(0xFF14532D),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: sale.obrSyncStatus == 'synced' ? Colors.green[100] : Colors.orange[100],
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          sale.obrSyncStatus == 'synced' ? 'TRANSMIS' : 'SIGNÉ LOCAL',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: sale.obrSyncStatus == 'synced' ? Colors.green[800] : Colors.orange[900],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'N° Fiscal : ${sale.obrInvoiceNumber ?? sale.code}',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF166534)),
+                                  ),
+                                  if (sale.customerTin != null && sale.customerTin!.isNotEmpty)
+                                    Text(
+                                      'NIF Client : ${sale.customerTin}',
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                                    ),
+                                  if (sale.invoiceIdentifier != null && sale.invoiceIdentifier!.isNotEmpty)
+                                    Text(
+                                      'ID Facture OBR : ${sale.invoiceIdentifier}',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       // Info chips
                       Wrap(
                         spacing: 8,
@@ -1086,6 +1184,23 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
+
+                    if (sale.status != 'cancelled') ...[
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          final lp = Provider.of<LanguageProvider>(context, listen: false);
+                          await _cancelSale(sale, lp);
+                        },
+                        icon: const Icon(Icons.cancel, size: 16, color: AppTheme.dangerColor),
+                        label: const Text('Annuler (Avoir)', style: TextStyle(fontSize: 12, color: AppTheme.dangerColor)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppTheme.dangerColor),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
 
                     // Imprimer
                     Expanded(

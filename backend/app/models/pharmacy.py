@@ -36,6 +36,20 @@ class Pharmacy(Base, BaseModelMixin):
     obr_api_username = Column(String(100), nullable=True)
     obr_api_password = Column(String(255), nullable=True)
 
+    # Spécifications OBR EBMS V0.5
+    tp_type = Column(String(5), default="2", nullable=False)  # "1" = physique, "2" = morale
+    tp_legal_form = Column(String(50), default="SUARL", nullable=True)
+    tp_activity_sector = Column(String(250), default="Commerce de détail de produits pharmaceutiques", nullable=True)
+    tp_address_province = Column(String(50), default="BUJUMBURA MAIRIE", nullable=True)
+    tp_address_commune = Column(String(50), default="MUKAZA", nullable=True)
+    tp_address_quartier = Column(String(50), default="ROHERO", nullable=True)
+    tp_address_avenue = Column(String(50), default="", nullable=True)
+    tp_address_rue = Column(String(50), default="", nullable=True)
+    tp_address_number = Column(String(20), default="", nullable=True)
+    vat_taxpayer = Column(String(3), default="1", nullable=False)  # "1" = Assujetti TVA, "0" = Non assujetti
+    ct_taxpayer = Column(String(3), default="0", nullable=False)   # "1" = Assujetti TC, "0" = Non
+    tl_taxpayer = Column(String(3), default="0", nullable=False)   # "1" = Assujetti TL, "0" = Non
+
     users = relationship("User", back_populates="pharmacy")
 
     def __repr__(self):

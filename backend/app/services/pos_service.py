@@ -716,6 +716,9 @@ def checkout(
         invoice_code = generate_pos_invoice_code(db)
         actual_sale_uuid = req_sale_uuid or str(uuid_lib.uuid4())
         
+        c_tin = checkout_data.customer_tin or (getattr(customer, 'customer_nif', None) if customer else None)
+        c_name = checkout_data.customer_name or (f"{customer.first_name} {customer.last_name}" if customer else None)
+
         sale = POSSale(
             sale_uuid=actual_sale_uuid,
             code=invoice_code,
@@ -725,7 +728,8 @@ def checkout(
             user_id=user_id,
             customer_id=checkout_data.customer_id,
             cash_session_uuid=cash_session.session_uuid if cash_session else None,
-            customer_name=checkout_data.customer_name,
+            customer_name=c_name,
+            customer_tin=c_tin,
             insurance_provider=checkout_data.insurance_provider,
             insurance_card_id=checkout_data.insurance_card_id,
             coverage_percent=checkout_data.coverage_percent or 0.0,
@@ -832,18 +836,16 @@ def checkout(
                 })
 
             obr_client = OBRClient(pharmacy)
-            c_tin = getattr(customer, 'customer_nif', None) if customer else None
-            c_name = checkout_data.customer_name or (f"{customer.first_name} {customer.last_name}" if customer else None)
-            
             obr_res = obr_client.send_invoice(
                 invoice_code=sale.code,
                 sale_date=sale.date,
                 total_amount=sale.total_amount,
                 items=obr_items_payload,
-                customer_tin=c_tin,
-                customer_name=c_name,
+                customer_tin=sale.customer_tin,
+                customer_name=sale.customer_name,
                 payment_method=checkout_data.payment_method,
             )
+            sale.invoice_identifier = obr_res.get("invoice_identifier")
             sale.obr_invoice_number = obr_res.get("obr_invoice_number")
             sale.obr_signature = obr_res.get("obr_signature")
             sale.obr_electronic_signature = obr_res.get("obr_electronic_signature")

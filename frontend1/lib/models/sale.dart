@@ -17,7 +17,11 @@ class Sale {
   final String? insuranceProvider;
   final String? insuranceCardId;
   final double coveragePercent;
-  // Champs fiscaux & OBR EBMS Burundi
+
+  // Champs fiscaux & OBR EBMS Burundi V0.5
+  final String? invoiceIdentifier;
+  final String? customerTin;
+  final String? cnMotif;
   final String? obrInvoiceNumber;
   final String? obrSignature;
   final String? obrElectronicSignature;
@@ -43,13 +47,15 @@ class Sale {
     this.insuranceProvider,
     this.insuranceCardId,
     this.coveragePercent = 0.0,
+    this.invoiceIdentifier,
+    this.customerTin,
+    this.cnMotif,
     this.obrInvoiceNumber,
     this.obrSignature,
     this.obrElectronicSignature,
     this.obrQrCode,
     this.obrSyncStatus,
   });
-
 
   factory Sale.fromJson(Map<String, dynamic> json) {
     return Sale(
@@ -76,6 +82,9 @@ class Sale {
       insuranceProvider: json['insurance_provider'] as String?,
       insuranceCardId: json['insurance_card_id'] as String?,
       coveragePercent: (json['coverage_percent'] as num?)?.toDouble() ?? 0.0,
+      invoiceIdentifier: json['invoice_identifier'] as String?,
+      customerTin: json['customer_tin'] as String?,
+      cnMotif: json['cn_motif'] as String?,
       obrInvoiceNumber: json['obr_invoice_number'] as String?,
       obrSignature: json['obr_signature'] as String?,
       obrElectronicSignature: json['obr_electronic_signature'] as String?,
@@ -84,8 +93,6 @@ class Sale {
     );
   }
 }
-
-
 
 class MedicineSaleStats {
   final int id;
@@ -182,4 +189,3 @@ class SaleItem {
     );
   }
 }
-

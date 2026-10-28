@@ -149,6 +149,7 @@ class POSCheckoutRequest(BaseModel):
     insurance_provider: Optional[str] = None
     insurance_card_id: Optional[str] = None
     coverage_percent: Optional[float] = Field(default=0.0, ge=0, le=100)
+    customer_tin: Optional[str] = Field(None, description="NIF du client si assujetti")
     
     model_config = {
         "json_schema_extra": {
@@ -215,6 +216,15 @@ class POSSaleResponse(BaseModel):
 
     # Bonus client
     bonus_earned: float = 0.0  # Points bonus gagnés lors de cette vente
+
+    # Fiscalité OBR EBMS
+    invoice_identifier: Optional[str] = None
+    customer_tin: Optional[str] = None
+    obr_invoice_number: Optional[str] = None
+    obr_signature: Optional[str] = None
+    obr_electronic_signature: Optional[str] = None
+    obr_qr_code: Optional[str] = None
+    obr_sync_status: Optional[str] = None
     
     model_config = {"from_attributes": True}
 

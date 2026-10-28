@@ -69,7 +69,11 @@ class POSSale(Base, BaseModelMixin, PharmacyScopedMixin):
     sync_status = Column(String(20), default="local_only", nullable=False, index=True)
     synced_at = Column(DateTime, nullable=True)
 
-    # Champs fiscaux & OBR EBMS Burundi
+    # Champs fiscaux & OBR EBMS Burundi V0.5
+    invoice_identifier = Column(String(120), nullable=True, index=True)  # <tp_TIN>/<system_id>/<YYYYMMDDhhmmss>/<invoice_number>
+    customer_tin = Column(String(50), nullable=True)
+    cn_motif = Column(String(200), nullable=True)  # Motif de note de crédit / annulation
+    cancelled_invoice_ref = Column(String(100), nullable=True)  # Réf de la facture originale si type RC
     obr_invoice_number = Column(String(100), nullable=True, index=True)
     obr_signature = Column(String(255), nullable=True)
     obr_electronic_signature = Column(String(500), nullable=True)
@@ -144,4 +148,3 @@ class InvoiceSequence(Base, BaseModelMixin, PharmacyScopedMixin):
 
     def __repr__(self):
         return f"<InvoiceSequence(pharmacy_id={self.pharmacy_id}, year={self.year}, current_number={self.current_number})>"
-

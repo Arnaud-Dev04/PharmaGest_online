@@ -8,6 +8,7 @@ import 'package:frontend1/providers/cart_provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/providers/license_provider.dart';
 import 'package:frontend1/services/pos_service.dart';
+import 'package:frontend1/services/obr_service.dart';
 import 'package:frontend1/services/cash_register_service.dart';
 import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/services/invoice_pdf_service.dart';
@@ -45,6 +46,37 @@ class _PaymentModalState extends State<PaymentModal> {
   // Champs Client (optionnel)
   final _clientPrenomCtrl = TextEditingController();
   final _clientNomCtrl = TextEditingController();
+  final ObrService _obrService = ObrService();
+  final _customerTinCtrl = TextEditingController();
+  bool _isValidatingTin = false;
+  String? _tinValidationMessage;
+  bool? _tinIsValid;
+
+  Future<void> _validateCustomerTin() async {
+    final tin = _customerTinCtrl.text.trim();
+    if (tin.isEmpty) return;
+    setState(() {
+      _isValidatingTin = true;
+      _tinValidationMessage = null;
+      _tinIsValid = null;
+    });
+    try {
+      final res = await _obrService.checkTIN(tin);
+      setState(() {
+        _isValidatingTin = false;
+        _tinIsValid = res['valid'] == true;
+        _tinValidationMessage = res['taxpayer_name'] as String? ??
+            res['message'] as String? ??
+            'NIF vérifié auprès de l\'OBR';
+      });
+    } catch (e) {
+      setState(() {
+        _isValidatingTin = false;
+        _tinIsValid = false;
+        _tinValidationMessage = 'Vérification NIF impossible (mode local/hors-ligne)';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -53,6 +85,7 @@ class _PaymentModalState extends State<PaymentModal> {
     _coveragePercentController.dispose();
     _clientPrenomCtrl.dispose();
     _clientNomCtrl.dispose();
+    _customerTinCtrl.dispose();
     super.dispose();
   }
 
@@ -289,6 +322,10 @@ class _PaymentModalState extends State<PaymentModal> {
         'cash_session_uuid': cashSessionUuid,
         // Nom client optionnel (pour la facture)
         'customer_name': customerName.isNotEmpty ? customerName : null,
+        // NIF Client si assujetti OBR
+        'customer_tin': _customerTinCtrl.text.trim().isNotEmpty
+            ? _customerTinCtrl.text.trim()
+            : null,
         // Insurance
         'insurance_provider': _paymentMethod == 'insurance_card'
             ? _insuranceProviderController.text
@@ -500,6 +537,56 @@ class _PaymentModalState extends State<PaymentModal> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _customerTinCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'NIF Client (Optionnel / Assujetti OBR)',
+                      prefixIcon: const Icon(Icons.badge_outlined, size: 18),
+                      suffixIcon: _isValidatingTin
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.check_circle_outline, size: 18),
+                              tooltip: 'Vérifier la validité du NIF avec l\'OBR',
+                              onPressed: _validateCustomerTin,
+                            ),
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                    onFieldSubmitted: (_) => _validateCustomerTin(),
+                  ),
+                  if (_tinValidationMessage != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          _tinIsValid == true ? Icons.check_circle : Icons.info_outline,
+                          size: 14,
+                          color: _tinIsValid == true ? Colors.green : Colors.orange,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _tinValidationMessage!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _tinIsValid == true ? Colors.green[800] : Colors.orange[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

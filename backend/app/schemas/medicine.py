@@ -100,6 +100,7 @@ class MedicineCreate(BaseModel):
     boxes_per_carton: int = Field(default=1, ge=1, description="Number of boxes per carton")
     blisters_per_box: int = Field(default=1, ge=1, description="Number of blisters/plaquettes per box")
     units_per_blister: int = Field(default=1, ge=1, description="Number of units per blister")
+    units_per_packaging: Optional[int] = Field(None, ge=1, description="Units per packaging")
     # Fiscalité OBR
     tax_rate: float = Field(default=0.0, ge=0.0, description="Taux de TVA en % (0.0 pour exonéré, 18.0 pour standard)")
     tax_category: str = Field(default="exempt", description="Catégorie fiscale: exempt, standard, zero")

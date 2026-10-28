@@ -713,12 +713,27 @@ class InvoicePdfService {
                   'N° Enregistrement Fiscal: ${sale.obrInvoiceNumber ?? sale.code}',
                   style: const pw.TextStyle(fontSize: 8),
                 ),
+                if (sale.customerTin != null && sale.customerTin!.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'NIF Client: ${sale.customerTin}',
+                    style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
                 pw.SizedBox(height: 2),
                 pw.Text(
                   'Signature Électronique: ${sale.obrSignature ?? "VALIDÉE"}',
                   style: pw.TextStyle(fontSize: 7, color: _textMuted, fontStyle: pw.FontStyle.italic),
                   maxLines: 1,
                 ),
+                if (sale.invoiceIdentifier != null && sale.invoiceIdentifier!.isNotEmpty) ...[
+                  pw.SizedBox(height: 1),
+                  pw.Text(
+                    'ID Facture OBR: ${sale.invoiceIdentifier}',
+                    style: pw.TextStyle(fontSize: 6.5, color: _textMuted),
+                    maxLines: 1,
+                  ),
+                ],
               ],
             ),
           ),

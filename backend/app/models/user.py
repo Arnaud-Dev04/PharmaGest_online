@@ -2,7 +2,7 @@
 User model for authentication and authorization.
 """
 
-from sqlalchemy import Boolean, Column, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, JSON, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.models.base import BaseModelMixin, PharmacyScopedMixin
@@ -41,6 +41,8 @@ class User(Base, BaseModelMixin, PharmacyScopedMixin):
     phone = Column(String(30), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     must_change_password = Column(Boolean, default=False, nullable=False)
+    is_super_platform_admin = Column(Boolean, default=False, nullable=False)
+    allowed_features = Column(JSON, nullable=True, default=None)
     pharmacy = relationship("Pharmacy", back_populates="users")
     
     def __repr__(self):

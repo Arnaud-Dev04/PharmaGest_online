@@ -243,6 +243,8 @@ from app.routes import (
     accounting_router,
     restock_router,
     obr_router,
+    platform_admin_users_router,
+    analyse_router,
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
@@ -268,6 +270,8 @@ app.include_router(search_router)
 app.include_router(accounting_router)
 app.include_router(restock_router, prefix="/restock", tags=["Restock"])
 app.include_router(obr_router)
+app.include_router(platform_admin_users_router)
+app.include_router(analyse_router)
 
 
 # =========================

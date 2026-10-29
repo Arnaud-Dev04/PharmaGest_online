@@ -52,6 +52,8 @@ from app.routes.customer_credits import router as customer_credits_router
 from app.routes.search import router as search_router
 from app.routes.accounting import router as accounting_router
 from app.routes.obr import router as obr_router
+from app.routes.platform_admin_users import router as platform_admin_users_router
+from app.routes.analyse import router as analyse_router
 
 # Routers optionnels (peuvent ne pas exister sur Render selon la version)
 try:
@@ -178,6 +180,8 @@ app.include_router(medicine_pricing_router, prefix="/pricing",  tags=["Pricing"]
 app.include_router(pos_router,              prefix="/pos",      tags=["POS"])
 app.include_router(cash_register_router,    prefix="/cash-register", tags=["Cash Register"])
 app.include_router(platform_admin_router,   prefix="/platform", tags=["Platform Admin"])
+app.include_router(platform_admin_users_router)
+app.include_router(analyse_router)
 app.include_router(customer_credits_router, prefix="/credits",  tags=["Customer Credits"])
 app.include_router(search_router)
 app.include_router(accounting_router)

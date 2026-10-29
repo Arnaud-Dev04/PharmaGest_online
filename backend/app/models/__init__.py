@@ -21,8 +21,11 @@ from app.models.medicine_pricing import MedicinePricing
 from app.models.audit_log import DeletionLog
 from app.models.cash_register import CashRegisterSession, CashRegisterMovement
 from app.models.customer_credit import CustomerCredit, CustomerCreditPayment
+from app.models.license_key import LicenseKey
 
 __all__ = [
+    # License Key
+    "LicenseKey",
     # Customer Credit
     "CustomerCredit",
     "CustomerCreditPayment",

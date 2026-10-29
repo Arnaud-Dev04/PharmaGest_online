@@ -1,4 +1,4 @@
-"""
+﻿"""
 Users routes.
 """
 
@@ -391,3 +391,37 @@ def delete_user(
     db.commit()
 
     return {"message": "Utilisateur désactivé avec succès", "is_active": False}
+
+
+class UserPermissionsUpdateRequest(BaseModel):
+    allowed_features: Optional[List[str]] = None
+
+@router.put("/{user_id}/permissions", summary="Update user permissions (Admin only)")
+def update_user_permissions(
+    user_id: int,
+    payload: UserPermissionsUpdateRequest,
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_local_db),
+):
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vous ne pouvez pas modifier vos propres permissions administratives",
+        )
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouve")
+
+    if current_user.pharmacy_id is not None and target_user.pharmacy_id != current_user.pharmacy_id:
+        raise HTTPException(status_code=403, detail="Acc�s non autoris� � cet utilisateur")
+
+    target_user.allowed_features = payload.allowed_features
+    db.commit()
+    db.refresh(target_user)
+    return {
+        "id": target_user.id,
+        "username": target_user.username,
+        "allowed_features": target_user.allowed_features,
+        "message": "Permissions mises � jour avec succ�s",
+    }

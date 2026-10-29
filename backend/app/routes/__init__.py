@@ -23,6 +23,8 @@ from .search import router as search_router
 from .accounting import router as accounting_router
 from .restock import router as restock_router
 from .obr import router as obr_router
+from .platform_admin_users import router as platform_admin_users_router
+from .analyse import router as analyse_router
 
 __all__ = [
     "auth_router",
@@ -48,4 +50,6 @@ __all__ = [
     "accounting_router",
     "restock_router",
     "obr_router",
+    "platform_admin_users_router",
+    "analyse_router",
 ]

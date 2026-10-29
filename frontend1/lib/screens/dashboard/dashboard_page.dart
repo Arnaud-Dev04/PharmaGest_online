@@ -6,6 +6,9 @@ import 'package:frontend1/widgets/dashboard/stats_card.dart';
 import 'package:frontend1/widgets/dashboard/period_toggle.dart';
 import 'package:frontend1/widgets/dashboard/revenue_chart.dart';
 import 'package:frontend1/widgets/dashboard/sales_patterns_charts.dart';
+import 'package:frontend1/widgets/dashboard/top_products_chart.dart';
+import 'package:frontend1/widgets/dashboard/stock_health_chart.dart';
+import 'package:frontend1/widgets/dashboard/stock_valuation_card.dart';
 import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/providers/auth_provider.dart';
 import 'package:frontend1/providers/inventory_provider.dart';
@@ -138,18 +141,84 @@ class _DashboardPageState extends State<DashboardPage> {
           _buildStatsGrid(languageProvider),
           const SizedBox(height: 24),
 
-          // Revenue Chart — admin seulement
+          // Revenue Chart & Top Products Donut Chart
           if (isAdmin) ...[
-            _buildRevenueChartCard(languageProvider),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 960) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: _buildRevenueChartCard(languageProvider)),
+                      const SizedBox(width: 20),
+                      Expanded(flex: 2, child: _buildTopProductsChartCard(languageProvider)),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    _buildRevenueChartCard(languageProvider),
+                    const SizedBox(height: 20),
+                    _buildTopProductsChartCard(languageProvider),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+          ] else ...[
+            _buildTopProductsChartCard(languageProvider),
             const SizedBox(height: 24),
           ],
 
-          // Sales By Day Chart
-          _buildSalesByDayCard(languageProvider),
+          // Sales By Day & Hour Charts (Side-by-Side on desktop)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 960) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildSalesByDayCard(languageProvider)),
+                    const SizedBox(width: 20),
+                    Expanded(child: _buildSalesByHourCard(languageProvider)),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  _buildSalesByDayCard(languageProvider),
+                  const SizedBox(height: 20),
+                  _buildSalesByHourCard(languageProvider),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 24),
 
-          // Sales By Hour Chart
-          _buildSalesByHourCard(languageProvider),
+          // Santé du Stock & Valorisation / Rentabilité
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (isAdmin) {
+                if (constraints.maxWidth > 960) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: _buildStockHealthCard(languageProvider)),
+                      const SizedBox(width: 20),
+                      Expanded(flex: 3, child: _buildStockValuationCard(languageProvider)),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    _buildStockHealthCard(languageProvider),
+                    const SizedBox(height: 20),
+                    _buildStockValuationCard(languageProvider),
+                  ],
+                );
+              }
+              return _buildStockHealthCard(languageProvider);
+            },
+          ),
           const SizedBox(height: 24),
 
           // Recent Sales Table
@@ -249,7 +318,10 @@ class _DashboardPageState extends State<DashboardPage> {
   // ========================================================================
 
   Widget _buildStatsGrid(LanguageProvider languageProvider) {
-    final isAdmin = Provider.of<AuthProvider>(context, listen: false).user?.isAdmin ?? false;
+    final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+    final isAdmin = authUser?.isAdmin ?? false;
+    final userRole = authUser?.role ?? "pharmacist";
+    final isCashier = userRole == "cashier";
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -262,11 +334,12 @@ class _DashboardPageState extends State<DashboardPage> {
           crossAxisCount: crossAxisCount,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 24,
-          crossAxisSpacing: 24,
-          childAspectRatio: 2.5,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 3.2,
           children: [
             // 1. Total Medicines (stock)
+            if (!isCashier)
             StatsCard(
               icon: Icons.inventory_2,
               label: languageProvider.translate('totalMedicines'),
@@ -295,6 +368,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
 
             // 4. Suppliers
+            if (!isCashier)
             StatsCard(
               icon: Icons.local_shipping,
               label: languageProvider.translate('suppliers'),
@@ -304,6 +378,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
 
             // 5. Expiring Soon
+            if (!isCashier)
             StatsCard(
               icon: Icons.warning_amber,
               label: languageProvider.translate('expiringSoon'),
@@ -314,6 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
 
             // 6. Low Stock
+            if (!isCashier)
             StatsCard(
               icon: Icons.error_outline,
               label: languageProvider.translate('lowStock'),
@@ -334,6 +410,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
 
             // 8. Cancelled Sales
+            if (!isCashier)
             StatsCard(
               icon: Icons.cancel,
               label: languageProvider.translate('cancelled'),
@@ -344,6 +421,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
 
             // 9. Top Selling Products
+            if (!isCashier)
             StatsCard(
               icon: Icons.star,
               label: languageProvider.translate('topProducts'),
@@ -989,7 +1067,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const Icon(Icons.access_time, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
-                  "Ventes par Heure", // TODO: Add translation key 'salesByHour'
+                  "Ventes par Heure",
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
@@ -998,6 +1076,90 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 24),
             SalesByHourChart(data: _stats!.salesByHour),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopProductsChartCard(LanguageProvider languageProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.pie_chart_outline, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Top Ventes (Répartition)',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            TopProductsPieChart(topProducts: _stats!.topSellingProducts),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockHealthCard(LanguageProvider languageProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.donut_large, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Santé de l\'Inventaire',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            StockHealthChart(
+              totalMedicines: _stats!.totalMedicines,
+              lowStockCount: _stats!.lowStockMedicines,
+              expiringSoonCount: _stats!.expiringSoonCount,
+              expiredCount: _stats!.expiredMedicines,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockValuationCard(LanguageProvider languageProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.analytics_outlined, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Valorisation du Stock & Rentabilité',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            StockValuationCard(
+              purchaseValue: _stats!.totalPurchaseValue,
+              sellValue: _stats!.totalSellValue,
+              totalRevenue: _stats!.totalRevenue,
+            ),
           ],
         ),
       ),

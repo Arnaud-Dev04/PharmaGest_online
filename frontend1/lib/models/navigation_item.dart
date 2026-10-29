@@ -90,6 +90,18 @@ class NavigationItems {
       icon: Icons.people,
       adminOnly: true,
     ),
+        const NavigationItem(
+      name: 'analyse',
+      route: '/analyse',
+      icon: Icons.analytics_outlined,
+      adminOnly: true,
+    ),
+    const NavigationItem(
+      name: 'license',
+      route: '/license',
+      icon: Icons.workspace_premium_outlined,
+      adminOnly: true,
+    ),
     const NavigationItem(
       name: 'reports',
       route: '/reports',

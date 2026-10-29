@@ -28,7 +28,7 @@ class StatsCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: [
               // Section gauche : Label + Value
@@ -44,12 +44,12 @@ class StatsCard extends StatelessWidget {
                         color: isDark ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
 
                     // Value (grande)
                     Text(
                       value,
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme.of(context).textTheme.titleLarge
                           ?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.grey[900],
@@ -61,12 +61,12 @@ class StatsCard extends StatelessWidget {
 
               // Section droite : Icône dans container coloré
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
             ],
           ),

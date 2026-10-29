@@ -1,6 +1,6 @@
 """Pharmacy tenant model."""
 
-from sqlalchemy import Boolean, Column, Date, Integer, String
+from sqlalchemy import Boolean, Column, Date, Integer, JSON, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -25,6 +25,11 @@ class Pharmacy(Base, BaseModelMixin):
     license_expires_at = Column(Date, nullable=True)
     license_is_trial = Column(Boolean, default=False, nullable=False)
     notes = Column(String(500), nullable=True)
+
+    # Feature access control (overrides plan defaults when set)
+    enabled_features = Column(JSON, nullable=True, default=None)
+    """List[str] of feature keys explicitly enabled for this pharmacy.
+    When None, the plan-based defaults from PLAN_FEATURES are used."""
 
     # Fiscalité & Liaison OBR EBMS Burundi
     nif = Column(String(50), nullable=True, index=True)

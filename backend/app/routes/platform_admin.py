@@ -137,6 +137,7 @@ def onboard_pharmacy(
         license_expires_at=payload.license_expires_at,
         license_is_trial=payload.license_is_trial,
         notes=payload.notes,
+        enabled_features=getattr(payload, 'enabled_features', None),
         is_active=True,
     )
     db.add(pharmacy)

@@ -29,6 +29,8 @@ import 'package:frontend1/screens/stock/stock_page.dart';
 import 'package:frontend1/screens/users/user_stats_page.dart';
 import 'package:frontend1/screens/restock/restock_list_page.dart';
 import 'package:frontend1/screens/restock/restock_form_page.dart';
+import 'package:frontend1/screens/analyse/analyse_page.dart';
+import 'package:frontend1/screens/settings/license_page.dart';
 import 'package:frontend1/models/supplier.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -124,6 +126,8 @@ class PharmacApp extends StatelessWidget {
                   '/change-password': (context) => const ChangePasswordScreen(),
                   '/stock-movements': (context) =>
                       const MainLayout(child: StockMovementsPage()),
+                  '/analyse': (context) => const MainLayout(child: AnalysePage()),
+                  '/license': (context) => const MainLayout(child: LicensePage()),
                 },
 
                 // Routes dynamiques acceptant des arguments

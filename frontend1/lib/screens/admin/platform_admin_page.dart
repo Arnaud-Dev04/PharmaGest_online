@@ -8,6 +8,8 @@ import 'package:frontend1/providers/language_provider.dart';
 import 'package:frontend1/services/platform_admin_service.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:frontend1/screens/admin/tabs/platform_admins_tab.dart';
+import 'package:frontend1/screens/admin/tabs/platform_licenses_tab.dart';
 
 class PlatformAdminPage extends StatefulWidget {
   const PlatformAdminPage({super.key});
@@ -661,91 +663,133 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
     if (!isPlatformAdmin) {
       return Center(child: Text(language.translate('platformAccessDenied')));
     }
+    return DefaultTabController(
+      length: 3,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 760;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TabBar(
+                  labelColor: AppTheme.primaryColor,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: AppTheme.primaryColor,
+                  tabs: const [
+                    Tab(
+                      icon: Icon(Icons.storefront_outlined),
+                      text: 'Pharmacies',
+                    ),
+                    Tab(
+                      icon: Icon(Icons.manage_accounts_outlined),
+                      text: 'Admins Plateforme',
+                    ),
+                    Tab(
+                      icon: Icon(Icons.vpn_key_outlined),
+                      text: 'Gestion Licences',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildPharmaciesTab(context, language, isCompact),
+                    const PlatformAdminsTab(),
+                    const PlatformLicensesTab(),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 760;
-        final title = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              language.translate('platformTitle'),
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 4),
-            Text(language.translate('platformSubtitle')),
-          ],
-        );
-        final refreshButton = IconButton(
-          tooltip: language.translate('refresh'),
-          onPressed: _isLoading ? null : _load,
-          icon: const Icon(Icons.refresh),
-        );
-        final createButton = FilledButton.icon(
-          onPressed: () => _showPharmacyForm(),
-          icon: const Icon(Icons.add_business_outlined),
-          label: Text(language.translate('platformNewPharmacy')),
-        );
-        final accountsButton = OutlinedButton.icon(
-          onPressed: _showAccountManagement,
-          icon: const Icon(Icons.manage_accounts_outlined),
-          label: Text(language.translate('platformAccounts')),
-        );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isCompact)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: title),
-                      refreshButton,
-                    ],
-                  ),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 8,
-                    children: [accountsButton, createButton],
-                  ),
-                ],
-              )
-            else
+  Widget _buildPharmaciesTab(
+    BuildContext context,
+    LanguageProvider language,
+    bool isCompact,
+  ) {
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          language.translate('platformTitle'),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 4),
+        Text(language.translate('platformSubtitle')),
+      ],
+    );
+    final refreshButton = IconButton(
+      tooltip: language.translate('refresh'),
+      onPressed: _isLoading ? null : _load,
+      icon: const Icon(Icons.refresh),
+    );
+    final createButton = FilledButton.icon(
+      onPressed: () => _showPharmacyForm(),
+      icon: const Icon(Icons.add_business_outlined),
+      label: Text(language.translate('platformNewPharmacy')),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isCompact)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Row(
                 children: [
                   Expanded(child: title),
                   refreshButton,
-                  const SizedBox(width: 8),
-                  accountsButton,
-                  const SizedBox(width: 8),
-                  createButton,
                 ],
               ),
-            const SizedBox(height: 20),
-            if (_metrics != null) _buildMetrics(language, isCompact),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              onChanged: (_) {
-                _searchDebounce?.cancel();
-                _searchDebounce = Timer(
-                  const Duration(milliseconds: 300),
-                  () => _load(page: 1),
-                );
-              },
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
-                hintText: language.translate('platformSearch'),
-                border: const OutlineInputBorder(),
-                isDense: true,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                children: [createButton],
               ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(child: _buildPharmacyList(language, isCompact)),
-          ],
-        );
-      },
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: title),
+              refreshButton,
+              const SizedBox(width: 8),
+              createButton,
+            ],
+          ),
+        const SizedBox(height: 20),
+        if (_metrics != null) _buildMetrics(language, isCompact),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _searchController,
+          onChanged: (_) {
+            _searchDebounce?.cancel();
+            _searchDebounce = Timer(
+              const Duration(milliseconds: 300),
+              () => _load(page: 1),
+            );
+          },
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            hintText: language.translate('platformSearch'),
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(child: _buildPharmacyList(language, isCompact)),
+      ],
     );
   }
 

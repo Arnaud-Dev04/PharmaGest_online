@@ -56,8 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
-      // Redirection vers dashboard (à implémenter)
-      Navigator.of(context).pushReplacementNamed('/dashboard');
+      // Redirection selon le rôle
+      if (authProvider.user?.role == 'platform_admin' || _isPlatformAdmin) {
+        Navigator.of(context).pushReplacementNamed('/platform-admin');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      }
     }
   }
 

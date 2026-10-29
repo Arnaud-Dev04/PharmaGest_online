@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend1/services/platform_admin_service.dart';
 
@@ -55,7 +55,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDlgState) => AlertDialog(
-          title: const Text('GÃ©nÃ©rer des ClÃ©s de Licence'),
+          title: const Text('Générer des Clés de Licence'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -68,7 +68,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                   items: const [
                     DropdownMenuItem(value: 'basic', child: Text('Basic (Essentiel)')),
                     DropdownMenuItem(value: 'pro', child: Text('Pro (Complet)')),
-                    DropdownMenuItem(value: 'enterprise', child: Text('Enterprise (Multi-postes & AvancÃ©)')),
+                    DropdownMenuItem(value: 'enterprise', child: Text('Enterprise (Multi-postes & Avancé)')),
                   ],
                   onChanged: (val) {
                     if (val != null) {
@@ -82,7 +82,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('DurÃ©e de validitÃ© :'),
+                const Text('Durée de validité :'),
                 DropdownButton<int>(
                   value: durationDays,
                   isExpanded: true,
@@ -122,12 +122,12 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Nombre de clÃ©s :'),
+                          const Text('Nombre de clés :'),
                           DropdownButton<int>(
                             value: quantity,
                             isExpanded: true,
                             items: [1, 2, 5, 10, 20]
-                                .map((q) => DropdownMenuItem(value: q, child: Text('$q clÃ©(s)')))
+                                .map((q) => DropdownMenuItem(value: q, child: Text('$q clé(s)')))
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) setDlgState(() => quantity = val);
@@ -152,7 +152,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('GÃ©nÃ©rer'),
+              child: const Text('Générer'),
             ),
           ],
         ),
@@ -172,7 +172,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${generated.length} clÃ©(s) gÃ©nÃ©rÃ©e(s) avec succÃ¨s !'),
+              content: Text('${generated.length} clé(s) générée(s) avec succès !'),
               backgroundColor: Colors.green,
             ),
           );
@@ -200,7 +200,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
           children: [
             Text('Erreur: $_error', style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('RÃ©essayer')),
+            ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
           ],
         ),
       );
@@ -210,10 +210,10 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showGenerateDialog,
         icon: const Icon(Icons.key),
-        label: const Text('GÃ©nÃ©rer des ClÃ©s'),
+        label: const Text('Générer des Clés'),
       ),
       body: _keys.isEmpty
-          ? const Center(child: Text('Aucune clÃ© de licence gÃ©nÃ©rÃ©e pour l\'instant.'))
+          ? const Center(child: Text('Aucune clé de licence générée pour l\'instant.'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _keys.length,
@@ -229,10 +229,10 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                 String statusText = 'Disponible';
                 if (isUsed) {
                   badgeColor = Colors.blue;
-                  statusText = 'ActivÃ©e ($pharmacyName)';
+                  statusText = 'Activée ($pharmacyName)';
                 } else if (!isActive) {
                   badgeColor = Colors.grey;
-                  statusText = 'RÃ©voquÃ©e';
+                  statusText = 'Révoquée';
                 }
 
                 return Card(
@@ -252,11 +252,11 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 18),
-                          tooltip: 'Copier la clÃ©',
+                          tooltip: 'Copier la clé',
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: keyStr));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('ClÃ© copiÃ©e dans le presse-papiers')),
+                              const SnackBar(content: Text('Clé copiée dans le presse-papiers')),
                             );
                           },
                         ),
@@ -276,7 +276,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         if (!isUsed && isActive)
                           IconButton(
                             icon: const Icon(Icons.cancel, color: Colors.red),
-                            tooltip: 'RÃ©voquer la clÃ©',
+                            tooltip: 'Révoquer la clé',
                             onPressed: () async {
                               await _service.revokeLicenseKey(k['id'] as int);
                               _load();

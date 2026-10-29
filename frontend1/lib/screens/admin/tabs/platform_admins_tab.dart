@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:frontend1/services/platform_admin_service.dart';
 
 class PlatformAdminsTab extends StatefulWidget {
@@ -72,7 +72,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
               const SizedBox(height: 8),
               TextField(
                 controller: firstCtrl,
-                decoration: const InputDecoration(labelText: 'PrÃ©nom'),
+                decoration: const InputDecoration(labelText: 'Prénom'),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -87,7 +87,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
               const SizedBox(height: 8),
               TextField(
                 controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: 'TÃ©lÃ©phone'),
+                decoration: const InputDecoration(labelText: 'Téléphone'),
               ),
             ],
           ),
@@ -99,7 +99,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
               if (userCtrl.text.trim().isEmpty || passCtrl.text.trim().isEmpty) return;
               Navigator.pop(ctx, true);
             },
-            child: const Text('CrÃ©er'),
+            child: const Text('Créer'),
           ),
         ],
       ),
@@ -141,13 +141,13 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: firstCtrl, decoration: const InputDecoration(labelText: 'PrÃ©nom')),
+              TextField(controller: firstCtrl, decoration: const InputDecoration(labelText: 'Prénom')),
               const SizedBox(height: 8),
               TextField(controller: lastCtrl, decoration: const InputDecoration(labelText: 'Nom')),
               const SizedBox(height: 8),
               TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
               const SizedBox(height: 8),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'TÃ©lÃ©phone')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone')),
               const SizedBox(height: 8),
               TextField(
                 controller: passCtrl,
@@ -200,7 +200,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
           children: [
             Text('Erreur: $_error', style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('RÃ©essayer')),
+            ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
           ],
         ),
       );
@@ -213,7 +213,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
         label: const Text('Nouvel Administrateur'),
       ),
       body: _admins.isEmpty
-          ? const Center(child: Text('Aucun administrateur plateforme configurÃ©.'))
+          ? const Center(child: Text('Aucun administrateur plateforme configuré.'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _admins.length,
@@ -237,13 +237,13 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      '${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''} â€¢ ${admin['email'] ?? 'Pas d\'email'} â€¢ ${admin['phone'] ?? 'Pas de tÃ©l.'}',
+                      '${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''} â€¢ ${admin['email'] ?? 'Pas d\'email'} â€¢ ${admin['phone'] ?? 'Pas de tél.'}',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Chip(
-                          label: Text(isActive ? 'Actif' : 'DÃ©sactivÃ©'),
+                          label: Text(isActive ? 'Actif' : 'Désactivé'),
                           backgroundColor: isActive ? Colors.green[100] : Colors.red[100],
                         ),
                         IconButton(
@@ -258,7 +258,7 @@ class _PlatformAdminsTabState extends State<PlatformAdminsTab> {
                               size: 20,
                               color: isActive ? Colors.orange : Colors.green,
                             ),
-                            tooltip: isActive ? 'DÃ©sactiver' : 'Activer',
+                            tooltip: isActive ? 'Désactiver' : 'Activer',
                             onPressed: () async {
                               await _service.updatePlatformAdmin(
                                 admin['id'] as int,

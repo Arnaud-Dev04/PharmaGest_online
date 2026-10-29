@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+typedef LicensePage = ClientLicensePage;
+import 'package:flutter/material.dart';
 import 'package:frontend1/services/api_service.dart';
 
 class ClientLicensePage extends StatefulWidget {
@@ -69,7 +70,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message']?.toString() ?? 'Licence activÃ©e avec succÃ¨s !'),
+            content: Text(data['message']?.toString() ?? 'Licence activée avec succès !'),
             backgroundColor: Colors.green,
           ),
         );
@@ -104,7 +105,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
           children: [
             Text('Erreur: $_error', style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('RÃ©essayer')),
+            ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
           ],
         ),
       );
@@ -161,7 +162,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
                           ],
                         ),
                         Chip(
-                          label: Text(isValid ? 'Actif' : 'ExpirÃ©'),
+                          label: Text(isValid ? 'Actif' : 'Expiré'),
                           backgroundColor: isValid ? Colors.green[100] : Colors.red[100],
                           labelStyle: TextStyle(
                             color: isValid ? Colors.green[800] : Colors.red[800],
@@ -201,7 +202,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Saisissez la clÃ© de licence dÃ©livrÃ©e par l\'administrateur de la plateforme pour prolonger votre accÃ¨s.',
+                      'Saisissez la clé de licence délivrée par l\'administrateur de la plateforme pour prolonger votre accès.',
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
@@ -230,7 +231,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
                                 : const Icon(Icons.check),
-                            label: const Text('Activer la ClÃ©'),
+                            label: const Text('Activer la Clé'),
                           ),
                         ),
                       ],
@@ -253,7 +254,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('Aucun historique d\'activation trouvÃ© pour cette pharmacie.'),
+                  child: Text('Aucun historique d\'activation trouvé pour cette pharmacie.'),
                 ),
               )
             else
@@ -271,11 +272,11 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
                         child: Icon(Icons.history, color: Colors.white),
                       ),
                       title: Text(
-                        'ClÃ© : ${item['key']}',
+                        'Clé : ${item['key']}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'Plan : ${item['plan']?.toString().toUpperCase()} â€¢ ${item['duration_days']} jours â€¢ ActivÃ© le : ${item['used_at']?.toString().substring(0, 10) ?? ""}',
+                        'Plan : ${item['plan']?.toString().toUpperCase()} â€¢ ${item['duration_days']} jours â€¢ Activé le : ${item['used_at']?.toString().substring(0, 10) ?? ""}',
                       ),
                       trailing: const Icon(Icons.verified, color: Colors.green),
                     ),

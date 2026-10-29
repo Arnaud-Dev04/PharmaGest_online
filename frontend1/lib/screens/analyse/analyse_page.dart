@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:frontend1/services/api_service.dart';
 
 class AnalysePage extends StatefulWidget {
@@ -79,7 +79,7 @@ class _AnalysePageState extends State<AnalysePage> {
             children: [
               Text('Erreur de chargement: $_error', style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 12),
-              ElevatedButton(onPressed: _loadAllAnalytics, child: const Text('RÃ©essayer')),
+              ElevatedButton(onPressed: _loadAllAnalytics, child: const Text('Réessayer')),
             ],
           ),
         ),
@@ -90,7 +90,7 @@ class _AnalysePageState extends State<AnalysePage> {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Tableau de Bord Analyse & DÃ©cision'),
+          title: const Text('Tableau de Bord Analyse & Décision'),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -101,9 +101,9 @@ class _AnalysePageState extends State<AnalysePage> {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.attach_money), text: 'Finances (12 mois)'),
-              Tab(icon: Icon(Icons.inventory_2), text: 'SantÃ© Stock & Dormants'),
+              Tab(icon: Icon(Icons.inventory_2), text: 'Santé Stock & Dormants'),
               Tab(icon: Icon(Icons.people), text: 'Performance Vendeurs'),
-              Tab(icon: Icon(Icons.medication), text: 'Top MÃ©dicaments'),
+              Tab(icon: Icon(Icons.medication), text: 'Top Médicaments'),
             ],
           ),
         ),
@@ -175,7 +175,7 @@ class _AnalysePageState extends State<AnalysePage> {
                 return ListTile(
                   leading: const Icon(Icons.calendar_month, color: Colors.blueGrey),
                   title: Text('Mois : ${m['month']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${m['sale_count']} ventes enregistrÃ©es'),
+                  subtitle: Text('${m['sale_count']} ventes enregistrées'),
                   trailing: Text(
                     '${(m['revenue'] as num).toStringAsFixed(0)} FBu',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
@@ -224,7 +224,7 @@ class _AnalysePageState extends State<AnalysePage> {
           const SizedBox(height: 12),
           Card(
             child: slowMovers.isEmpty
-                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucun produit dormant identifiÃ©.'))
+                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucun produit dormant identifié.'))
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -235,9 +235,9 @@ class _AnalysePageState extends State<AnalysePage> {
                       return ListTile(
                         leading: const CircleAvatar(backgroundColor: Colors.orange, child: Icon(Icons.hourglass_empty, color: Colors.white)),
                         title: Text(item['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Stock actuel : ${item['current_stock']} unitÃ©s â€¢ P.U Achat : ${item['purchase_price']} FBu'),
+                        subtitle: Text('Stock actuel : ${item['current_stock']} unités â€¢ P.U Achat : ${item['purchase_price']} FBu'),
                         trailing: Text(
-                          'ImmobilisÃ©: ${(item['stock_value'] as num).toStringAsFixed(0)} FBu',
+                          'Immobilisé: ${(item['stock_value'] as num).toStringAsFixed(0)} FBu',
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange),
                         ),
                       );
@@ -260,7 +260,7 @@ class _AnalysePageState extends State<AnalysePage> {
           const SizedBox(height: 12),
           Card(
             child: _vendorsData.isEmpty
-                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucune donnÃ©e de vente enregistrÃ©e pour les utilisateurs.'))
+                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucune donnée de vente enregistrée pour les utilisateurs.'))
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -298,7 +298,7 @@ class _AnalysePageState extends State<AnalysePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Top 10 des MÃ©dicaments les Plus Vendus (Volume)',
+          Text('Top 10 des Médicaments les Plus Vendus (Volume)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Card(
@@ -313,13 +313,13 @@ class _AnalysePageState extends State<AnalysePage> {
                   leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.medication, color: Colors.white)),
                   title: Text(p['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('Chiffre d\'affaires : ${(p['revenue'] as num).toStringAsFixed(0)} FBu'),
-                  trailing: Chip(label: Text('${p['quantity']} unitÃ©s')),
+                  trailing: Chip(label: Text('${p['quantity']} unités')),
                 );
               },
             ),
           ),
           const SizedBox(height: 24),
-          Text('Top 10 des MÃ©dicaments les Plus Rentables (Chiffre d\'Affaires)',
+          Text('Top 10 des Médicaments les Plus Rentables (Chiffre d\'Affaires)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Card(
@@ -333,7 +333,7 @@ class _AnalysePageState extends State<AnalysePage> {
                 return ListTile(
                   leading: const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.star, color: Colors.white)),
                   title: Text(p['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${p['quantity']} unitÃ©s vendues'),
+                  subtitle: Text('${p['quantity']} unités vendues'),
                   trailing: Text(
                     '${(p['revenue'] as num).toStringAsFixed(0)} FBu',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal, fontSize: 16),

@@ -1,4 +1,3 @@
-typedef LicensePage = ClientLicensePage;
 import 'package:flutter/material.dart';
 import 'package:frontend1/services/api_service.dart';
 

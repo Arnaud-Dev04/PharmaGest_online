@@ -127,7 +127,7 @@ class PharmacApp extends StatelessWidget {
                   '/stock-movements': (context) =>
                       const MainLayout(child: StockMovementsPage()),
                   '/analyse': (context) => const MainLayout(child: AnalysePage()),
-                  '/license': (context) => const MainLayout(child: LicensePage()),
+                  '/license': (context) => const MainLayout(child: ClientLicensePage()),
                 },
 
                 // Routes dynamiques acceptant des arguments

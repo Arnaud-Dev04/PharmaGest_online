@@ -231,8 +231,9 @@ class _PlatformLicencesPageState extends State<PlatformLicencesPage> {
                           ),
                         ],
                         onChanged: (val) {
-                          if (val != null)
+                          if (val != null) {
                             setDlgState(() => durationDays = val);
+                            }
                         },
                       ),
                     ),
@@ -274,8 +275,9 @@ class _PlatformLicencesPageState extends State<PlatformLicencesPage> {
                                       )
                                       .toList(),
                                   onChanged: (val) {
-                                    if (val != null)
+                                    if (val != null) {
                                       setDlgState(() => maxUsers = val);
+                                      }
                                   },
                                 ),
                               ),
@@ -317,8 +319,9 @@ class _PlatformLicencesPageState extends State<PlatformLicencesPage> {
                                       )
                                       .toList(),
                                   onChanged: (val) {
-                                    if (val != null)
+                                    if (val != null) {
                                       setDlgState(() => quantity = val);
+                                      }
                                   },
                                 ),
                               ),

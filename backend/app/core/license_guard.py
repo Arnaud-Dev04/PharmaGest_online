@@ -10,28 +10,27 @@ from app.models.pharmacy import Pharmacy
 from app.models.user import User
 
 
-PLAN_LEVELS = {"basic": 0, "pro": 1, "enterprise": 2}
+PLAN_LEVELS = {"basic": 0, "pro": 1, "enterprise": 2, "diamond": 3}
 FEATURE_MINIMUM_PLANS = {
-    "customer_management": "pro",
-    "cloud_sync": "pro",
-    "sales_discounts": "pro",
-    "insurance_sales": "pro",
-    "sales_reports": "pro",
-    "report_exports": "pro",
-    "financial_reports": "pro",
-    "stock_movements": "pro",
-    "inventory_reconciliation": "pro",
-    "audit_logs": "pro",
-    "extended_sales_history": "pro",
-    "customer_loyalty": "enterprise",
+    "customer_management": "basic",
+    "cloud_sync": "basic",
+    "sales_discounts": "basic",
+    "insurance_sales": "basic",
+    "sales_reports": "basic",
+    "report_exports": "basic",
+    "financial_reports": "basic",
+    "stock_movements": "basic",
+    "inventory_reconciliation": "basic",
+    "audit_logs": "basic",
+    "extended_sales_history": "basic",
+    "customer_loyalty": "basic",
 }
+ALL_FEATURES = frozenset(FEATURE_MINIMUM_PLANS.keys())
 PLAN_FEATURES = {
-    "basic": frozenset(),
-    "pro": frozenset(
-        feature for feature, minimum in FEATURE_MINIMUM_PLANS.items()
-        if minimum == "pro"
-    ),
-    "enterprise": frozenset(FEATURE_MINIMUM_PLANS),
+    "basic": ALL_FEATURES,
+    "pro": ALL_FEATURES,
+    "enterprise": ALL_FEATURES,
+    "diamond": ALL_FEATURES,
 }
 
 
@@ -173,7 +172,7 @@ def apply_sales_history_limit(
                 "message": "This pharmacy has an unsupported plan configuration.",
             },
         )
-    if PLAN_LEVELS[current_plan] >= PLAN_LEVELS["pro"]:
+    if PLAN_LEVELS[current_plan] >= PLAN_LEVELS["basic"]:
         return start_date
 
     try:
@@ -218,7 +217,7 @@ def ensure_sales_record_access(
                 "message": "This pharmacy has an unsupported plan configuration.",
             },
         )
-    if PLAN_LEVELS[current_plan] >= PLAN_LEVELS["pro"]:
+    if PLAN_LEVELS[current_plan] >= PLAN_LEVELS["basic"]:
         return
 
     sale_day = sale_date.date() if isinstance(sale_date, datetime) else sale_date

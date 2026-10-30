@@ -191,7 +191,7 @@ class _AnalysePageState extends State<AnalysePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: months.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final m = months[idx];
                       return ListTile(
@@ -299,7 +299,7 @@ class _AnalysePageState extends State<AnalysePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: slowMovers.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final item = slowMovers[idx];
                       return ListTile(
@@ -351,7 +351,7 @@ class _AnalysePageState extends State<AnalysePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _vendorsData.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final v = _vendorsData[idx];
                       return ListTile(
@@ -415,7 +415,7 @@ class _AnalysePageState extends State<AnalysePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: topVolume.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final p = topVolume[idx];
                       return ListTile(
@@ -451,7 +451,7 @@ class _AnalysePageState extends State<AnalysePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: topRevenue.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final p = topRevenue[idx];
                       return ListTile(

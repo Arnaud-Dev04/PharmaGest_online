@@ -22,7 +22,6 @@ import 'package:frontend1/screens/reports/reports_page.dart';
 import 'package:frontend1/screens/settings/settings_page.dart'; // Import Settings
 // Import REAL pages instead of placeholders
 import 'package:frontend1/screens/admin/super_admin_page.dart';
-import 'package:frontend1/screens/admin/platform_admin_page.dart';
 import 'package:frontend1/screens/platform/pharmacies_page.dart';
 import 'package:frontend1/screens/platform/licences_page.dart';
 import 'package:frontend1/screens/platform/platform_admins_page.dart';

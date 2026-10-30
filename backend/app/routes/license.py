@@ -1,4 +1,4 @@
-﻿"""
+"""
 License routes - Public endpoint for license status checks.
 """
 
@@ -71,6 +71,7 @@ def get_license_status(
         "message": status.get("message", ""),
         "plan": plan,
         "max_users": pharmacy.max_users,
+        "max_agencies": getattr(pharmacy, "max_agencies", 2),
         "active_users": active_user_count,
         "available_features": sorted(PLAN_FEATURES[plan]),
     }
@@ -144,6 +145,9 @@ def update_license(
 
 
 import secrets
+import re
+import random
+import string
 from pydantic import BaseModel
 from typing import List
 from app.models.license_key import LicenseKey
@@ -156,6 +160,7 @@ class LicenseGenerateRequest(BaseModel):
     quantity: int = 1
     notes: Optional[str] = None
     pharmacy_id: Optional[int] = None
+    pharmacy_name: Optional[str] = None
 
 class LicenseKeyResponse(BaseModel):
     id: int
@@ -164,6 +169,7 @@ class LicenseKeyResponse(BaseModel):
     duration_days: int
     max_users: int
     pharmacy_id: Optional[int] = None
+    pharmacy_name: Optional[str] = None
     pharmacy_name: Optional[str] = None
     used_at: Optional[datetime] = None
     is_active: bool
@@ -176,10 +182,35 @@ class LicenseKeyResponse(BaseModel):
 class LicenseRedeemRequest(BaseModel):
     key: str
 
-def _generate_key_string(plan: str, duration_days: int) -> str:
-    prefix = {"basic": "BSC", "pro": "PRO", "enterprise": "ENT"}.get(plan.lower(), "KEY")
-    token = secrets.token_hex(8).upper()
-    return f"{prefix}-{token[:4]}-{token[4:8]}-{duration_days}D"
+def _format_duration_segment(days: int) -> str:
+    if days == 365:
+        return "12M"
+    if days == 730:
+        return "24M"
+    if days >= 30 and days % 30 == 0:
+        return f"{days // 30}M"
+    return f"{days}J"
+
+def _generate_key_string(pharmacy_name_or_plan: str | None, duration_days: int) -> str:
+    name_clean = re.sub(r'[^A-Za-z]', '', pharmacy_name_or_plan or '').upper()
+    if len(name_clean) >= 3:
+        p1 = name_clean[:3]
+    elif len(name_clean) > 0:
+        p1 = name_clean.ljust(3, 'X')
+    else:
+        p1 = "PHA"
+    p2 = f"{random.randint(1000, 9999)}"
+    p3 = _format_duration_segment(duration_days)
+    charset = string.ascii_uppercase + string.digits
+    while True:
+        p4 = "".join(random.choice(charset) for _ in range(5))
+        if any(c.isalpha() for c in p4) and any(c.isdigit() for c in p4):
+            break
+    return f"{p1}-{p2}-{p3}-{p4}"
+
+
+
+
 
 @router.post("/platform/generate", summary="Generate license keys (Platform Admin)")
 def generate_license_keys(
@@ -187,13 +218,18 @@ def generate_license_keys(
     current_admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_local_db),
 ):
+    target_name = payload.pharmacy_name
+    if not target_name and payload.pharmacy_id:
+        p_obj = db.query(Pharmacy).filter(Pharmacy.id == payload.pharmacy_id).first()
+        if p_obj:
+            target_name = p_obj.name
     created_keys = []
     qty = max(1, min(payload.quantity, 50))
     for _ in range(qty):
-        key_str = _generate_key_string(payload.plan, payload.duration_days)
+        key_str = _generate_key_string(target_name, payload.duration_days)
         # Ensure uniqueness
         while db.query(LicenseKey).filter(LicenseKey.key == key_str).first():
-            key_str = _generate_key_string(payload.plan, payload.duration_days)
+            key_str = _generate_key_string(target_name, payload.duration_days)
 
         l_key = LicenseKey(
             key=key_str,
@@ -300,6 +336,8 @@ def redeem_license_key(
     pharmacy.plan = l_key.plan
     if l_key.max_users:
         pharmacy.max_users = l_key.max_users
+    from app.schemas.pharmacy import PLAN_MAX_AGENCIES
+    pharmacy.max_agencies = PLAN_MAX_AGENCIES.get(l_key.plan.lower(), 2)
 
     l_key.used_at = datetime.utcnow()
     l_key.pharmacy_id = pharmacy.id
@@ -314,6 +352,7 @@ def redeem_license_key(
         "plan": pharmacy.plan,
         "license_expires_at": pharmacy.license_expires_at.isoformat(),
         "max_users": pharmacy.max_users,
+        "max_agencies": getattr(pharmacy, "max_agencies", 2),
     }
 
 @router.get("/history", summary="License activation history (Pharmacy Admin)")

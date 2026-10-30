@@ -444,6 +444,7 @@ def _auto_repair_schema(bind_engine):
             ("price_wvat", "FLOAT NOT NULL DEFAULT 0.0"),
         ],
         "pharmacies": [
+            ("max_agencies", "INT NOT NULL DEFAULT 2"),
             ("status", "VARCHAR(30) NOT NULL DEFAULT 'active'"),
             ("deployment_env", "VARCHAR(20) NOT NULL DEFAULT 'basic'"),
             ("nif", "VARCHAR(50) NULL"),
@@ -473,7 +474,7 @@ def _auto_repair_schema(bind_engine):
         "medicine_families", "medicine_types", "medicines", "pos_sales",
         "pos_sale_items", "restock_orders", "restock_items", "sales",
         "sale_items", "settings", "stock_movements", "suppliers",
-        "sync_logs", "sync_queue", "users", "invoice_sequences",
+        "sync_logs", "sync_queue", "users", "invoice_sequences", "taxpayer_verifications",
     )
     for table_name in tenant_tables:
         required_columns.setdefault(table_name, []).append(("pharmacy_id", "INT NULL"))

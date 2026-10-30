@@ -212,6 +212,7 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                   isBoldValue: true,
                 ),
                 _detailRow('Limite Utilisateurs', '${p.maxUsers} utilisateurs'),
+                _detailRow('Agences Autorisées', p.plan == 'diamond' ? 'Illimité' : '${p.maxAgencies} agences', isBoldValue: true),
                 _detailRow(
                   'Expiration Licence',
                   exp != null
@@ -370,9 +371,10 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                     prefixIcon: Icon(Icons.workspace_premium_outlined),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'basic', child: Text('Petit (Basic - max 3 users)')),
-                    DropdownMenuItem(value: 'pro', child: Text('Moyen (Pro - max 10 users)')),
-                    DropdownMenuItem(value: 'enterprise', child: Text('Entreprise (Illimité)')),
+                    DropdownMenuItem(value: 'basic', child: Text('Basic (2 Agences)')),
+                    DropdownMenuItem(value: 'pro', child: Text('Pro (5 Agences)')),
+                    DropdownMenuItem(value: 'enterprise', child: Text('Entreprise (10 Agences)')),
+                    DropdownMenuItem(value: 'diamond', child: Text('Diamond (Illimité)')),
                   ],
                   onChanged: (val) {
                     if (val != null) setDialogState(() => selectedPlan = val);
@@ -598,7 +600,6 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
     var isSaving = false;
     var grantTrial = true;
     var trialDays = 14;
-    final rcCtrl = TextEditingController(text: pharmacy?.rcNumber ?? '');
 
     List<int> optionsForPlan(String selectedPlan, int selectedMaxUsers) {
       final options = switch (selectedPlan) {
@@ -665,15 +666,19 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                       items: const [
                         DropdownMenuItem(
                           value: 'basic',
-                          child: Text('Basic (Essentiel - max 3)'),
+                          child: Text('Basic (2 Agences)'),
                         ),
                         DropdownMenuItem(
                           value: 'pro',
-                          child: Text('Pro (Complet - max 10)'),
+                          child: Text('Pro (5 Agences)'),
                         ),
                         DropdownMenuItem(
                           value: 'enterprise',
-                          child: Text('Enterprise (Illimité)'),
+                          child: Text('Entreprise (10 Agences)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'diamond',
+                          child: Text('Diamond (Illimité)'),
                         ),
                       ],
                       onChanged: (value) {
@@ -1070,8 +1075,9 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                                 ),
                               ],
                               onChanged: (val) {
-                                if (val != null)
+                                if (val != null) {
                                   setDlgState(() => obrEnv = val);
+                                  }
                               },
                             ),
                           ),
@@ -1359,7 +1365,7 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                   children: [
                     FilterChip(
                       selected: _statusFilter == 'all',
-                      label: Text('Toutes (${_totalPharmacies})'),
+                      label: Text('Toutes ($_totalPharmacies)'),
                       onSelected: (_) => setState(() => _statusFilter = 'all'),
                     ),
                     const SizedBox(width: 8),
@@ -1615,18 +1621,22 @@ class _PharmaciesPageState extends State<PharmaciesPage> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: p.plan == 'pro'
+                          color: p.plan == 'diamond'
+                              ? Colors.teal[800]
+                              : (p.plan == 'pro'
                               ? Colors.indigo[800]
                               : (p.plan == 'enterprise'
                                     ? Colors.purple[800]
-                                    : Colors.blueGrey[800]),
+                                    : Colors.blueGrey[800])),
                         ),
                       ),
-                      backgroundColor: p.plan == 'pro'
+                      backgroundColor: p.plan == 'diamond'
+                          ? Colors.teal[50]
+                          : (p.plan == 'pro'
                           ? Colors.indigo[50]
                           : (p.plan == 'enterprise'
                                 ? Colors.purple[50]
-                                : Colors.blueGrey[50]),
+                                : Colors.blueGrey[50])),
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),

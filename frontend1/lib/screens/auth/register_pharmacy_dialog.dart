@@ -48,14 +48,6 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
   final _adminPassConfirmCtrl = TextEditingController();
   bool _obscurePassword = true;
 
-  // Étape 3 : Fiscalité & OBR
-  final _nifCtrl = TextEditingController();
-  final _rcCtrl = TextEditingController();
-  String _taxCenter = 'DPMC';
-  String _tpType = '2'; // 1: Physique, 2: Morale
-  String _legalForm = 'SUARL';
-  String _vatTaxpayer = '1';
-  String _ctTaxpayer = '0';
 
   // Étape 4 : Plan souhaité
   String _selectedPlan = 'basic';
@@ -74,8 +66,6 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     _adminNameCtrl.dispose();
     _adminPassCtrl.dispose();
     _adminPassConfirmCtrl.dispose();
-    _nifCtrl.dispose();
-    _rcCtrl.dispose();
     super.dispose();
   }
 
@@ -83,7 +73,8 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     if (_codeCtrl.text.isEmpty || _codeCtrl.text.startsWith('PHARM-')) {
       final slug = val.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
       if (slug.isNotEmpty) {
-        _codeCtrl.text = 'PHARM-${slug.length > 8 ? slug.substring(0, 8) : slug}';
+        _codeCtrl.text =
+            'PHARM-${slug.length > 8 ? slug.substring(0, 8) : slug}';
       }
     }
   }
@@ -92,33 +83,43 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     setState(() => _errorMessage = null);
     if (_currentStep == 0) {
       if (_nameCtrl.text.trim().length < 2) {
-        setState(() => _errorMessage = 'Veuillez saisir le nom de la pharmacie');
+        setState(
+          () => _errorMessage = 'Veuillez saisir le nom de la pharmacie',
+        );
         return false;
       }
       if (_phoneCtrl.text.trim().length < 4) {
-        setState(() => _errorMessage = 'Veuillez renseigner un numéro de téléphone valide');
+        setState(
+          () => _errorMessage =
+              'Veuillez renseigner un numéro de téléphone valide',
+        );
         return false;
       }
       if (_emailCtrl.text.trim().length < 5 || !_emailCtrl.text.contains('@')) {
-        setState(() => _errorMessage = 'Veuillez renseigner une adresse email valide');
+        setState(
+          () => _errorMessage = 'Veuillez renseigner une adresse email valide',
+        );
         return false;
       }
     } else if (_currentStep == 1) {
       if (_adminUserCtrl.text.trim().length < 3) {
-        setState(() => _errorMessage = 'L\'identifiant admin doit comporter au moins 3 caractères');
+        setState(
+          () => _errorMessage =
+              'L\'identifiant admin doit comporter au moins 3 caractères',
+        );
         return false;
       }
       if (_adminPassCtrl.text.length < 6) {
-        setState(() => _errorMessage = 'Le mot de passe doit comporter au moins 6 caractères');
+        setState(
+          () => _errorMessage =
+              'Le mot de passe doit comporter au moins 6 caractères',
+        );
         return false;
       }
       if (_adminPassCtrl.text != _adminPassConfirmCtrl.text) {
-        setState(() => _errorMessage = 'Les mots de passe ne correspondent pas');
-        return false;
-      }
-    } else if (_currentStep == 2) {
-      if (_nifCtrl.text.trim().length < 4) {
-        setState(() => _errorMessage = 'Le NIF (Numéro d\'Identité Fiscale) est requis pour l\'OBR');
+        setState(
+          () => _errorMessage = 'Les mots de passe ne correspondent pas',
+        );
         return false;
       }
     }
@@ -135,7 +136,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     try {
       final payload = {
         'name': _nameCtrl.text.trim(),
-        'code': _codeCtrl.text.trim().isEmpty ? null : _codeCtrl.text.trim().toUpperCase(),
+        'code': _codeCtrl.text.trim().isEmpty
+            ? null
+            : _codeCtrl.text.trim().toUpperCase(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
@@ -143,19 +146,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
         'city': 'Bujumbura',
         'admin_username': _adminUserCtrl.text.trim(),
         'admin_password': _adminPassCtrl.text,
-        'admin_name': _adminNameCtrl.text.trim().isEmpty ? null : _adminNameCtrl.text.trim(),
-        'nif': _nifCtrl.text.trim(),
-        'rc_number': _rcCtrl.text.trim().isEmpty ? null : _rcCtrl.text.trim(),
-        'tax_center': _taxCenter,
-        'tp_type': _tpType,
-        'tp_legal_form': _legalForm,
-        'tp_activity_sector': 'Commerce de détail de produits pharmaceutiques',
-        'tp_address_province': _provinceCtrl.text.trim(),
-        'tp_address_commune': _communeCtrl.text.trim(),
-        'tp_address_quartier': _quartierCtrl.text.trim(),
-        'vat_taxpayer': _vatTaxpayer,
-        'ct_taxpayer': _ctTaxpayer,
-        'tl_taxpayer': '0',
+        'admin_name': _adminNameCtrl.text.trim().isEmpty
+            ? null
+            : _adminNameCtrl.text.trim(),
         'plan': _selectedPlan,
       };
 
@@ -163,7 +156,8 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
       if (!mounted) return;
 
       final pCode = res['pharmacy_code']?.toString() ?? _codeCtrl.text.trim();
-      final pUname = res['admin_username']?.toString() ?? _adminUserCtrl.text.trim();
+      final pUname =
+          res['admin_username']?.toString() ?? _adminUserCtrl.text.trim();
 
       Navigator.of(context).pop();
       _showSuccessDialog(pCode, pUname);
@@ -192,7 +186,11 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                 color: Colors.green.shade50,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 56),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.green,
+                size: 56,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -224,12 +222,19 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                   const Divider(height: 16),
                   Row(
                     children: [
-                      const Icon(Icons.hourglass_top_rounded, color: Colors.orange, size: 18),
+                      const Icon(
+                        Icons.hourglass_top_rounded,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
                           'Statut : En attente d\'approbation',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.orange),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
                         ),
                       ),
                     ],
@@ -250,7 +255,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.of(ctx).pop();
@@ -269,7 +276,10 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        ),
         Row(
           children: [
             SelectableText(
@@ -286,7 +296,10 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: value));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Code pharmacie copié !'), duration: Duration(seconds: 1)),
+                    const SnackBar(
+                      content: Text('Code pharmacie copié !'),
+                      duration: Duration(seconds: 1),
+                    ),
                   );
                 },
               ),
@@ -316,7 +329,11 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                       color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.app_registration_rounded, color: AppTheme.primaryColor, size: 26),
+                    child: const Icon(
+                      Icons.app_registration_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 26,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -325,18 +342,26 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                       children: [
                         const Text(
                           'Inscription d\'une nouvelle Pharmacie',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           'Rejoignez le réseau PharmaGest — Période d\'essai gratuite incluse',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -348,7 +373,10 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
 
               if (_errorMessage != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -356,12 +384,19 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.red,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -378,7 +413,7 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                     child: switch (_currentStep) {
                       0 => _buildStep1Pharmacy(),
                       1 => _buildStep2Admin(),
-                      2 => _buildStep3OBR(),
+
                       _ => _buildStep4Plan(),
                     },
                   ),
@@ -392,7 +427,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                 children: [
                   if (_currentStep > 0)
                     OutlinedButton.icon(
-                      onPressed: _isLoading ? null : () => setState(() => _currentStep--),
+                      onPressed: _isLoading
+                          ? null
+                          : () => setState(() => _currentStep--),
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: const Text('Précédent'),
                     )
@@ -401,28 +438,45 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                   Row(
                     children: [
                       TextButton(
-                        onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text('Annuler'),
                       ),
                       const SizedBox(width: 12),
-                      if (_currentStep < 3)
+                      if (_currentStep < 2)
                         FilledButton.icon(
                           onPressed: () {
                             if (_validateCurrentStep()) {
                               setState(() => _currentStep++);
                             }
                           },
-                          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Suivant'),
                         )
                       else
                         FilledButton.icon(
-                          style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
                           onPressed: _isLoading ? null : _submitRegistration,
                           icon: _isLoading
-                              ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
                               : const Icon(Icons.check_rounded, size: 18),
-                          label: Text(_isLoading ? 'Inscription...' : 'Confirmer mon inscription'),
+                          label: Text(
+                            _isLoading
+                                ? 'Inscription...'
+                                : 'Confirmer mon inscription',
+                          ),
                         ),
                     ],
                   ),
@@ -436,7 +490,7 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
   }
 
   Widget _buildStepIndicator() {
-    final steps = ['1. Officine', '2. Responsable', '3. Fiscalité OBR', '4. Formule'];
+    final steps = ['1. Officine', '2. Responsable', '3. Formule d\'abonnement'];
     return Row(
       children: List.generate(steps.length, (idx) {
         final isActive = idx == _currentStep;
@@ -450,7 +504,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                   decoration: BoxDecoration(
                     color: isActive
                         ? AppTheme.primaryColor
-                        : (isDone ? Colors.green.shade600 : Colors.grey.shade200),
+                        : (isDone
+                              ? Colors.green.shade600
+                              : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -459,7 +515,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: (isActive || isDone) ? Colors.white : Colors.grey.shade700,
+                        color: (isActive || isDone)
+                            ? Colors.white
+                            : Colors.grey.shade700,
                       ),
                     ),
                   ),
@@ -629,8 +687,13 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
             helperText: 'Au moins 6 caractères',
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
         ),
@@ -648,137 +711,6 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     );
   }
 
-  // -------------------------------------------------------------
-  // Step 3 : Fiscalité & OBR
-  // -------------------------------------------------------------
-  Widget _buildStep3OBR() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Identifiants Fiscaux & OBR Burundi 🇧🇮',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text('EBMS V0.5', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Nécessaire pour la conformité avec la facturation électronique de l\'Office Burundais des Recettes.',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _nifCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'NIF (Numéro d\'Identité Fiscale) *',
-                  hintText: 'Ex: 4001234567',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _rcCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Numéro Registre de Commerce (RC)',
-                  hintText: 'Ex: 12345/2023',
-                  prefixIcon: Icon(Icons.receipt_long_outlined),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _taxCenter,
-                decoration: const InputDecoration(
-                  labelText: 'Centre Fiscal Gestionnaire',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'DPMC', child: Text('DPMC - Moyennes Entreprises')),
-                  DropdownMenuItem(value: 'DMC', child: Text('DMC - Grandes Entreprises')),
-                  DropdownMenuItem(value: 'DPC', child: Text('DPC - Petites Entreprises')),
-                ],
-                onChanged: (val) => setState(() => _taxCenter = val ?? 'DPMC'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _legalForm,
-                decoration: const InputDecoration(
-                  labelText: 'Forme Juridique',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'SUARL', child: Text('SUARL')),
-                  DropdownMenuItem(value: 'SPRL', child: Text('SPRL')),
-                  DropdownMenuItem(value: 'SA', child: Text('SA')),
-                  DropdownMenuItem(value: 'EI', child: Text('Entreprise Individuelle')),
-                ],
-                onChanged: (val) => setState(() => _legalForm = val ?? 'SUARL'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _tpType,
-                decoration: const InputDecoration(
-                  labelText: 'Type de Contribuable',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: '2', child: Text('Personne Morale (Société)')),
-                  DropdownMenuItem(value: '1', child: Text('Personne Physique (Individu)')),
-                ],
-                onChanged: (val) => setState(() => _tpType = val ?? '2'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _vatTaxpayer,
-                decoration: const InputDecoration(
-                  labelText: 'Assujetti à la TVA',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: '1', child: Text('Oui (Assujetti TVA 18%)')),
-                  DropdownMenuItem(value: '0', child: Text('Non (Exonéré)')),
-                ],
-                onChanged: (val) => setState(() => _vatTaxpayer = val ?? '1'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   // -------------------------------------------------------------
   // Step 4 : Plan & Offre
@@ -805,8 +737,12 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '🎁 Période d\'essai gratuite incluse ! Sans engagement. L\'administrateur validera votre compte.',
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12),
+                  '🎁 Accès intégral : Toutes les fonctionnalités incluses ! Choisissez votre volume d\'agences.',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -815,41 +751,58 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
         const SizedBox(height: 16),
         _planCard(
           planId: 'basic',
-          title: 'Plan Petit (Basic)',
-          subtitle: 'Pour les officines indépendantes et démarrages',
+          title: 'Basic (2 Agences)',
+          subtitle: 'Idéal pour gérer jusqu\'à 2 agences ou succursales',
+          badgeText: '2 Agences',
           features: [
-            '1 Caisse / Comptoir de vente',
-            'Jusqu\'à 3 utilisateurs',
-            'Déstockage automatique FEFO (lots & péremptions)',
-            'Facturation électronique OBR standard',
-            'Gestion de caisse & Rapport Z',
+            '2 Agences de Pharmacie autorisées',
+            'Toutes les fonctionnalités PharmaGest incluses',
+            'Facturation OBR, Déstockage FEFO & Assurances',
+            'Multi-caisses, marges & rapports financiers',
           ],
         ),
         const SizedBox(height: 12),
         _planCard(
           planId: 'pro',
-          title: 'Plan Moyen (Pro) — Populaire',
-          subtitle: 'Pour les pharmacies établies à flux soutenu',
+          title: 'Pro (5 Agences) — Populaire',
+          subtitle: 'Pour les réseaux en développement (jusqu\'à 5 agences)',
+          badgeText: '5 Agences',
           isPopular: true,
           features: [
-            'Multi-caisses réseau (jusqu\'à 5 caisses)',
-            'Jusqu\'à 10 utilisateurs simultanés',
-            'Prise en charge Assurances & Tiers-Payant',
-            'Rapports financiers, marges & exports Excel',
-            'Historique complet des mouvements de stock',
+            '5 Agences de Pharmacie autorisées',
+            'Toutes les fonctionnalités PharmaGest incluses',
+            'Multi-caisses réseau & gestion centralisée',
+            'Crédits clients, fidélité & exports Excel',
+            'Support technique réactif prioritaire',
           ],
         ),
         const SizedBox(height: 12),
         _planCard(
           planId: 'enterprise',
-          title: 'Plan Entreprise',
-          subtitle: 'Pour les grandes pharmacies et réseaux',
+          title: 'Entreprise (10 Agences)',
+          subtitle: 'Pour les grands réseaux et chaînes d\'officines',
+          badgeText: '10 Agences',
+          badgeColor: Colors.purple,
           features: [
-            'Caisses et utilisateurs illimités',
-            'Multi-dépôts & réapprovisionnement réseau',
-            'Programme de fidélité & crédits clients avancés',
+            '10 Agences de Pharmacie autorisées',
+            'Toutes les fonctionnalités PharmaGest incluses',
+            'Multi-dépôts & réapprovisionnement inter-agences',
             'Journal d\'audit immuable & alertes prédictives',
-            'Support prioritaire 24/7 & haute disponibilité',
+            'Sauvegardes automatisées & suivi dédié',
+          ],
+        ),
+        const SizedBox(height: 12),
+        _planCard(
+          planId: 'diamond',
+          title: 'Diamond (Illimité)',
+          subtitle: 'La formule ultime sans restriction de succursales',
+          badgeText: 'Agences Illimitées',
+          badgeColor: Colors.teal,
+          features: [
+            'Nombre d\'Agences de Pharmacie Illimité',
+            'Toutes les fonctionnalités PharmaGest incluses',
+            'Gestion globale réseau & multi-dépôts illimités',
+            'Haute disponibilité & accompagnement VIP dédié',
           ],
         ),
       ],
@@ -861,6 +814,8 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     required String title,
     required String subtitle,
     required List<String> features,
+    String? badgeText,
+    Color? badgeColor,
     bool isPopular = false,
   }) {
     final isSelected = _selectedPlan == planId;
@@ -870,10 +825,14 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.05) : Colors.white,
+          color: isSelected
+              ? AppTheme.primaryColor.withValues(alpha: 0.05)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryColor : (isPopular ? Colors.orange.shade300 : Colors.grey.shade300),
+            color: isSelected
+                ? AppTheme.primaryColor
+                : (isPopular ? Colors.orange.shade300 : Colors.grey.shade300),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -883,7 +842,9 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
             Row(
               children: [
                 Icon(
-                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
                   color: isSelected ? AppTheme.primaryColor : Colors.grey,
                   size: 20,
                 ),
@@ -894,19 +855,58 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: isSelected ? AppTheme.primaryColor : Colors.black87,
+                      color: isSelected
+                          ? AppTheme.primaryColor
+                          : Colors.black87,
                     ),
                   ),
                 ),
+                if (badgeText != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (badgeColor ?? AppTheme.primaryColor).withValues(
+                        alpha: 0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (badgeColor ?? AppTheme.primaryColor).withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: badgeColor ?? AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
                 if (isPopular)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.orange.shade300),
                     ),
-                    child: const Text('Recommandé', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange)),
+                    child: const Text(
+                      'Recommandé',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -915,18 +915,32 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
                   const SizedBox(height: 6),
-                  ...features.map((f) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 1.5),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
-                            const SizedBox(width: 6),
-                            Expanded(child: Text(f, style: const TextStyle(fontSize: 12))),
-                          ],
-                        ),
-                      )),
+                  ...features.map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 1.5),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.green,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              f,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -936,4 +950,3 @@ class _RegisterPharmacyDialogState extends State<RegisterPharmacyDialog> {
     );
   }
 }
-

@@ -36,8 +36,8 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
       ]);
       if (mounted) {
         setState(() {
-          _keys = results[0] as List<Map<String, dynamic>>;
-          _pharmacies = results[1] as List<Map<String, dynamic>>;
+          _keys = List<Map<String, dynamic>>.from(results[0] as List);
+          _pharmacies = List<Map<String, dynamic>>.from(results[1] as List);
           _isLoading = false;
         });
       }
@@ -93,16 +93,21 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         items: [
                           const DropdownMenuItem<Map<String, dynamic>?>(
                             value: null,
-                            child: Text('-- Aucune (cle generique) --',
-                                style: TextStyle(color: Colors.grey)),
+                            child: Text(
+                              '-- Aucune (cle generique) --',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ),
                           ..._pharmacies.map(
                             (p) => DropdownMenuItem<Map<String, dynamic>?>(
                               value: p,
                               child: Row(
                                 children: [
-                                  const Icon(Icons.storefront_outlined,
-                                      size: 16, color: Colors.blueGrey),
+                                  const Icon(
+                                    Icons.storefront_outlined,
+                                    size: 16,
+                                    color: Colors.blueGrey,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -112,18 +117,20 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.indigo.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      p['plan']?.toString().toUpperCase() ??
-                                          '',
+                                      p['plan']?.toString().toUpperCase() ?? '',
                                       style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.indigo,
-                                          fontWeight: FontWeight.bold),
+                                        fontSize: 10,
+                                        color: Colors.indigo,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -139,8 +146,10 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                   const SizedBox(height: 16),
 
                   // ── PLAN ─────────────────────────────────────────────
-                  const Text('Formule d\'abonnement :',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Formule d\'abonnement :',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 6),
                   Container(
                     width: double.infinity,
@@ -155,13 +164,21 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         isExpanded: true,
                         items: const [
                           DropdownMenuItem(
-                              value: 'basic',
-                              child: Text('Basic (Essentiel)')),
+                            value: 'basic',
+                            child: Text('Basic (2 Agences)'),
+                          ),
                           DropdownMenuItem(
-                              value: 'pro', child: Text('Pro (Complet)')),
+                            value: 'pro',
+                            child: Text('Pro (5 Agences)'),
+                          ),
                           DropdownMenuItem(
-                              value: 'enterprise',
-                              child: Text('Enterprise (Multi-postes)')),
+                            value: 'enterprise',
+                            child: Text('Entreprise (10 Agences)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'diamond',
+                            child: Text('Diamond (Illimité)'),
+                          ),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -170,6 +187,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                               if (val == 'basic') maxUsers = 3;
                               if (val == 'pro') maxUsers = 5;
                               if (val == 'enterprise') maxUsers = 20;
+                              if (val == 'diamond') maxUsers = 1000;
                             });
                           }
                         },
@@ -179,8 +197,10 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                   const SizedBox(height: 12),
 
                   // ── DUREE ────────────────────────────────────────────
-                  const Text('Duree de validite :',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Duree de validite :',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 6),
                   Container(
                     width: double.infinity,
@@ -195,13 +215,21 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         isExpanded: true,
                         items: const [
                           DropdownMenuItem(
-                              value: 30, child: Text('1 Mois (30 jours)')),
+                            value: 30,
+                            child: Text('1 Mois (30 jours)'),
+                          ),
                           DropdownMenuItem(
-                              value: 90, child: Text('3 Mois (90 jours)')),
+                            value: 90,
+                            child: Text('3 Mois (90 jours)'),
+                          ),
                           DropdownMenuItem(
-                              value: 180, child: Text('6 Mois (180 jours)')),
+                            value: 180,
+                            child: Text('6 Mois (180 jours)'),
+                          ),
                           DropdownMenuItem(
-                              value: 365, child: Text('1 An (365 jours)')),
+                            value: 365,
+                            child: Text('1 An (365 jours)'),
+                          ),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -220,13 +248,16 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Max Utilisateurs :',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Max Utilisateurs :',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             const SizedBox(height: 6),
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12),
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.grey),
                                 borderRadius: BorderRadius.circular(8),
@@ -236,9 +267,12 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                   value: maxUsers,
                                   isExpanded: true,
                                   items: [3, 5, 10, 20, 50]
-                                      .map((u) => DropdownMenuItem(
+                                      .map(
+                                        (u) => DropdownMenuItem(
                                           value: u,
-                                          child: Text('$u util.')))
+                                          child: Text('$u util.'),
+                                        ),
+                                      )
                                       .toList(),
                                   onChanged: (val) {
                                     if (val != null) {
@@ -256,13 +290,16 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Nombre de cles :',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Nombre de cles :',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             const SizedBox(height: 6),
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12),
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.grey),
                                 borderRadius: BorderRadius.circular(8),
@@ -272,8 +309,12 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                   value: quantity,
                                   isExpanded: true,
                                   items: [1, 2, 5, 10, 20]
-                                      .map((q) => DropdownMenuItem(
-                                          value: q, child: Text('$q cle(s)')))
+                                      .map(
+                                        (q) => DropdownMenuItem(
+                                          value: q,
+                                          child: Text('$q cle(s)'),
+                                        ),
+                                      )
                                       .toList(),
                                   onChanged: (val) {
                                     if (val != null) {
@@ -306,20 +347,26 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.08),
-                        border: Border.all(color: Colors.green.withOpacity(0.4)),
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.4),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle,
-                              color: Colors.green, size: 18),
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Sera assignee a : ${selectedPharmacy!['name']} (${selectedPharmacy!['code']})',
                               style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -357,8 +404,8 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
           notes: notesCtrl.text.trim().isNotEmpty
               ? notesCtrl.text.trim()
               : selectedPharmacy != null
-                  ? 'Pour: ${selectedPharmacy!['name']}'
-                  : null,
+              ? 'Pour: ${selectedPharmacy!['name']}'
+              : null,
           pharmacyId: selectedPharmacy?['id'] as int?,
         );
         _load();
@@ -375,10 +422,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -398,9 +442,11 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 12),
-            Text('Erreur: $_error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red)),
+            Text(
+              'Erreur: $_error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _load,
@@ -454,8 +500,11 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.vpn_key_off_outlined,
-                              size: 64, color: Colors.grey[400]),
+                          Icon(
+                            Icons.vpn_key_off_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Aucune cle de licence generee pour l\'instant.',
@@ -464,8 +513,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                           const SizedBox(height: 8),
                           const Text(
                             'Cliquez sur "Generer des Cles" pour commencer.',
-                            style:
-                                TextStyle(color: Colors.grey, fontSize: 13),
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         ],
                       ),
@@ -473,15 +521,13 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                   : ListView.separated(
                       padding: const EdgeInsets.only(bottom: 80),
                       itemCount: _keys.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, idx) {
                         final k = _keys[idx];
                         final keyStr = k['key']?.toString() ?? '';
                         final isUsed = k['used_at'] != null;
                         final isActive = k['is_active'] == true;
-                        final pharmacyName =
-                            k['pharmacy_name']?.toString();
+                        final pharmacyName = k['pharmacy_name']?.toString();
                         final notes = k['notes']?.toString();
 
                         Color badgeColor = Colors.green;
@@ -506,10 +552,14 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                 Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor:
-                                          badgeColor.withOpacity(0.15),
-                                      child: Icon(statusIcon,
-                                          color: badgeColor, size: 18),
+                                      backgroundColor: badgeColor.withOpacity(
+                                        0.15,
+                                      ),
+                                      child: Icon(
+                                        statusIcon,
+                                        color: badgeColor,
+                                        size: 18,
+                                      ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -528,66 +578,70 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                       tooltip: 'Copier la cle',
                                       onPressed: () {
                                         Clipboard.setData(
-                                            ClipboardData(text: keyStr));
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                          ClipboardData(text: keyStr),
+                                        );
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                              content: Text(
-                                                  'Cle copiee dans le presse-papiers')),
+                                            content: Text(
+                                              'Cle copiee dans le presse-papiers',
+                                            ),
+                                          ),
                                         );
                                       },
                                     ),
                                     Chip(
                                       label: Text(statusText),
-                                      backgroundColor:
-                                          badgeColor.withOpacity(0.12),
+                                      backgroundColor: badgeColor.withOpacity(
+                                        0.12,
+                                      ),
                                       labelStyle: TextStyle(
-                                          color: badgeColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11),
+                                        color: badgeColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
                                       padding: EdgeInsets.zero,
                                       materialTapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     if (!isUsed && isActive)
                                       IconButton(
-                                        icon: const Icon(Icons.cancel,
-                                            color: Colors.red, size: 20),
+                                        icon: const Icon(
+                                          Icons.cancel,
+                                          color: Colors.red,
+                                          size: 20,
+                                        ),
                                         tooltip: 'Revoquer la cle',
                                         onPressed: () async {
-                                          final confirm =
-                                              await showDialog<bool>(
+                                          final confirm = await showDialog<bool>(
                                             context: context,
                                             builder: (ctx) => AlertDialog(
-                                              title:
-                                                  const Text('Confirmation'),
+                                              title: const Text('Confirmation'),
                                               content: Text(
-                                                  'Revoquer la cle $keyStr ?'),
+                                                'Revoquer la cle $keyStr ?',
+                                              ),
                                               actions: [
                                                 TextButton(
                                                   onPressed: () =>
-                                                      Navigator.pop(
-                                                          ctx, false),
-                                                  child:
-                                                      const Text('Annuler'),
+                                                      Navigator.pop(ctx, false),
+                                                  child: const Text('Annuler'),
                                                 ),
                                                 FilledButton(
-                                                  style: FilledButton
-                                                      .styleFrom(
-                                                          backgroundColor:
-                                                              Colors.red),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                  ),
                                                   onPressed: () =>
-                                                      Navigator.pop(
-                                                          ctx, true),
-                                                  child:
-                                                      const Text('Revoquer'),
+                                                      Navigator.pop(ctx, true),
+                                                  child: const Text('Revoquer'),
                                                 ),
                                               ],
                                             ),
                                           );
                                           if (confirm == true) {
                                             await _service.revokeLicenseKey(
-                                                k['id'] as int);
+                                              k['id'] as int,
+                                            );
                                             _load();
                                           }
                                         },
@@ -600,28 +654,34 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
                                   runSpacing: 4,
                                   children: [
                                     _buildTag(
-                                        Icons.workspace_premium_outlined,
-                                        k['plan']
-                                                ?.toString()
-                                                .toUpperCase() ??
-                                            '',
-                                        Colors.purple),
+                                      Icons.workspace_premium_outlined,
+                                      k['plan']?.toString().toUpperCase() ?? '',
+                                      k['plan'] == 'diamond'
+                                          ? Colors.teal
+                                          : Colors.purple,
+                                    ),
                                     _buildTag(
-                                        Icons.timer_outlined,
-                                        '${k['duration_days']} jours',
-                                        Colors.teal),
+                                      Icons.timer_outlined,
+                                      '${k['duration_days']} jours',
+                                      Colors.teal,
+                                    ),
                                     _buildTag(
-                                        Icons.people_outline,
-                                        '${k['max_users']} util.',
-                                        Colors.orange),
+                                      Icons.people_outline,
+                                      '${k['max_users']} util.',
+                                      Colors.orange,
+                                    ),
                                     if (pharmacyName != null)
                                       _buildTag(
-                                          Icons.storefront_outlined,
-                                          pharmacyName,
-                                          Colors.blue),
+                                        Icons.storefront_outlined,
+                                        pharmacyName,
+                                        Colors.blue,
+                                      ),
                                     if (notes != null && notes.isNotEmpty)
-                                      _buildTag(Icons.note_outlined, notes,
-                                          Colors.grey),
+                                      _buildTag(
+                                        Icons.note_outlined,
+                                        notes,
+                                        Colors.grey,
+                                      ),
                                   ],
                                 ),
                               ],
@@ -660,9 +720,14 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -680,8 +745,7 @@ class _PlatformLicensesTabState extends State<PlatformLicensesTab> {
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(fontSize: 11, color: color)),
+          Text(label, style: TextStyle(fontSize: 11, color: color)),
         ],
       ),
     );

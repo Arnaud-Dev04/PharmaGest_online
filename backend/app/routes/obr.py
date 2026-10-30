@@ -49,6 +49,7 @@ class OBRConfigUpdate(BaseModel):
 
 class CheckTINRequest(BaseModel):
     tin: str = Field(..., min_length=4, description="Numéro d'Identification Fiscale (NIF)")
+    force_refresh: bool = Field(default=False, description="Forcer l'interrogation OBR sans utiliser le cache")
 
 
 class CancelInvoiceRequest(BaseModel):
@@ -214,7 +215,7 @@ def check_tin_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pharmacie introuvable")
 
     client = OBRClient(pharmacy)
-    return client.check_tin(payload.tin)
+    return client.check_tin(payload.tin, db=db, force_refresh=payload.force_refresh)
 
 
 @router.post("/cancel-invoice", summary="Annuler une facture fiscale OBR")
@@ -351,3 +352,49 @@ def resync_pending_invoices(
         "synced": success_count,
         "remaining_pending": len(pending_sales) - success_count,
     }
+
+
+@router.get("/taxpayers", summary="Liste des NIFs vérifiés en cache")
+def list_taxpayers_endpoint(
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_local_db),
+):
+    """Retourne la liste des NIFs déjà vérifiés et enregistrés en cache pour cette pharmacie."""
+    from app.models.taxpayer_verification import TaxpayerVerification
+    from sqlalchemy import or_
+
+    query = db.query(TaxpayerVerification).filter(
+        TaxpayerVerification.pharmacy_id == current_user.pharmacy_id
+    )
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                TaxpayerVerification.tin.ilike(s),
+                TaxpayerVerification.taxpayer_name.ilike(s),
+            )
+        )
+    items = query.order_by(TaxpayerVerification.verified_at.desc()).limit(100).all()
+    return [
+        {
+            "id": it.id,
+            "tin": it.tin,
+            "taxpayer_name": it.taxpayer_name,
+            "taxpayer_address": it.taxpayer_address,
+            "status": it.status,
+            "is_valid": it.is_valid,
+            "verified_at": it.verified_at.isoformat() if it.verified_at else None,
+        }
+        for it in items
+    ]
+
+
+@router.post("/verify-taxpayer", summary="Alias pour la vérification du NIF (checkTIN)")
+def verify_taxpayer_endpoint(
+    payload: CheckTINRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_local_db),
+):
+    """Alias direct pour l'API de vérification NIF."""
+    return check_tin_endpoint(payload, current_user=current_user, db=db)

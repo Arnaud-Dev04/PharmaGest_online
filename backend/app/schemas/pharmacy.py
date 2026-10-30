@@ -6,8 +6,9 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 
 
-LicensePlan = Literal["basic", "pro", "enterprise"]
-PLAN_MAX_USERS = {"basic": 3, "pro": 10, "enterprise": 1000}
+LicensePlan = Literal["basic", "pro", "enterprise", "diamond"]
+PLAN_MAX_USERS = {"basic": 10, "pro": 25, "enterprise": 100, "diamond": 1000}
+PLAN_MAX_AGENCIES = {"basic": 2, "pro": 5, "enterprise": 10, "diamond": 99999}
 
 
 class PharmacyResponse(BaseModel):
@@ -23,6 +24,7 @@ class PharmacyResponse(BaseModel):
     status: str = "active"  # "active", "pending_approval", "suspended", "rejected"
     plan: str
     max_users: int
+    max_agencies: int = 2
     license_expires_at: Optional[PyDate] = None
     license_is_trial: bool = False
     license_key: Optional[str] = None
@@ -62,6 +64,7 @@ class PharmacyOnboardRequest(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     plan: LicensePlan = "basic"
     max_users: int = Field(default=3, ge=1, le=10000)
+    max_agencies: Optional[int] = Field(default=None, ge=1, le=100000)
     license_expires_at: Optional[PyDate] = None
     license_is_trial: bool = False
     grant_trial: bool = True
@@ -94,9 +97,10 @@ class PharmacyOnboardRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_plan_user_limit(self):
-        if self.max_users > PLAN_MAX_USERS[self.plan]:
+        max_allowed = PLAN_MAX_USERS.get(self.plan, 1000)
+        if self.max_users > max_allowed:
             raise ValueError(
-                f"The {self.plan} plan allows at most {PLAN_MAX_USERS[self.plan]} users"
+                f"The {self.plan} plan allows at most {max_allowed} users"
             )
         return self
 
@@ -117,7 +121,7 @@ class PharmacyRegisterRequest(BaseModel):
     admin_name: Optional[str] = Field(default=None, max_length=120, description="Nom complet du titulaire")
     
     # Fiscalité OBR
-    nif: str = Field(min_length=4, max_length=50, description="Numéro d'Identification Fiscale (NIF)")
+    nif: Optional[str] = Field(default=None, max_length=50, description="Numéro d'Identification Fiscale (NIF)")
     rc_number: Optional[str] = Field(default=None, max_length=100, description="Registre de commerce")
     tax_center: Optional[str] = Field(default="DPMC", max_length=50)
     tp_type: str = Field(default="2", max_length=5)
@@ -143,6 +147,7 @@ class PharmacyApprovalRequest(BaseModel):
     trial_days: int = Field(default=14, ge=1, le=365)
     plan: Optional[LicensePlan] = None
     max_users: Optional[int] = None
+    max_agencies: Optional[int] = None
 
 
 class PharmacyApprovalResponse(BaseModel):
@@ -163,6 +168,7 @@ class PharmacyUpdateRequest(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     plan: Optional[LicensePlan] = None
     max_users: Optional[int] = Field(default=None, ge=1, le=10000)
+    max_agencies: Optional[int] = Field(default=None, ge=1, le=100000)
     license_expires_at: Optional[PyDate] = None
     license_is_trial: Optional[bool] = None
     notes: Optional[str] = Field(default=None, max_length=500)

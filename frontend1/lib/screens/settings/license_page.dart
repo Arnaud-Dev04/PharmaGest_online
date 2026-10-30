@@ -125,6 +125,8 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
     final isValid = _licenseStatus?['is_valid'] as bool? ?? false;
     final maxUsers = _licenseStatus?['max_users'] ?? 3;
     final activeUsers = _licenseStatus?['active_users'] ?? 1;
+    final maxAgencies = _licenseStatus?['max_agencies'] ?? (_licenseStatus?['plan'] == 'diamond' ? 99999 : 2);
+    final agenciesDisplay = (_licenseStatus?['plan'] == 'diamond' || maxAgencies == 99999) ? 'Illimité' : '$maxAgencies agences';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -195,6 +197,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildKpiItem('Jours Restants', '$daysRemaining jours', Icons.timer),
+                      _buildKpiItem('Agences', agenciesDisplay, Icons.storefront),
                       _buildKpiItem(
                         'Utilisateurs',
                         '$activeUsers / $maxUsers',
@@ -285,7 +288,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _history.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, idx) {
                 final item = _history[idx];
                 return Card(

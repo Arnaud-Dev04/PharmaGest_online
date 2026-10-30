@@ -50,7 +50,9 @@ class _PaymentModalState extends State<PaymentModal> {
   final _customerTinCtrl = TextEditingController();
   bool _isValidatingTin = false;
   String? _tinValidationMessage;
+  // ignore: unused_field
   bool? _tinIsValid;
+  String? _tinStatus; // 'VALID', 'INVALID', 'UNREACHABLE', 'CACHED', 'FORMAT_ERROR'
 
   Future<void> _validateCustomerTin() async {
     final tin = _customerTinCtrl.text.trim();
@@ -59,21 +61,39 @@ class _PaymentModalState extends State<PaymentModal> {
       _isValidatingTin = true;
       _tinValidationMessage = null;
       _tinIsValid = null;
+      _tinStatus = null;
     });
     try {
       final res = await _obrService.checkTIN(tin);
+      final status = res['status']?.toString() ?? (res['valid'] == true ? 'VALID' : 'INVALID');
+      final tpName = (res['taxpayer_name'] as String?)?.trim();
+
+      // Auto-compléter le nom du client si récupéré depuis l'OBR
+      if (tpName != null && tpName.isNotEmpty) {
+        if (_clientNomCtrl.text.isEmpty && _clientPrenomCtrl.text.isEmpty) {
+          final parts = tpName.split(' ');
+          if (parts.length > 1) {
+            _clientPrenomCtrl.text = parts.first;
+            _clientNomCtrl.text = parts.sublist(1).join(' ');
+          } else {
+            _clientNomCtrl.text = tpName;
+          }
+        }
+      }
+
       setState(() {
         _isValidatingTin = false;
+        _tinStatus = status;
         _tinIsValid = res['valid'] == true;
-        _tinValidationMessage = res['taxpayer_name'] as String? ??
-            res['message'] as String? ??
-            'NIF vérifié auprès de l\'OBR';
+        _tinValidationMessage = res['message'] as String? ??
+            (tpName != null ? 'Contribuable OBR : $tpName' : 'NIF vérifié');
       });
     } catch (e) {
       setState(() {
         _isValidatingTin = false;
-        _tinIsValid = false;
-        _tinValidationMessage = 'Vérification NIF impossible (mode local/hors-ligne)';
+        _tinStatus = 'UNREACHABLE';
+        _tinIsValid = true; // Règle OBR : Ne bloque pas la vente en mode hors-ligne
+        _tinValidationMessage = 'OBR injoignable (NIF accepté pour la vente hors-ligne)';
       });
     }
   }
@@ -565,26 +585,56 @@ class _PaymentModalState extends State<PaymentModal> {
                     onFieldSubmitted: (_) => _validateCustomerTin(),
                   ),
                   if (_tinValidationMessage != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          _tinIsValid == true ? Icons.check_circle : Icons.info_outline,
-                          size: 14,
-                          color: _tinIsValid == true ? Colors.green : Colors.orange,
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _tinStatus == 'VALID' || _tinStatus == 'CACHED'
+                            ? Colors.green.shade50
+                            : (_tinStatus == 'UNREACHABLE'
+                                ? Colors.amber.shade50
+                                : Colors.red.shade50),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: _tinStatus == 'VALID' || _tinStatus == 'CACHED'
+                              ? Colors.green.shade200
+                              : (_tinStatus == 'UNREACHABLE'
+                                  ? Colors.amber.shade300
+                                  : Colors.red.shade200),
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            _tinValidationMessage!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _tinIsValid == true ? Colors.green[800] : Colors.orange[800],
-                              fontWeight: FontWeight.w500,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _tinStatus == 'VALID' || _tinStatus == 'CACHED'
+                                ? Icons.check_circle_rounded
+                                : (_tinStatus == 'UNREACHABLE'
+                                    ? Icons.cloud_off_rounded
+                                    : Icons.cancel_rounded),
+                            size: 15,
+                            color: _tinStatus == 'VALID' || _tinStatus == 'CACHED'
+                                ? Colors.green.shade700
+                                : (_tinStatus == 'UNREACHABLE'
+                                    ? Colors.amber.shade800
+                                    : Colors.red.shade700),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _tinValidationMessage!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _tinStatus == 'VALID' || _tinStatus == 'CACHED'
+                                    ? Colors.green.shade800
+                                    : (_tinStatus == 'UNREACHABLE'
+                                        ? Colors.amber.shade900
+                                        : Colors.red.shade800),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ],

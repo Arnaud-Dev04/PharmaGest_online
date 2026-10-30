@@ -11,6 +11,7 @@ class Pharmacy {
   final String status;
   final String plan;
   final int maxUsers;
+  final int maxAgencies;
   final DateTime? createdAt;
   final DateTime? licenseExpiresAt;
   final bool licenseIsTrial;
@@ -34,6 +35,7 @@ class Pharmacy {
     this.status = 'active',
     required this.plan,
     required this.maxUsers,
+    this.maxAgencies = 2,
     this.createdAt,
     this.licenseExpiresAt,
     this.licenseIsTrial = false,
@@ -69,6 +71,7 @@ class Pharmacy {
       status: stat,
       plan: json['plan']?.toString() ?? 'basic',
       maxUsers: (json['max_users'] as num?)?.toInt() ?? 3,
+      maxAgencies: (json['max_agencies'] as num?)?.toInt() ?? 2,
       createdAt: parseDate(json['created_at']),
       licenseExpiresAt: parseDate(json['license_expires_at']),
       licenseIsTrial: json['license_is_trial'] as bool? ?? false,

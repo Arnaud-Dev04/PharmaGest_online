@@ -25,6 +25,7 @@ class Pharmacy(Base, BaseModelMixin):
     deployment_env = Column(String(20), default="basic", nullable=False)
     """Instance Docker cible pour cette pharmacie: basic, pro, enterprise"""
     max_users = Column(Integer, default=3, nullable=False)
+    max_agencies = Column(Integer, default=2, nullable=False)  # basic: 2, pro: 5, enterprise: 10, diamond: 99999
     license_expires_at = Column(Date, nullable=True)
     license_is_trial = Column(Boolean, default=False, nullable=False)
     notes = Column(String(500), nullable=True)

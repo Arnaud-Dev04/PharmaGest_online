@@ -18,6 +18,7 @@ from app.schemas.pharmacy import (
     PharmacyApprovalResponse,
     PharmacyOBRConfigRequest,
     PLAN_MAX_USERS,
+    PLAN_MAX_AGENCIES,
     PharmacyOnboardRequest,
     PharmacyOnboardResponse,
     PharmacyResponse,
@@ -151,6 +152,7 @@ def onboard_pharmacy(
         city=payload.city,
         plan=payload.plan,
         max_users=payload.max_users,
+        max_agencies=payload.max_agencies or PLAN_MAX_AGENCIES.get(payload.plan, 2),
         license_expires_at=expires_at,
         license_is_trial=is_trial,
         notes=payload.notes,
@@ -196,7 +198,7 @@ def onboard_pharmacy(
         if payload.grant_trial:
             from app.routes.license import _generate_key_string
             from app.models.license_key import LicenseKey
-            generated_key = _generate_key_string(pharmacy.plan, payload.trial_days or 14)
+            generated_key = _generate_key_string(pharmacy.name, payload.trial_days or 14)
             l_key = LicenseKey(
                 key=generated_key,
                 plan=pharmacy.plan,
@@ -506,10 +508,14 @@ def approve_pharmacy(
         pharmacy.max_users = payload.max_users
     else:
         pharmacy.max_users = PLAN_MAX_USERS.get(target_plan, pharmacy.max_users)
+    if getattr(payload, "max_agencies", None):
+        pharmacy.max_agencies = payload.max_agencies
+    else:
+        pharmacy.max_agencies = PLAN_MAX_AGENCIES.get(target_plan, 2)
 
     from app.routes.license import _generate_key_string
     from app.models.license_key import LicenseKey
-    key_str = _generate_key_string(pharmacy.plan, trial_days)
+    key_str = _generate_key_string(pharmacy.name, trial_days)
     l_key = LicenseKey(
         key=key_str,
         plan=pharmacy.plan,

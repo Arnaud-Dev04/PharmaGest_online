@@ -5,6 +5,7 @@ import 'package:frontend1/core/theme.dart';
 import 'package:frontend1/core/constants.dart';
 import 'package:frontend1/providers/auth_provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
+import 'package:frontend1/services/api_service.dart';
 
 /// Écran de connexion reproduisant exactement le design React
 /// Design split-screen : Logo/Brand à gauche, Formulaire à droite
@@ -23,13 +24,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _showPassword = false;
   bool _rememberMe = false;
   bool _isPlatformAdmin = false;
+  List<Map<String, dynamic>> _pharmacies = [];
+  String? _selectedPharmacyCode;
+  bool _isLoadingPharmacies = false;
 
   @override
   void initState() {
     super.initState();
+    _loadPharmacies();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.pharmacyCode != null && auth.pharmacyCode!.isNotEmpty) {
+        _selectedPharmacyCode = auth.pharmacyCode;
         _pharmacyCodeController.text = auth.pharmacyCode!;
       }
     });
@@ -43,12 +49,36 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _loadPharmacies() async {
+    setState(() => _isLoadingPharmacies = true);
+    try {
+      final res = await ApiService().get('/auth/pharmacies');
+      if (res.data is List && mounted) {
+        setState(() {
+          _pharmacies = List<Map<String, dynamic>>.from(
+            (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+          );
+          if (_selectedPharmacyCode == null && _pharmacies.isNotEmpty) {
+            _selectedPharmacyCode = _pharmacies.first['code']?.toString();
+            _pharmacyCodeController.text = _selectedPharmacyCode ?? '';
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('[Login] Erreur chargement pharmacies: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingPharmacies = false);
+    }
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final pharmacyCode = _isPlatformAdmin ? null : _pharmacyCodeController.text.trim();
+    final pharmacyCode = _isPlatformAdmin
+        ? null
+        : (_selectedPharmacyCode ?? _pharmacyCodeController.text.trim());
 
     final success = await authProvider.login(
       _usernameController.text.trim(),
@@ -287,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 64),
                         Center(
                           child: Text(
-                            'Version 1.0.0 • © 2025 Developped by ArnaudDev',
+                            'Version 1.0.0 • © 2026 Developped by BurundiJobs',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: isDark
@@ -403,13 +433,13 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              Provider.of<LanguageProvider>(context).translate('platformCode'),
+              'Nom de la Pharmacie *',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
             Text(
-              'Officine',
+              _isLoadingPharmacies ? 'Chargement...' : 'Sélectionnez votre officine',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: isDark
                     ? AppTheme.darkSidebarText.withValues(alpha: 0.6)
@@ -420,13 +450,41 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: _pharmacyCodeController,
-          textCapitalization: TextCapitalization.characters,
+        DropdownButtonFormField<String>(
+          value: _pharmacies.any((p) => p['code'] == _selectedPharmacyCode)
+              ? _selectedPharmacyCode
+              : (_pharmacies.isNotEmpty ? _pharmacies.first['code']?.toString() : null),
+          items: _pharmacies.map((p) {
+            final name = p['name']?.toString() ?? 'Pharmacie';
+            final city = p['city']?.toString();
+            return DropdownMenuItem<String>(
+              value: p['code']?.toString(),
+              child: Text(
+                city != null && city.isNotEmpty ? '$name ($city)' : name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: Provider.of<AuthProvider>(context).isLoading
+              ? null
+              : (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedPharmacyCode = val;
+                      _pharmacyCodeController.text = val;
+                    });
+                  }
+                },
+
           decoration: InputDecoration(
-            hintText: 'Ex: PHARM-001',
+            hintText: _isLoadingPharmacies
+                ? 'Chargement des pharmacies...'
+                : (_pharmacies.isEmpty
+                    ? 'Aucune pharmacie disponible'
+                    : 'Sélectionnez votre pharmacie...'),
             prefixIcon: Icon(
-              Icons.local_pharmacy_outlined,
+              Icons.storefront_outlined,
               color: isDark
                   ? AppTheme.darkSidebarText.withValues(alpha: 0.6)
                   : Colors.grey[600],
@@ -434,11 +492,11 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           validator: (value) {
             if (!_isPlatformAdmin && (value == null || value.trim().isEmpty)) {
-              return 'Code pharmacie requis';
+              return 'Veuillez sélectionner votre pharmacie';
             }
             return null;
           },
-          enabled: !Provider.of<AuthProvider>(context).isLoading,
+
         ),
       ],
     );
@@ -477,7 +535,7 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             return null;
           },
-          enabled: !Provider.of<AuthProvider>(context).isLoading,
+
         ),
       ],
     );
@@ -530,7 +588,7 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             return null;
           },
-          enabled: !Provider.of<AuthProvider>(context).isLoading,
+
         ),
       ],
     );
@@ -595,19 +653,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: _isPlatformAdmin
                       ? AppTheme.primaryColor
                       : (isDark
-                          ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
-                          : Colors.grey[600]),
+                            ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
+                            : Colors.grey[600]),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   _isPlatformAdmin ? 'Admin Plateforme' : 'Plateforme',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: _isPlatformAdmin ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: _isPlatformAdmin
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     color: _isPlatformAdmin
                         ? AppTheme.primaryColor
                         : (isDark
-                            ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
-                            : Colors.grey[600]),
+                              ? AppTheme.darkSidebarText.withValues(alpha: 0.7)
+                              : Colors.grey[600]),
                   ),
                 ),
               ],
@@ -669,18 +729,28 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Row(
           children: [
-            Expanded(child: Divider(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder)),
+            Expanded(
+              child: Divider(
+                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'Première utilisation ?',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? AppTheme.darkSidebarText : AppTheme.lightSidebarText,
+                  color: isDark
+                      ? AppTheme.darkSidebarText
+                      : AppTheme.lightSidebarText,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder)),
+            Expanded(
+              child: Divider(
+                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -694,7 +764,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppTheme.primaryColor.withValues(alpha: 0.6),
                 width: 1.2,
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             icon: const Icon(Icons.app_registration_rounded, size: 18),
             label: const Text(
@@ -704,8 +776,10 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () {
               RegisterPharmacyDialog.show(
                 context,
-                onRegistered: (pCode, uName) {
+                onRegistered: (pCode, uName) async {
+                  await _loadPharmacies();
                   setState(() {
+                    _selectedPharmacyCode = pCode;
                     _pharmacyCodeController.text = pCode;
                     _usernameController.text = uName;
                   });
@@ -717,5 +791,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
     );
   }
-
 }

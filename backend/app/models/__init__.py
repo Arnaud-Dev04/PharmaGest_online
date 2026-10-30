@@ -22,9 +22,11 @@ from app.models.audit_log import DeletionLog
 from app.models.cash_register import CashRegisterSession, CashRegisterMovement
 from app.models.customer_credit import CustomerCredit, CustomerCreditPayment
 from app.models.license_key import LicenseKey
+from app.models.taxpayer_verification import TaxpayerVerification
 
 __all__ = [
-    # License Key
+    # Taxpayer Verification & License Key
+    "TaxpayerVerification",
     "LicenseKey",
     # Customer Credit
     "CustomerCredit",

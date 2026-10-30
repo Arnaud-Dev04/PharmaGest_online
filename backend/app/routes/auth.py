@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.pharmacy import Pharmacy
-from app.schemas.pharmacy import PharmacyRegisterRequest
+from app.schemas.pharmacy import PharmacyRegisterRequest, PLAN_MAX_USERS, PLAN_MAX_AGENCIES
 from datetime import timedelta
 from app.core.limiter import limiter
 
@@ -57,7 +58,7 @@ def authenticate_user(
     user = None
 
     if pharmacy_code:
-        pharmacy = db.query(Pharmacy).filter(Pharmacy.code == pharmacy_code).first()
+        pharmacy = db.query(Pharmacy).filter(or_(Pharmacy.code == pharmacy_code, Pharmacy.name == pharmacy_code)).first()
         if not pharmacy or not pharmacy.is_active:
             return None
         user = db.query(User).filter(
@@ -89,6 +90,25 @@ def authenticate_user(
 
 
 # ============================================================================
+# PUBLIC PHARMACIES LIST (FOR LOGIN SELECTION)
+# ============================================================================
+
+@router.get("/pharmacies", summary="List active pharmacies for login selection")
+def get_public_pharmacies(db: Session = Depends(get_local_db)):
+    """Retourne la liste des pharmacies actives pour la selection deroulante lors de la connexion."""
+    pharmacies = (
+        db.query(Pharmacy.id, Pharmacy.name, Pharmacy.code, Pharmacy.city)
+        .filter(Pharmacy.is_active.is_(True), Pharmacy.status == "active")
+        .order_by(Pharmacy.name.asc())
+        .all()
+    )
+    return [
+        {"id": p.id, "name": p.name, "code": p.code, "city": p.city}
+        for p in pharmacies
+    ]
+
+
+# ============================================================================
 # LOGIN ENDPOINT
 # ============================================================================
 
@@ -111,7 +131,7 @@ async def login(
         pharmacy_code = pharmacy_code.strip() or None
 
     if pharmacy_code:
-        pharmacy_check = db.query(Pharmacy).filter(Pharmacy.code == pharmacy_code).first()
+        pharmacy_check = db.query(Pharmacy).filter(or_(Pharmacy.code == pharmacy_code, Pharmacy.name == pharmacy_code)).first()
         if pharmacy_check:
             if getattr(pharmacy_check, "status", None) == "pending_approval" or not pharmacy_check.is_active:
                 raise HTTPException(
@@ -608,8 +628,8 @@ async def register_pharmacy(
         )
 
     # 3. Vérifier l'unicité du NIF
-    nif_clean = payload.nif.strip()
-    existing_nif = db.query(Pharmacy).filter(Pharmacy.nif == nif_clean).first()
+    nif_clean = payload.nif.strip() if payload.nif else None
+    existing_nif = db.query(Pharmacy).filter(Pharmacy.nif == nif_clean).first() if nif_clean else None
     if existing_nif:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -626,7 +646,8 @@ async def register_pharmacy(
         country=payload.country.strip() if payload.country else "Burundi",
         city=payload.city.strip() if payload.city else "Bujumbura",
         plan=payload.plan,
-        max_users={"basic": 3, "pro": 10, "enterprise": 1000}.get(payload.plan, 3),
+        max_users=PLAN_MAX_USERS.get(payload.plan, 10),
+        max_agencies=PLAN_MAX_AGENCIES.get(payload.plan, 2),
         license_is_trial=True,
         is_active=False,
         status="pending_approval",

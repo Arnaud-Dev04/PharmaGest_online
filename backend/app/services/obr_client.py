@@ -11,8 +11,11 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 import requests
+from datetime import timedelta
+from sqlalchemy.orm import Session
 
 from app.models.pharmacy import Pharmacy
+from app.models.taxpayer_verification import TaxpayerVerification
 
 logger = logging.getLogger("obr_client")
 
@@ -23,6 +26,9 @@ class OBRClient:
     # URLs officielles EBMS V0.5 sur le port 9443
     SANDBOX_BASE_URL = "https://ebms-test.obr.gov.bi:9443/ebms_api"
     PRODUCTION_BASE_URL = "https://ebms.obr.gov.bi:9443/ebms_api"
+
+    # Cache en mémoire des jetons Bearer (validité OBR : 60s, renouvellement à 50s)
+    _token_cache: Dict[int, Dict[str, Any]] = {}
 
     def __init__(self, pharmacy: Pharmacy):
         self.pharmacy = pharmacy
@@ -83,11 +89,16 @@ class OBRClient:
 
     def get_token(self) -> Optional[str]:
         """
-        Récupère un jeton d'authentification auprès de l'OBR.
+        Récupère un jeton d'authentification auprès de l'OBR (avec cache mémoire 50s).
         Endpoint officiel V0.5 : POST /login/
         """
         if not self.username or not self.password:
             return None
+
+        now = datetime.utcnow()
+        cached = self._token_cache.get(self.pharmacy.id)
+        if cached and cached.get("expires_at") and cached["expires_at"] > now:
+            return cached["token"]
 
         for endpoint in [f"{self.base_url}/login/", f"{self.base_url}/login"]:
             try:
@@ -102,6 +113,10 @@ class OBRClient:
                     res_obj = data.get("result") if isinstance(data.get("result"), dict) else {}
                     token = res_obj.get("token") or data.get("token") or data.get("access_token")
                     if token:
+                        self._token_cache[self.pharmacy.id] = {
+                            "token": token,
+                            "expires_at": now + timedelta(seconds=50),
+                        }
                         return token
             except Exception as e:
                 logger.warning(f"[OBR] Erreur d'authentification API sur {endpoint}: {e}")
@@ -336,53 +351,218 @@ class OBRClient:
             "sync_status": "synced" if self.environment == "sandbox" else "pending",
         }
 
-    def check_tin(self, tin: str) -> Dict[str, Any]:
+    def check_tin(
+        self,
+        tin: str,
+        db: Optional[Session] = None,
+        force_refresh: bool = False,
+    ) -> Dict[str, Any]:
         """
-        Vérifie la validité d'un NIF auprès du serveur EBMS OBR.
-        Endpoint officiel V0.5 : POST /checkTIN/
+        Vérifie la validité d'un NIF auprès du serveur EBMS OBR (POST /checkTIN/).
+        Récupère automatiquement le nom officiel du contribuable (tp_name).
+        Enregistre le résultat en cache (30 jours) et distingue nettement :
+          - VALID       : NIF existant et confirmé par l'OBR (tp_name retourné)
+          - INVALID     : NIF rejeté explicitement par l'OBR (inexistant / inactif)
+          - UNREACHABLE : OBR injoignable (hors-ligne / timeout) -> NIF accepté sans bloquer la vente
+          - CACHED      : NIF déjà validé récemment en cache officiel
+          - FORMAT_ERROR: Format non conforme
         """
         clean_tin = (tin or "").strip()
         if not clean_tin:
-            return {"success": False, "valid": False, "message": "NIF requis"}
+            return {
+                "success": False,
+                "valid": False,
+                "status": "FORMAT_ERROR",
+                "tin": "",
+                "taxpayer_name": None,
+                "taxpayer_address": None,
+                "message": "NIF requis pour la vérification.",
+                "is_offline": False,
+            }
 
+        # 1. Validation minimale de format (au moins 4 caractères alphanumériques)
+        if len(clean_tin) < 4 or not clean_tin.replace("-", "").isalnum():
+            return {
+                "success": False,
+                "valid": False,
+                "status": "FORMAT_ERROR",
+                "tin": clean_tin,
+                "taxpayer_name": None,
+                "taxpayer_address": None,
+                "message": "Format de NIF invalide (caractères alphanumériques requis).",
+                "is_offline": False,
+            }
+
+        # 2. Vérification dans le cache local de la pharmacie (si pas de force_refresh)
+        cached = None
+        if db is not None:
+            cached = db.query(TaxpayerVerification).filter(
+                TaxpayerVerification.pharmacy_id == self.pharmacy.id,
+                TaxpayerVerification.tin == clean_tin,
+            ).first()
+
+            if cached and not force_refresh and cached.is_cache_fresh() and cached.is_valid:
+                return {
+                    "success": True,
+                    "valid": True,
+                    "status": "CACHED",
+                    "tin": clean_tin,
+                    "taxpayer_name": cached.taxpayer_name,
+                    "taxpayer_address": cached.taxpayer_address,
+                    "verified_at": cached.verified_at.isoformat() if cached.verified_at else None,
+                    "message": f"NIF vérifié (en cache officiel) : {cached.taxpayer_name}",
+                    "is_offline": False,
+                }
+
+        # 3. Appel de l'API officielle EBMS OBR
         token = self.get_token() if (self.username and self.password) else None
+        obr_error_msg = None
+
         if token:
             for endpoint in [f"{self.base_url}/checkTIN/", f"{self.base_url}/checkTIN"]:
                 try:
                     headers = {
                         "Authorization": f"Bearer {token}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     resp = requests.post(
                         endpoint,
                         json={"tp_TIN": clean_tin},
                         headers=headers,
-                        timeout=10.0,
+                        timeout=8.0,
                         verify=False,
                     )
+
                     if resp.status_code == 200:
                         data = resp.json()
-                        result = data.get("result") or data
-                        return {
-                            "success": True,
-                            "valid": True,
-                            "tin": clean_tin,
-                            "taxpayer_name": result.get("tp_name") or result.get("taxpayer_name", ""),
-                            "taxpayer_address": result.get("tp_address") or "",
-                            "raw_response": data,
-                        }
-                except Exception as e:
-                    logger.warning(f"[OBR] Erreur checkTIN ({endpoint}): {e}")
+                        result = data.get("result") if isinstance(data.get("result"), dict) else {}
+                        tp_name = (
+                            result.get("tp_name")
+                            or result.get("taxpayer_name")
+                            or data.get("tp_name")
+                            or ""
+                        ).strip()
+                        tp_address = (
+                            result.get("tp_address")
+                            or result.get("taxpayer_address")
+                            or data.get("tp_address")
+                            or ""
+                        ).strip()
 
-        # Vérification locale de base si serveur distant injoignable
-        is_valid_format = len(clean_tin) >= 6 and clean_tin.isalnum()
+                        # Vérifier si l'OBR a validé ou rejeté le NIF
+                        is_success = data.get("success") is True or bool(tp_name)
+                        is_not_found = (
+                            data.get("success") is False
+                            or "not found" in str(data.get("msg", "")).lower()
+                            or "invalide" in str(data.get("msg", "")).lower()
+                        )
+
+                        if is_success and tp_name:
+                            # NIF officiel confirmé
+                            if db is not None:
+                                self._save_taxpayer_cache(
+                                    db, clean_tin, tp_name, tp_address, "VALID", True, data
+                                )
+                            return {
+                                "success": True,
+                                "valid": True,
+                                "status": "VALID",
+                                "tin": clean_tin,
+                                "taxpayer_name": tp_name,
+                                "taxpayer_address": tp_address,
+                                "message": f"NIF vérifié auprès de l'OBR : {tp_name}",
+                                "is_offline": False,
+                                "raw_response": data,
+                            }
+                        elif is_not_found:
+                            # NIF formellement rejeté par l'OBR
+                            if db is not None:
+                                self._save_taxpayer_cache(
+                                    db, clean_tin, None, None, "INVALID", False, data
+                                )
+                            return {
+                                "success": True,
+                                "valid": False,
+                                "status": "INVALID",
+                                "tin": clean_tin,
+                                "taxpayer_name": None,
+                                "taxpayer_address": None,
+                                "message": f"NIF '{clean_tin}' non reconnu par l'OBR.",
+                                "is_offline": False,
+                                "raw_response": data,
+                            }
+                except Exception as e:
+                    logger.warning(f"[OBR] Erreur lors de l'appel checkTIN ({endpoint}): {e}")
+                    obr_error_msg = str(e)
+
+        # 4. Cas : OBR Injoignable / Hors-ligne (Règle essentielle : on ne bloque pas la vente)
+        fallback_name = cached.taxpayer_name if cached else None
+        fallback_addr = cached.taxpayer_address if cached else None
+
+        if db is not None and not cached:
+            # Enregistrer comme vérification en attente / hors-ligne
+            self._save_taxpayer_cache(
+                db, clean_tin, fallback_name, fallback_addr, "UNREACHABLE", True, {"offline_reason": obr_error_msg or "injoignable"}
+            )
+
         return {
             "success": True,
-            "valid": is_valid_format,
+            "valid": True,  # Autorisé pour la facturation hors-ligne
+            "status": "UNREACHABLE",
             "tin": clean_tin,
-            "taxpayer_name": "Contribuable Vérifié (Local)" if is_valid_format else "Format NIF invalide",
-            "message": "Vérification locale (serveur OBR direct injoignable)",
+            "taxpayer_name": fallback_name,
+            "taxpayer_address": fallback_addr,
+            "message": "OBR injoignable (NIF accepté pour la vente en mode hors-ligne).",
+            "is_offline": True,
         }
+
+    def _save_taxpayer_cache(
+        self,
+        db: Session,
+        tin: str,
+        name: Optional[str],
+        address: Optional[str],
+        status: str,
+        is_valid: bool,
+        raw_response: Any,
+    ):
+        """Enregistre ou met à jour le NIF en cache local avec validité 30 jours."""
+        try:
+            record = db.query(TaxpayerVerification).filter(
+                TaxpayerVerification.pharmacy_id == self.pharmacy.id,
+                TaxpayerVerification.tin == tin,
+            ).first()
+
+            now = datetime.utcnow()
+            expires = now + timedelta(days=30)
+
+            if not record:
+                record = TaxpayerVerification(
+                    pharmacy_id=self.pharmacy.id,
+                    tin=tin,
+                    taxpayer_name=name,
+                    taxpayer_address=address,
+                    status=status,
+                    is_valid=is_valid,
+                    raw_response=raw_response,
+                    verified_at=now,
+                    expires_at=expires,
+                )
+                db.add(record)
+            else:
+                record.taxpayer_name = name or record.taxpayer_name
+                record.taxpayer_address = address or record.taxpayer_address
+                record.status = status
+                record.is_valid = is_valid
+                record.raw_response = raw_response
+                record.verified_at = now
+                record.expires_at = expires
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"[ERROR _save_taxpayer_cache]: {e}", flush=True)
+            logger.warning(f"[OBR] Échec enregistrement cache NIF: {e}")
 
     def cancel_invoice(self, invoice_identifier: str, cn_motif: str) -> Dict[str, Any]:
         """

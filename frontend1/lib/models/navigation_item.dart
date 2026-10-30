@@ -1,23 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Modèle représentant un item de navigation dans la sidebar
+/// Modele representant un item de navigation dans la sidebar
 class NavigationItem {
-  /// Nom de l'item (clé de traduction)
   final String name;
-
-  /// Route de navigation
   final String route;
-
-  /// Icône à afficher
   final IconData icon;
-
-  /// Si true, visible seulement pour les admins et super admins
   final bool adminOnly;
-
-  /// Si true, visible seulement pour les super admins
   final bool superAdminOnly;
-
-  /// If true, visible only to platform administrators.
   final bool platformAdminOnly;
 
   const NavigationItem({
@@ -55,42 +44,46 @@ class NavigationItem {
   }
 }
 
-/// Liste des items de navigation (correspond au menu React)
+/// Liste des items de navigation
 class NavigationItems {
   static final List<NavigationItem> items = [
     const NavigationItem(
       name: 'dashboard',
       route: '/dashboard',
-      icon: Icons.dashboard,
+      icon: Icons.space_dashboard_rounded,
     ),
     const NavigationItem(
       name: 'stock',
       route: '/stock',
-      icon: Icons.inventory_2,
+      icon: Icons.inventory_2_outlined,
     ),
-    const NavigationItem(name: 'pos', route: '/pos', icon: Icons.shopping_cart),
+    const NavigationItem(
+      name: 'pos',
+      route: '/pos',
+      icon: Icons.point_of_sale_rounded,
+    ),
     const NavigationItem(
       name: 'cashRegister',
       route: '/cash-register',
-      icon: Icons.point_of_sale,
+      icon: Icons.account_balance_wallet_outlined,
     ),
     const NavigationItem(
       name: 'salesHistory',
       route: '/sales-history',
-      icon: Icons.history,
+      icon: Icons.receipt_long_rounded,
     ),
     const NavigationItem(
       name: 'suppliers',
       route: '/suppliers',
-      icon: Icons.local_shipping,
+      icon: Icons.local_shipping_outlined,
     ),
     const NavigationItem(
       name: 'users',
       route: '/users',
-      icon: Icons.people,
+      icon: Icons.people_alt_outlined,
       adminOnly: true,
     ),
-        const NavigationItem(
+    const NavigationItem(
       name: 'analyse',
       route: '/analyse',
       icon: Icons.analytics_outlined,
@@ -105,33 +98,47 @@ class NavigationItems {
     const NavigationItem(
       name: 'reports',
       route: '/reports',
-      icon: Icons.description,
+      icon: Icons.bar_chart_rounded,
     ),
     const NavigationItem(
       name: 'settings',
       route: '/settings',
-      icon: Icons.settings,
+      icon: Icons.tune_rounded,
     ),
     const NavigationItem(
       name: 'superAdmin',
       route: '/super-admin',
-      icon: Icons.admin_panel_settings,
+      icon: Icons.admin_panel_settings_outlined,
       superAdminOnly: true,
     ),
+    // Modules dédiés Platform Admin
     const NavigationItem(
-      name: 'platformAdmin',
-      route: '/platform-admin',
-      icon: Icons.business_center_outlined,
+      name: 'platformPharmacies',
+      route: '/platform/pharmacies',
+      icon: Icons.storefront_outlined,
+      platformAdminOnly: true,
+    ),
+    const NavigationItem(
+      name: 'platformLicences',
+      route: '/platform/licences',
+      icon: Icons.vpn_key_outlined,
+      platformAdminOnly: true,
+    ),
+    const NavigationItem(
+      name: 'platformAdmins',
+      route: '/platform/admins',
+      icon: Icons.manage_accounts_outlined,
       platformAdminOnly: true,
     ),
   ];
 
-  /// Filtre les items selon le rôle de l'utilisateur
+  /// Filtre les items selon le role de l'utilisateur
   static List<NavigationItem> filterByRole(String? userRole) {
     if (userRole == null) return [];
 
     final isPlatformAdmin = userRole.toLowerCase() == 'platform_admin';
     if (isPlatformAdmin) {
+      // Platform admin sees strictly the 3 dedicated platform modules
       return items.where((item) => item.platformAdminOnly).toList();
     }
 
@@ -139,18 +146,15 @@ class NavigationItems {
     final isAdmin = userRole.toLowerCase() == 'admin' || isSuperAdmin;
 
     if (isSuperAdmin) {
-      // Super admin voit tout
       return items.where((item) => !item.platformAdminOnly).toList();
     }
 
     if (isAdmin) {
-      // Admin voit tout sauf super admin
       return items
           .where((item) => !item.superAdminOnly && !item.platformAdminOnly)
           .toList();
     }
 
-    // Pharmacien voit seulement : POS, Stock, Sales History, Suppliers, Dashboard
     final pharmacistAllowedRoutes = [
       '/pos',
       '/cash-register',

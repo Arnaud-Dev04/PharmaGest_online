@@ -1,3 +1,4 @@
+import 'package:frontend1/screens/auth/register_pharmacy_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend1/core/theme.dart';
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       // Redirection selon le rôle
       if (authProvider.user?.role == 'platform_admin' || _isPlatformAdmin) {
-        Navigator.of(context).pushReplacementNamed('/platform-admin');
+        Navigator.of(context).pushReplacementNamed('/platform/pharmacies');
       } else {
         Navigator.of(context).pushReplacementNamed('/dashboard');
       }
@@ -275,6 +276,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                               // Bouton de connexion
                               _buildLoginButton(context, authProvider),
+                              const SizedBox(height: 20),
+                              // Inscription si première fois
+                              _buildRegisterButton(context, isDark),
                             ],
                           ),
                         ),
@@ -657,4 +661,61 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  Widget _buildRegisterButton(BuildContext context, bool isDark) {
+    if (_isPlatformAdmin) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'Première utilisation ?',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.darkSidebarText : AppTheme.lightSidebarText,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(
+                color: AppTheme.primaryColor.withValues(alpha: 0.6),
+                width: 1.2,
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.app_registration_rounded, size: 18),
+            label: const Text(
+              'Inscrire votre Pharmacie (Essai Gratuit)',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            onPressed: () {
+              RegisterPharmacyDialog.show(
+                context,
+                onRegistered: (pCode, uName) {
+                  setState(() {
+                    _pharmacyCodeController.text = pCode;
+                    _usernameController.text = uName;
+                  });
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
 }

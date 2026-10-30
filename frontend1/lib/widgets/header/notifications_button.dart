@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend1/core/theme.dart';
+import 'package:frontend1/widgets/common/modern_tab_bar.dart';
+
 import 'package:frontend1/models/medicine_pricing.dart';
 import 'package:frontend1/services/medicine_pricing_service.dart';
 import 'package:frontend1/providers/language_provider.dart';
@@ -540,46 +542,23 @@ class _NotificationsCenterDialogState extends State<NotificationsCenterDialog> {
       child: Row(
         children: [
           Expanded(
-            child: TabBar(
+            child: ModernPillTabBar(
               isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              labelColor: AppTheme.primaryColor,
-              unselectedLabelColor: isDark ? Colors.grey[400] : Colors.grey[600],
-              indicatorColor: AppTheme.primaryColor,
-              indicatorWeight: 3,
               tabs: [
-                Tab(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.hourglass_bottom, size: 18, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      const Text('Péremption prochaine', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 6),
-                      _buildPillBadge(_expiringSoon.length, Colors.orange),
-                    ],
-                  ),
+                ModernTab(
+                  icon: Icons.hourglass_bottom_rounded,
+                  text: 'Péremption prochaine',
+                  badge: _buildPillBadge(_expiringSoon.length, Colors.orange),
                 ),
-                Tab(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, size: 18, color: Colors.amber),
-                      const SizedBox(width: 8),
-                      const Text('Stock Faible', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 6),
-                      _buildPillBadge(_lowStock.length, Colors.amber[800]!),
-                    ],
-                  ),
+                ModernTab(
+                  icon: Icons.warning_amber_rounded,
+                  text: 'Stock Faible',
+                  badge: _buildPillBadge(_lowStock.length, Colors.amber[800]!),
                 ),
-                Tab(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                      const SizedBox(width: 8),
-                      const Text('Rupture', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 6),
-                      _buildPillBadge(_outOfStock.length, Colors.red),
-                    ],
-                  ),
+                ModernTab(
+                  icon: Icons.error_outline_rounded,
+                  text: 'Rupture',
+                  badge: _buildPillBadge(_outOfStock.length, Colors.red),
                 ),
               ],
             ),

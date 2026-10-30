@@ -20,7 +20,10 @@ class Pharmacy(Base, BaseModelMixin):
     country = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    status = Column(String(30), default="active", nullable=False)  # "active", "pending_approval", "suspended", "rejected"
     plan = Column(String(30), default="basic", nullable=False)
+    deployment_env = Column(String(20), default="basic", nullable=False)
+    """Instance Docker cible pour cette pharmacie: basic, pro, enterprise"""
     max_users = Column(Integer, default=3, nullable=False)
     license_expires_at = Column(Date, nullable=True)
     license_is_trial = Column(Boolean, default=False, nullable=False)

@@ -73,6 +73,9 @@ class Token(BaseModel):
     token_type: str = Field(default="bearer", description="Token type")
     must_change_password: bool = Field(default=False, description="User must change password on first login")
     is_first_setup: bool = Field(default=False, description="System is in first-time setup mode")
+    plan: Optional[str] = None
+    api_base_url: Optional[str] = None
+    environment: Optional[str] = None
     
     model_config = {
         "json_schema_extra": {

@@ -1,4 +1,4 @@
-﻿import 'package:frontend1/models/pharmacy.dart';
+import 'package:frontend1/models/pharmacy.dart';
 import 'package:frontend1/services/api_service.dart';
 
 class PlatformAdminService {
@@ -20,15 +20,79 @@ class PlatformAdminService {
     return PharmacyPage.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Returns a flat list of all pharmacies (id, name, code, plan) for dropdowns.
+  Future<List<Map<String, dynamic>>> getPharmaciesSimple() async {
+    // Fetch a large page to get all pharmacies for the dropdown
+    final response = await _api.get(
+      '/platform/pharmacies',
+      queryParameters: {'page': 1, 'page_size': 100},
+    );
+    final page = response.data as Map<String, dynamic>;
+    final items = page['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
   Future<PlatformMetrics> getMetrics() async {
     final response = await _api.get('/platform/metrics');
     return PlatformMetrics.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<Pharmacy> onboardPharmacy(Map<String, dynamic> data) async {
+  /// Inscription publique libre-service
+  Future<Map<String, dynamic>> registerPharmacy(Map<String, dynamic> data) async {
+    final response = await _api.post('/auth/register-pharmacy', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Onboarding direct par l'admin avec génération éventuelle de clé d'essai
+  Future<Map<String, dynamic>> onboardPharmacy(Map<String, dynamic> data) async {
     final response = await _api.post('/platform/pharmacies', data: data);
     final body = response.data as Map<String, dynamic>;
-    return Pharmacy.fromJson(body['pharmacy'] as Map<String, dynamic>);
+    return {
+      'pharmacy': Pharmacy.fromJson(body['pharmacy'] as Map<String, dynamic>),
+      'admin_username': body['admin_username']?.toString(),
+      'license_key': body['license_key']?.toString(),
+    };
+  }
+
+  /// Liste des pharmacies en attente d'approbation
+  Future<List<Map<String, dynamic>>> getPendingPharmacies() async {
+    final response = await _api.get('/platform/pharmacies-pending');
+    return (response.data as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
+
+  /// Approuver une pharmacie avec période d'essai et clé de licence
+  Future<Map<String, dynamic>> approvePharmacy(
+    int pharmacyId, {
+    int trialDays = 14,
+    String? plan,
+    int? maxUsers,
+  }) async {
+    final response = await _api.post(
+      '/platform/pharmacies/$pharmacyId/approve',
+      data: {
+        'trial_days': trialDays,
+        if (plan != null) 'plan': plan,
+        if (maxUsers != null) 'max_users': maxUsers,
+      },
+    );
+    final body = response.data as Map<String, dynamic>;
+    return {
+      'success': body['success'] as bool? ?? true,
+      'message': body['message']?.toString() ?? '',
+      'pharmacy': Pharmacy.fromJson(body['pharmacy'] as Map<String, dynamic>),
+      'license_key': body['license_key']?.toString() ?? '',
+      'license_expires_at': body['license_expires_at']?.toString(),
+      'plan': body['plan']?.toString() ?? '',
+    };
+  }
+
+  /// Rejeter une demande d'inscription
+  Future<void> rejectPharmacy(int pharmacyId) async {
+    await _api.post('/platform/pharmacies/$pharmacyId/reject');
   }
 
   Future<Pharmacy> updatePharmacy(int id, Map<String, dynamic> data) async {
@@ -78,15 +142,19 @@ class PlatformAdminService {
   // Platform Admins Management
   Future<List<Map<String, dynamic>>> getPlatformAdmins() async {
     final response = await _api.get('/platform/admins');
-    return (response.data as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return (response.data as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
-  Future<Map<String, dynamic>> createPlatformAdmin(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createPlatformAdmin(
+      Map<String, dynamic> data) async {
     final response = await _api.post('/platform/admins', data: data);
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  Future<Map<String, dynamic>> updatePlatformAdmin(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updatePlatformAdmin(
+      int id, Map<String, dynamic> data) async {
     final response = await _api.put('/platform/admins/$id', data: data);
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -102,6 +170,7 @@ class PlatformAdminService {
     int maxUsers = 3,
     int quantity = 1,
     String? notes,
+    int? pharmacyId,
   }) async {
     final response = await _api.post(
       '/license/platform/generate',
@@ -110,13 +179,17 @@ class PlatformAdminService {
         'duration_days': durationDays,
         'max_users': maxUsers,
         'quantity': quantity,
-        'notes': notes,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes,
+        if (pharmacyId != null) 'pharmacy_id': pharmacyId,
       },
     );
-    return (response.data as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return (response.data as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
-  Future<List<Map<String, dynamic>>> getLicenseKeys({String? plan, bool? isActive}) async {
+  Future<List<Map<String, dynamic>>> getLicenseKeys(
+      {String? plan, bool? isActive}) async {
     final response = await _api.get(
       '/license/platform/keys',
       queryParameters: {
@@ -124,13 +197,31 @@ class PlatformAdminService {
         if (isActive != null) 'is_active': isActive,
       },
     );
-    return (response.data as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return (response.data as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
   Future<void> revokeLicenseKey(int id) async {
     await _api.put('/license/platform/keys/$id/revoke');
   }
+
+  // OBR Configuration
+  Future<Map<String, dynamic>> getPharmacyObrConfig(int pharmacyId) async {
+    final response = await _api.get('/platform/pharmacies/$pharmacyId/obr-config');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> updatePharmacyObrConfig(
+      int pharmacyId, Map<String, dynamic> data) async {
+    final response = await _api.put(
+      '/platform/pharmacies/$pharmacyId/obr-config',
+      data: data,
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
 }
+
 
 class PlatformAccount {
   final int id;

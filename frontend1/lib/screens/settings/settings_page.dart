@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:frontend1/core/theme.dart';
+import 'package:frontend1/widgets/common/modern_tab_bar.dart';
 
 import 'package:frontend1/services/settings_service.dart';
 import 'package:frontend1/services/obr_service.dart';
@@ -368,28 +369,30 @@ class _SettingsPageState extends State<SettingsPage> {
       length: tabCount,
       child: Column(
         children: [
-          // TabBar
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              labelColor: AppTheme.primaryColor,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: AppTheme.primaryColor,
-              tabs: [
-                Tab(
-                  icon: const Icon(Icons.business),
-                  text: lp.translate('general'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: ModernPillTabBar(
+                  tabs: [
+                    ModernTab(
+                      icon: Icons.storefront_outlined,
+                      text: lp.translate('general'),
+                    ),
+                    const ModernTab(
+                      icon: Icons.receipt_long_outlined,
+                      text: 'Fiscalité OBR (EBMS)',
+                    ),
+                    if (isSuperAdmin)
+                      ModernTab(
+                        icon: Icons.admin_panel_settings_outlined,
+                        text: lp.translate('administration'),
+                      ),
+                  ],
                 ),
-                const Tab(
-                  icon: Icon(Icons.receipt_long),
-                  text: 'Fiscalité OBR (EBMS)',
-                ),
-                if (isSuperAdmin)
-                  Tab(
-                    icon: const Icon(Icons.security),
-                    text: lp.translate('administration'),
-                  ),
-              ],
+              ),
             ),
           ),
 

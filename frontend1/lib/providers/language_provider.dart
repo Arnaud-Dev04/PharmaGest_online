@@ -53,7 +53,9 @@ class LanguageProvider with ChangeNotifier {
       'platformFirstAdmin': 'Compte du premier administrateur',
       'platformInitialPasswordHint':
           'Au moins 8 caractères; changement requis à la première connexion',
-      'platformPharmacies': 'Pharmacies',
+      'platformPharmacies': 'Gestion Pharmacies',
+      'platformLicences': 'Gestion Licences',
+      'platformAdmins': 'Admins Plateforme',
       'platformActive': 'Actives',
       'platformUsers': 'Utilisateurs',
       'activeUsers': 'Utilisateurs actifs',
@@ -423,7 +425,9 @@ class LanguageProvider with ChangeNotifier {
       'platformFirstAdmin': 'First administrator account',
       'platformInitialPasswordHint':
           'At least 8 characters; change required on first login',
-      'platformPharmacies': 'Pharmacies',
+      'platformPharmacies': 'Gestion Pharmacies',
+      'platformLicences': 'Gestion Licences',
+      'platformAdmins': 'Admins Plateforme',
       'platformActive': 'Active',
       'platformUsers': 'Users',
       'activeUsers': 'Active users',

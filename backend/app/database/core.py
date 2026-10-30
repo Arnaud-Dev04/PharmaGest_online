@@ -444,6 +444,8 @@ def _auto_repair_schema(bind_engine):
             ("price_wvat", "FLOAT NOT NULL DEFAULT 0.0"),
         ],
         "pharmacies": [
+            ("status", "VARCHAR(30) NOT NULL DEFAULT 'active'"),
+            ("deployment_env", "VARCHAR(20) NOT NULL DEFAULT 'basic'"),
             ("nif", "VARCHAR(50) NULL"),
             ("rc_number", "VARCHAR(100) NULL"),
             ("tax_center", "VARCHAR(50) NULL"),

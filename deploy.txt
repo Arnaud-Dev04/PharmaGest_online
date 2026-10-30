@@ -1,0 +1,21 @@
+# 1. Compiler l'interface Web Flutter
+cd E:\Project\PharmaGest_online\frontend1
+flutter build web --release --base-href / --no-pub
+
+# 2. Pousser sur les deux branches GitHub
+cd E:\Project\PharmaGest_online
+git add .
+git commit -m "feat: interface de gestion des abonnements SaaS et cles de licence"
+git push origin main
+git push origin test/multitenant-online
+
+
+cd E:\Project\PharmaGest_online\backend
+# 1. Activer l'environnement virtuel
+.\venv\Scripts\Activate.ps1
+# 2. Démarrer l'API FastAPI avec rechargement automatique
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+cd E:\Project\PharmaGest_online\frontend1
+
+flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:8000 --no-pub

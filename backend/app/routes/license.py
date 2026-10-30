@@ -155,6 +155,7 @@ class LicenseGenerateRequest(BaseModel):
     max_users: int = 3
     quantity: int = 1
     notes: Optional[str] = None
+    pharmacy_id: Optional[int] = None
 
 class LicenseKeyResponse(BaseModel):
     id: int
@@ -202,6 +203,7 @@ def generate_license_keys(
             created_by_id=current_admin.id,
             is_active=True,
             notes=payload.notes,
+            pharmacy_id=payload.pharmacy_id,
         )
         db.add(l_key)
         created_keys.append(l_key)

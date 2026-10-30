@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:frontend1/core/theme.dart';
+import 'package:frontend1/widgets/common/modern_tab_bar.dart';
+
 import 'package:frontend1/models/pharmacy.dart';
 import 'package:frontend1/providers/auth_provider.dart';
 import 'package:frontend1/providers/language_provider.dart';
@@ -671,30 +673,21 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TabBar(
-                  labelColor: AppTheme.primaryColor,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: AppTheme.primaryColor,
-                  tabs: const [
-                    Tab(
-                      icon: Icon(Icons.storefront_outlined),
-                      text: 'Pharmacies',
-                    ),
-                    Tab(
-                      icon: Icon(Icons.manage_accounts_outlined),
-                      text: 'Admins Plateforme',
-                    ),
-                    Tab(
-                      icon: Icon(Icons.vpn_key_outlined),
-                      text: 'Gestion Licences',
-                    ),
-                  ],
-                ),
+              ModernPillTabBar(
+                tabs: const [
+                  ModernTab(
+                    icon: Icons.storefront_outlined,
+                    text: 'Pharmacies',
+                  ),
+                  ModernTab(
+                    icon: Icons.manage_accounts_outlined,
+                    text: 'Admins Plateforme',
+                  ),
+                  ModernTab(
+                    icon: Icons.vpn_key_outlined,
+                    text: 'Gestion Licences',
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -806,24 +799,6 @@ class _PlatformAdminPageState extends State<PlatformAdminPage> {
         label: language.translate('platformActive'),
         value: '${metrics.activePharmacyCount}',
         icon: Icons.check_circle_outline,
-        color: AppTheme.successColor,
-      ),
-      (
-        label: language.translate('platformUsers'),
-        value: '${metrics.userCount}',
-        icon: Icons.people_outline,
-        color: AppTheme.warningColor,
-      ),
-      (
-        label: language.translate('platformSales'),
-        value: '${metrics.saleCount}',
-        icon: Icons.point_of_sale_outlined,
-        color: AppTheme.dangerColor,
-      ),
-      (
-        label: language.translate('platformRevenue'),
-        value: NumberFormat.decimalPattern().format(metrics.totalRevenue),
-        icon: Icons.payments_outlined,
         color: AppTheme.successColor,
       ),
     ];

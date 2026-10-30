@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
 from app.models.pharmacy import Pharmacy
+from app.schemas.pharmacy import PharmacyRegisterRequest
 from datetime import timedelta
 from app.core.limiter import limiter
 
@@ -109,6 +110,25 @@ async def login(
     if isinstance(pharmacy_code, str):
         pharmacy_code = pharmacy_code.strip() or None
 
+    if pharmacy_code:
+        pharmacy_check = db.query(Pharmacy).filter(Pharmacy.code == pharmacy_code).first()
+        if pharmacy_check:
+            if getattr(pharmacy_check, "status", None) == "pending_approval" or not pharmacy_check.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Votre compte pharmacie est en attente d'approbation par l'administrateur de la plateforme. Une clé d'activation vous sera attribuée dès validation.",
+                )
+    else:
+        user_candidate = db.query(User).filter(User.username == form_data.username).first()
+        if user_candidate and user_candidate.pharmacy_id:
+            pharm_check = db.query(Pharmacy).filter(Pharmacy.id == user_candidate.pharmacy_id).first()
+            if pharm_check and (getattr(pharm_check, "status", None) == "pending_approval" or not pharm_check.is_active):
+                if verify_password(form_data.password, user_candidate.password_hash):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Votre compte pharmacie est en attente d'approbation par l'administrateur de la plateforme. Une clé d'activation vous sera attribuée dès validation.",
+                    )
+
     if not pharmacy_code:
         candidates = db.query(User).filter(User.username == form_data.username).all()
         if len(candidates) > 1:
@@ -151,12 +171,34 @@ async def login(
     first_setup_setting = db.query(Settings).filter(Settings.key == "is_first_setup").first()
     is_first_setup = first_setup_setting.value == "true" if first_setup_setting else False
 
+    # ── Routage multi-instance : determiner l'URL de l'instance cible ──
+    import os as _os
+    plan = "platform"
+    api_base_url = None
+    environment = "platform"
+
+    if user.pharmacy_id:
+        pharmacy = db.query(Pharmacy).filter(Pharmacy.id == user.pharmacy_id).first()
+        if pharmacy:
+            plan = pharmacy.plan
+            env = getattr(pharmacy, "deployment_env", None) or pharmacy.plan
+            environment = env
+            url_map = {
+                "basic":      _os.getenv("URL_ENV_BASIC",      "http://localhost:8001"),
+                "pro":        _os.getenv("URL_ENV_PRO",        "http://localhost:8002"),
+                "enterprise": _os.getenv("URL_ENV_ENTERPRISE", "http://localhost:8003"),
+            }
+            api_base_url = url_map.get(env, url_map["basic"])
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "must_change_password": user.must_change_password,
-        "is_first_setup": is_first_setup
+        "is_first_setup": is_first_setup,
+        "plan": plan,
+        "api_base_url": api_base_url,
+        "environment": environment,
     }
 
 
@@ -519,3 +561,120 @@ def change_password(
     db.commit()
 
     return {"success": True, "message": "Mot de passe mis à jour avec succès"}
+
+
+# ============================================================================
+# SELF-SERVICE PHARMACY REGISTRATION (Public)
+# ============================================================================
+
+@router.post("/register-pharmacy", summary="Inscription publique d'une nouvelle pharmacie")
+@limiter.limit("5/minute")
+async def register_pharmacy(
+    request: Request,
+    payload: PharmacyRegisterRequest,
+    db: Session = Depends(get_local_db)
+):
+    """
+    Permet à une pharmacie de s'inscrire en libre-service.
+    Le compte est créé en attente d'approbation (is_active=False, status='pending_approval').
+    L'administrateur de la plateforme l'activera et lui fournira sa clé d'activation d'essai.
+    """
+    import re
+    import secrets
+
+    # 1. Vérification ou génération du code pharmacie
+    code = (payload.code or "").strip().upper()
+    if not code:
+        clean_name = re.sub(r'[^A-Za-z0-9]', '', payload.name).upper()[:8]
+        code = f"PHARM-{clean_name}"
+
+    # Vérifier l'unicité du code
+    existing_code = db.query(Pharmacy).filter(Pharmacy.code == code).first()
+    if existing_code:
+        if payload.code:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Le code pharmacie '{code}' est déjà attribué. Veuillez en choisir un autre.",
+            )
+        code = f"{code}-{secrets.token_hex(2).upper()}"
+
+    # 2. Vérifier l'unicité du nom d'utilisateur admin
+    admin_uname = payload.admin_username.strip()
+    existing_user = db.query(User).filter(User.username == admin_uname).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Le nom d'utilisateur '{admin_uname}' est déjà utilisé. Veuillez en choisir un autre.",
+        )
+
+    # 3. Vérifier l'unicité du NIF
+    nif_clean = payload.nif.strip()
+    existing_nif = db.query(Pharmacy).filter(Pharmacy.nif == nif_clean).first()
+    if existing_nif:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Une pharmacie est déjà enregistrée avec le NIF '{nif_clean}'.",
+        )
+
+    # 4. Créer la pharmacie en attente d'approbation
+    pharmacy = Pharmacy(
+        name=payload.name.strip(),
+        code=code,
+        address=payload.address.strip() if payload.address else None,
+        phone=payload.phone.strip(),
+        email=payload.email.strip(),
+        country=payload.country.strip() if payload.country else "Burundi",
+        city=payload.city.strip() if payload.city else "Bujumbura",
+        plan=payload.plan,
+        max_users={"basic": 3, "pro": 10, "enterprise": 1000}.get(payload.plan, 3),
+        license_is_trial=True,
+        is_active=False,
+        status="pending_approval",
+        notes=payload.notes,
+        # Fiscalité OBR
+        nif=nif_clean,
+        rc_number=payload.rc_number.strip() if payload.rc_number else None,
+        tax_center=payload.tax_center.strip() if payload.tax_center else "DPMC",
+        tp_type=payload.tp_type or "2",
+        tp_legal_form=payload.tp_legal_form or "SUARL",
+        tp_activity_sector=payload.tp_activity_sector or "Commerce de détail de produits pharmaceutiques",
+        tp_address_province=payload.tp_address_province or "BUJUMBURA MAIRIE",
+        tp_address_commune=payload.tp_address_commune or "MUKAZA",
+        tp_address_quartier=payload.tp_address_quartier or "ROHERO",
+        tp_address_avenue=payload.tp_address_avenue or "",
+        tp_address_rue=payload.tp_address_rue or "",
+        tp_address_number=payload.tp_address_number or "",
+        vat_taxpayer=payload.vat_taxpayer or "1",
+        ct_taxpayer=payload.ct_taxpayer or "0",
+        tl_taxpayer=payload.tl_taxpayer or "0",
+    )
+    db.add(pharmacy)
+    try:
+        db.flush()
+        first_name = payload.admin_name.strip() if payload.admin_name else None
+        admin_user = User(
+            username=admin_uname,
+            password_hash=hash_password(payload.admin_password),
+            role=UserRole.ADMIN,
+            first_name=first_name,
+            is_active=False,
+            must_change_password=True,
+            pharmacy_id=pharmacy.id,
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(pharmacy)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'inscription: {str(e)}")
+
+    return {
+        "success": True,
+        "message": "Votre demande d'inscription a bien été enregistrée. L'administrateur de la plateforme l'examinera pour activer votre compte et vous attribuer une clé d'activation d'essai.",
+        "pharmacy_id": pharmacy.id,
+        "pharmacy_name": pharmacy.name,
+        "pharmacy_code": pharmacy.code,
+        "admin_username": admin_uname,
+        "status": "pending_approval",
+        "plan": pharmacy.plan,
+    }

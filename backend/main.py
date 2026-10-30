@@ -103,6 +103,11 @@ from app.core.limiter import limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Instance guard middleware — multi-instance Docker
+from app.middleware.instance_guard import instance_guard_middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+app.add_middleware(BaseHTTPMiddleware, dispatch=instance_guard_middleware)
+
 # Maintenance marker file path (project root)
 MAINT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'MAINTENANCE_MODE'))
 
@@ -151,7 +156,7 @@ async def timing_middleware(request: Request, call_next):
     qs = f"?{request.url.query}" if request.url.query else ""
     if elapsed > 200:   # Afficher uniquement les requêtes > 200ms
         flag = " SLOW" if elapsed > 2000 else ("" if elapsed > 800 else "")
-        print(f"[TIMING] {flag} {request.method} {path}{qs}  →  {elapsed:.0f}ms", flush=True)
+        print(f"[TIMING] {flag} {request.method} {path}{qs}  ->  {elapsed:.0f}ms", flush=True)
     return response
 
 
@@ -247,6 +252,8 @@ from app.routes import (
     analyse_router,
 )
 
+from app.routes.health import router as health_router
+app.include_router(health_router)
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(stock_router, prefix="/stock", tags=["Stock"])
 app.include_router(config_router, prefix="/config", tags=["Configuration"])

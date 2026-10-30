@@ -69,7 +69,7 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message']?.toString() ?? 'Licence activée avec succès !'),
+            content: Text(data['message']?.toString() ?? 'Licence activee avec succes !'),
             backgroundColor: Colors.green,
           ),
         );
@@ -102,9 +102,19 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Erreur: $_error', style: const TextStyle(color: Colors.red)),
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
+            Text(
+              'Erreur: $_error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reessayer'),
+            ),
           ],
         ),
       );
@@ -116,174 +126,189 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
     final maxUsers = _licenseStatus?['max_users'] ?? 3;
     final activeUsers = _licenseStatus?['active_users'] ?? 1;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestion de la Licence Pharmacie'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _load,
-            tooltip: 'Actualiser',
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Titre
+          Row(
+            children: [
+              const Icon(Icons.verified_user, color: Colors.indigo, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Gestion de la Licence Pharmacie',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _load,
+                tooltip: 'Actualiser',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              isValid ? Icons.verified : Icons.warning_amber_rounded,
-                              color: isValid ? Colors.green : Colors.orange,
-                              size: 28,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Formule Actuelle : $plan',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        Chip(
-                          label: Text(isValid ? 'Actif' : 'Expiré'),
-                          backgroundColor: isValid ? Colors.green[100] : Colors.red[100],
-                          labelStyle: TextStyle(
-                            color: isValid ? Colors.green[800] : Colors.red[800],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildKpiItem('Jours Restants', '$daysRemaining jours', Icons.timer),
-                        _buildKpiItem('Utilisateurs Actifs', '$activeUsers / $maxUsers', Icons.people),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-            // Redeem Key Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Renouveler ou Mettre Ã  Niveau la Licence',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+          // Status Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isValid ? Icons.verified : Icons.warning_amber_rounded,
+                            color: isValid ? Colors.green : Colors.orange,
+                            size: 28,
                           ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Saisissez la clé de licence délivrée par l\'administrateur de la plateforme pour prolonger votre accès.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _keyController,
-                            decoration: const InputDecoration(
-                              hintText: 'Exemple : PRO-A1B2-C3D4-365D',
-                              prefixIcon: Icon(Icons.vpn_key),
-                              border: OutlineInputBorder(),
-                            ),
-                            textCapitalization: TextCapitalization.characters,
+                          const SizedBox(width: 12),
+                          Text(
+                            'Formule : $plan',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
+                        ],
+                      ),
+                      Chip(
+                        label: Text(isValid ? 'Actif' : 'Expire'),
+                        backgroundColor: isValid ? Colors.green[100] : Colors.red[100],
+                        labelStyle: TextStyle(
+                          color: isValid ? Colors.green[800] : Colors.red[800],
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          height: 48,
-                          child: ElevatedButton.icon(
-                            onPressed: _isRedeeming ? null : _redeemKey,
-                            icon: _isRedeeming
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.check),
-                            label: const Text('Activer la Clé'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // History Section
-            Text(
-              'Historique des Activations',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                      ),
+                    ],
                   ),
-            ),
-            const SizedBox(height: 12),
-            if (_history.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Aucun historique d\'activation trouvé pour cette pharmacie.'),
-                ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _history.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, idx) {
-                  final item = _history[idx];
-                  return Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Colors.blueGrey,
-                        child: Icon(Icons.history, color: Colors.white),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildKpiItem('Jours Restants', '$daysRemaining jours', Icons.timer),
+                      _buildKpiItem(
+                        'Utilisateurs',
+                        '$activeUsers / $maxUsers',
+                        Icons.people,
                       ),
-                      title: Text(
-                        'Clé : ${item['key']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        'Plan : ${item['plan']?.toString().toUpperCase()} â€¢ ${item['duration_days']} jours â€¢ Activé le : ${item['used_at']?.toString().substring(0, 10) ?? ""}',
-                      ),
-                      trailing: const Icon(Icons.verified, color: Colors.green),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                ],
               ),
-          ],
-        ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Redeem Key Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Renouveler / Mettre a Niveau',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Saisissez la cle de licence delivree par l\'administrateur de la plateforme.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _keyController,
+                          decoration: const InputDecoration(
+                            hintText: 'Exemple : PRO-A1B2-C3D4-365D',
+                            prefixIcon: Icon(Icons.vpn_key),
+                            border: OutlineInputBorder(),
+                          ),
+                          textCapitalization: TextCapitalization.characters,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _isRedeeming ? null : _redeemKey,
+                          icon: _isRedeeming
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.check),
+                          label: const Text('Activer'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // History Section
+          Text(
+            'Historique des Activations',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 12),
+          if (_history.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Aucun historique d\'activation trouve pour cette pharmacie.'),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _history.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, idx) {
+                final item = _history[idx];
+                return Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.blueGrey,
+                      child: Icon(Icons.history, color: Colors.white),
+                    ),
+                    title: Text(
+                      'Cle : ${item['key']}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Plan : ${item['plan']?.toString().toUpperCase()} | '
+                      '${item['duration_days']} jours | '
+                      'Activee le : ${item['used_at']?.toString().substring(0, 10) ?? ""}',
+                    ),
+                    trailing: const Icon(Icons.verified, color: Colors.green),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -300,4 +325,3 @@ class _ClientLicensePageState extends State<ClientLicensePage> {
     );
   }
 }
-

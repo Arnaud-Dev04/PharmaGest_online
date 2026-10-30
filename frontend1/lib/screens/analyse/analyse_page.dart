@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend1/services/api_service.dart';
+import 'package:frontend1/widgets/common/modern_tab_bar.dart';
+
 
 class AnalysePage extends StatefulWidget {
   const AnalysePage({super.key});
@@ -32,16 +34,11 @@ class _AnalysePageState extends State<AnalysePage> {
     });
 
     try {
-      final financeFuture = _api.get('/analyse/finance');
-      final stockFuture = _api.get('/analyse/stock');
-      final vendorsFuture = _api.get('/analyse/vendors');
-      final productsFuture = _api.get('/analyse/products');
-
       final results = await Future.wait([
-        financeFuture,
-        stockFuture,
-        vendorsFuture,
-        productsFuture,
+        _api.get('/analyse/finance'),
+        _api.get('/analyse/stock'),
+        _api.get('/analyse/vendors'),
+        _api.get('/analyse/products'),
       ]);
 
       if (mounted) {
@@ -68,53 +65,71 @@ class _AnalysePageState extends State<AnalysePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Erreur de chargement: $_error', style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _loadAllAnalytics, child: const Text('Réessayer')),
-            ],
-          ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Erreur de chargement:\n$_error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadAllAnalytics,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reessayer'),
+            ),
+          ],
         ),
       );
     }
 
     return DefaultTabController(
       length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Tableau de Bord Analyse & Décision'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadAllAnalytics,
-              tooltip: 'Actualiser les statistiques',
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: ModernPillTabBar(
+                    isScrollable: true,
+                    tabs: [
+                      ModernTab(icon: Icons.payments_outlined, text: 'Finances'),
+                      ModernTab(icon: Icons.inventory_2_outlined, text: 'Stock'),
+                      ModernTab(icon: Icons.people_alt_outlined, text: 'Vendeurs'),
+                      ModernTab(icon: Icons.medication_outlined, text: 'Produits'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  onPressed: _loadAllAnalytics,
+                  tooltip: 'Actualiser',
+                ),
+              ],
             ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.attach_money), text: 'Finances (12 mois)'),
-              Tab(icon: Icon(Icons.inventory_2), text: 'Santé Stock & Dormants'),
-              Tab(icon: Icon(Icons.people), text: 'Performance Vendeurs'),
-              Tab(icon: Icon(Icons.medication), text: 'Top Médicaments'),
-            ],
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildFinanceTab(),
-            _buildStockTab(),
-            _buildVendorsTab(),
-            _buildProductsTab(),
-          ],
-        ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildFinanceTab(),
+                _buildStockTab(),
+                _buildVendorsTab(),
+                _buildProductsTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -143,7 +158,7 @@ class _AnalysePageState extends State<AnalysePage> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildMetricCard(
-                  'Nombre Total Ventes',
+                  'Total Ventes',
                   '$totalSales transactions',
                   Icons.shopping_bag,
                   Colors.indigo,
@@ -152,7 +167,7 @@ class _AnalysePageState extends State<AnalysePage> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildMetricCard(
-                  'Moyenne Mensuelle',
+                  'Moy. Mensuelle',
                   '${(avgMonthly as num).toStringAsFixed(0)} FBu',
                   Icons.bar_chart,
                   Colors.teal,
@@ -161,28 +176,42 @@ class _AnalysePageState extends State<AnalysePage> {
             ],
           ),
           const SizedBox(height: 24),
-          Text('Ã‰volution Mensuelle du Chiffre d\'Affaires',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Evolution Mensuelle du CA (12 derniers mois)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           Card(
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: months.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, idx) {
-                final m = months[idx];
-                return ListTile(
-                  leading: const Icon(Icons.calendar_month, color: Colors.blueGrey),
-                  title: Text('Mois : ${m['month']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${m['sale_count']} ventes enregistrées'),
-                  trailing: Text(
-                    '${(m['revenue'] as num).toStringAsFixed(0)} FBu',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
+            child: months.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucune vente enregistree sur les 12 derniers mois.'),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: months.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, idx) {
+                      final m = months[idx];
+                      return ListTile(
+                        leading: const Icon(Icons.calendar_month, color: Colors.blueGrey),
+                        title: Text(
+                          'Mois : ${m['month']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text('${m['sale_count']} ventes'),
+                        trailing: Text(
+                          '${(m['revenue'] as num).toStringAsFixed(0)} FBu',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                            fontSize: 16,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -190,10 +219,10 @@ class _AnalysePageState extends State<AnalysePage> {
   }
 
   Widget _buildStockTab() {
-    // totalMeds
     final stockPurchase = _stockData?['total_stock_value_purchase'] ?? 0.0;
     final stockSale = _stockData?['total_stock_value_sale'] ?? 0.0;
     final margin = _stockData?['potential_margin'] ?? 0.0;
+    final lowStock = _stockData?['low_stock_count'] ?? 0;
     final slowMovers = (_stockData?['slow_movers'] as List<dynamic>?) ?? [];
 
     return SingleChildScrollView(
@@ -204,41 +233,93 @@ class _AnalysePageState extends State<AnalysePage> {
           Row(
             children: [
               Expanded(
-                child: _buildMetricCard('Valorisation Achat', '${(stockPurchase as num).toStringAsFixed(0)} FBu', Icons.archive, Colors.blueGrey),
+                child: _buildMetricCard(
+                  'Valeur Achat',
+                  '${(stockPurchase as num).toStringAsFixed(0)} FBu',
+                  Icons.archive,
+                  Colors.blueGrey,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildMetricCard('Valorisation Vente', '${(stockSale as num).toStringAsFixed(0)} FBu', Icons.sell, Colors.green),
+                child: _buildMetricCard(
+                  'Valeur Vente',
+                  '${(stockSale as num).toStringAsFixed(0)} FBu',
+                  Icons.sell,
+                  Colors.green,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildMetricCard('Marge Potentielle', '${(margin as num).toStringAsFixed(0)} FBu', Icons.monetization_on, Colors.amber[800]!),
+                child: _buildMetricCard(
+                  'Marge Potentielle',
+                  '${(margin as num).toStringAsFixed(0)} FBu',
+                  Icons.monetization_on,
+                  Colors.amber[800]!,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Text('Produits Dormants (> 60 jours sans vente)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          if (lowStock > 0)
+            Card(
+              color: Colors.red[50],
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$lowStock medicament(s) en stock bas',
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          Text(
+            'Produits Dormants (> 60 jours sans vente)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
-          const Text('Ces articles immobilisent du capital en stock sans rotation.', style: TextStyle(color: Colors.grey)),
+          const Text(
+            'Ces articles immobilisent du capital en stock sans rotation.',
+            style: TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 12),
           Card(
             child: slowMovers.isEmpty
-                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucun produit dormant identifié.'))
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucun produit dormant identifie.'),
+                  )
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: slowMovers.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final item = slowMovers[idx];
                       return ListTile(
-                        leading: const CircleAvatar(backgroundColor: Colors.orange, child: Icon(Icons.hourglass_empty, color: Colors.white)),
-                        title: Text(item['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Stock actuel : ${item['current_stock']} unités â€¢ P.U Achat : ${item['purchase_price']} FBu'),
+                        leading: const CircleAvatar(
+                          backgroundColor: Colors.orange,
+                          child: Icon(Icons.hourglass_empty, color: Colors.white),
+                        ),
+                        title: Text(
+                          item['name']?.toString() ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Stock: ${item['current_stock']} u. | Prix achat: ${item['purchase_price']} FBu',
+                        ),
                         trailing: Text(
-                          'Immobilisé: ${(item['stock_value'] as num).toStringAsFixed(0)} FBu',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                          '${(item['stock_value'] as num).toStringAsFixed(0)} FBu',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepOrange,
+                          ),
                         ),
                       );
                     },
@@ -255,30 +336,51 @@ class _AnalysePageState extends State<AnalysePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Classement des Vendeurs par Chiffre d\'Affaires',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Classement des Vendeurs par Chiffre d\'Affaires',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           Card(
             child: _vendorsData.isEmpty
-                ? const Padding(padding: EdgeInsets.all(16), child: Text('Aucune donnée de vente enregistrée pour les utilisateurs.'))
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucune donnee de vente enregistree pour les utilisateurs.'),
+                  )
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _vendorsData.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, idx) {
                       final v = _vendorsData[idx];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: idx == 0 ? Colors.amber[700] : (idx == 1 ? Colors.grey : Colors.brown[400]),
-                          child: Text('${idx + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          backgroundColor: idx == 0
+                              ? Colors.amber[700]
+                              : (idx == 1 ? Colors.grey : Colors.brown[400]),
+                          child: Text(
+                            '${idx + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        title: Text(v['cashier_name']?.toString() ?? v['username']?.toString() ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${v['sale_count']} ventes â€¢ Panier moyen : ${(v['average_basket'] as num).toStringAsFixed(0)} FBu'),
+                        title: Text(
+                          v['cashier_name']?.toString() ?? v['username']?.toString() ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${v['sale_count']} ventes | Panier moy: ${(v['average_basket'] as num).toStringAsFixed(0)} FBu',
+                        ),
                         trailing: Text(
                           '${(v['total_revenue'] as num).toStringAsFixed(0)} FBu',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                            fontSize: 16,
+                          ),
                         ),
                       );
                     },
@@ -298,49 +400,81 @@ class _AnalysePageState extends State<AnalysePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Top 10 des Médicaments les Plus Vendus (Volume)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Top 10 Medicaments les Plus Vendus (Volume)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           Card(
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: topVolume.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, idx) {
-                final p = topVolume[idx];
-                return ListTile(
-                  leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.medication, color: Colors.white)),
-                  title: Text(p['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Chiffre d\'affaires : ${(p['revenue'] as num).toStringAsFixed(0)} FBu'),
-                  trailing: Chip(label: Text('${p['quantity']} unités')),
-                );
-              },
-            ),
+            child: topVolume.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucune vente enregistree.'),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: topVolume.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, idx) {
+                      final p = topVolume[idx];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Colors.blue,
+                          child: Icon(Icons.medication, color: Colors.white),
+                        ),
+                        title: Text(
+                          p['name']?.toString() ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'CA: ${(p['revenue'] as num).toStringAsFixed(0)} FBu',
+                        ),
+                        trailing: Chip(label: Text('${p['quantity']} u.')),
+                      );
+                    },
+                  ),
           ),
           const SizedBox(height: 24),
-          Text('Top 10 des Médicaments les Plus Rentables (Chiffre d\'Affaires)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Top 10 Medicaments les Plus Rentables (CA)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           Card(
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: topRevenue.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, idx) {
-                final p = topRevenue[idx];
-                return ListTile(
-                  leading: const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.star, color: Colors.white)),
-                  title: Text(p['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${p['quantity']} unités vendues'),
-                  trailing: Text(
-                    '${(p['revenue'] as num).toStringAsFixed(0)} FBu',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal, fontSize: 16),
+            child: topRevenue.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aucune vente enregistree.'),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: topRevenue.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, idx) {
+                      final p = topRevenue[idx];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Colors.teal,
+                          child: Icon(Icons.star, color: Colors.white),
+                        ),
+                        title: Text(
+                          p['name']?.toString() ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text('${p['quantity']} unites vendues'),
+                        trailing: Text(
+                          '${(p['revenue'] as num).toStringAsFixed(0)} FBu',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal,
+                            fontSize: 16,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -354,7 +488,10 @@ class _AnalysePageState extends State<AnalysePage> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            CircleAvatar(backgroundColor: color.withOpacity(0.15), child: Icon(icon, color: color)),
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.15),
+              child: Icon(icon, color: color),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -362,7 +499,7 @@ class _AnalysePageState extends State<AnalysePage> {
                 children: [
                   Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 4),
-                  Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ],
               ),
             ),
@@ -372,4 +509,3 @@ class _AnalysePageState extends State<AnalysePage> {
     );
   }
 }
-

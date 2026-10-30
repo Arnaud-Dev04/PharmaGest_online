@@ -54,19 +54,28 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
 
     if (newPwd.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir un nouveau mot de passe'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Veuillez saisir un nouveau mot de passe'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
     if (newPwd.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le mot de passe doit contenir au moins 6 caractères'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Le mot de passe doit contenir au moins 6 caractères'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
     if (newPwd != confirmPwd) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Les mots de passe ne correspondent pas'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Les mots de passe ne correspondent pas'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -212,7 +221,11 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
           padding: const EdgeInsets.all(24),
           child: Row(
             children: [
-              const Icon(Icons.shield, size: 32, color: AppTheme.primaryColor),
+              const Icon(
+                Icons.admin_panel_settings_outlined,
+                size: 32,
+                color: AppTheme.primaryColor,
+              ),
               const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,10 +274,14 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.warning, color: Colors.orange[800]),
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange[800],
+                                    ),
                                     const SizedBox(width: 16),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           lp.translate('currentLicenseStatus'),
@@ -298,7 +315,9 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                               // Form
                               Text(
                                 lp.translate('newExpirationDate'),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               InkWell(
@@ -319,7 +338,9 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                                 width: double.infinity,
                                 height: 50,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isUpdating ? null : _updateLicense,
+                                  onPressed: _isUpdating
+                                      ? null
+                                      : _updateLicense,
                                   icon: const Icon(Icons.save),
                                   label: _isUpdating
                                       ? const CircularProgressIndicator(
@@ -352,27 +373,40 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.delete_sweep, color: Colors.redAccent, size: 28),
+                                  const Icon(
+                                    Icons.delete_sweep,
+                                    color: Colors.redAccent,
+                                    size: 28,
+                                  ),
                                   const SizedBox(width: 12),
                                   Text(
                                     'Journal des Suppressions',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Consultez la traçabilité complète : qui a supprimé un médicament, un lot ou annulé une facture.',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
                               ),
                               const SizedBox(height: 20),
                               SizedBox(
                                 width: double.infinity,
                                 height: 48,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => DeletionLogsDialog.show(context),
+                                  onPressed: () =>
+                                      DeletionLogsDialog.show(context),
                                   icon: const Icon(Icons.history),
-                                  label: const Text('Consulter les Suppressions'),
+                                  label: const Text(
+                                    'Consulter les Suppressions',
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.redAccent,
                                     foregroundColor: Colors.white,
@@ -389,87 +423,127 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                   // ── Carte Changement de Mot de Passe ──
                   const SizedBox(height: 24),
                   Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            const Icon(Icons.lock_outline, color: AppTheme.primaryColor, size: 24),
-                            const SizedBox(width: 12),
-                            Text('Changer mon mot de passe',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                          ]),
-                          const SizedBox(height: 8),
-                          Text('En tant que Super Admin, vous pouvez changer votre mot de passe sans saisir l\'ancien.',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                          const SizedBox(height: 24),
-
-                          // Nouveau mot de passe
-                          const Text('Nouveau mot de passe', style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _newPwdCtrl,
-                            obscureText: !_showNewPwd,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock),
-                              border: const OutlineInputBorder(),
-                              hintText: 'Minimum 6 caractères',
-                              suffixIcon: IconButton(
-                                icon: Icon(_showNewPwd ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _showNewPwd = !_showNewPwd),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.lock_outline,
+                                    color: AppTheme.primaryColor,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Changer mon mot de passe',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Confirmation
-                          const Text('Confirmer le mot de passe', style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _confirmPwdCtrl,
-                            obscureText: !_showConfirmPwd,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: const OutlineInputBorder(),
-                              hintText: 'Répéter le mot de passe',
-                              suffixIcon: IconButton(
-                                icon: Icon(_showConfirmPwd ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _showConfirmPwd = !_showConfirmPwd),
+                              const SizedBox(height: 8),
+                              Text(
+                                'En tant que Super Admin, vous pouvez changer votre mot de passe sans saisir l\'ancien.',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
+                              const SizedBox(height: 24),
 
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton.icon(
-                              onPressed: _isChangingPwd ? null : _changePassword,
-                              icon: const Icon(Icons.key),
-                              label: _isChangingPwd
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text('Mettre à jour le mot de passe'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
+                              // Nouveau mot de passe
+                              const Text(
+                                'Nouveau mot de passe',
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _newPwdCtrl,
+                                obscureText: !_showNewPwd,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  border: const OutlineInputBorder(),
+                                  hintText: 'Minimum 6 caractères',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _showNewPwd
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _showNewPwd = !_showNewPwd,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Confirmation
+                              const Text(
+                                'Confirmer le mot de passe',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _confirmPwdCtrl,
+                                obscureText: !_showConfirmPwd,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  border: const OutlineInputBorder(),
+                                  hintText: 'Répéter le mot de passe',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _showConfirmPwd
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _showConfirmPwd = !_showConfirmPwd,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isChangingPwd
+                                      ? null
+                                      : _changePassword,
+                                  icon: const Icon(Icons.key),
+                                  label: _isChangingPwd
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                      : const Text(
+                                          'Mettre à jour le mot de passe',
+                                        ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),         // ferme Center(password card)
-            ],           // ferme Column(children: [...])
-          ),             // ferme Column
-        ),               // ferme SingleChildScrollView
-      ),                 // ferme Expanded
-      ],                 // ferme outer Column children
-    );                   // ferme outer Column
+                  ), // ferme Center(password card)
+                ], // ferme Column(children: [...])
+              ), // ferme Column
+            ), // ferme SingleChildScrollView
+          ), // ferme Expanded
+      ], // ferme outer Column children
+    ); // ferme outer Column
   }
 }

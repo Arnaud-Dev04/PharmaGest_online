@@ -29,7 +29,7 @@ def get_finance_analysis(
     twelve_months_ago = datetime.utcnow() - timedelta(days=365)
     sales = (
         db.query(
-            func.strftime("%Y-%m", POSSale.created_at).label("month"),
+            func.date_format(POSSale.created_at, "%Y-%m").label("month"),
             func.coalesce(func.sum(POSSale.total_amount), 0.0).label("revenue"),
             func.count(POSSale.id).label("sale_count"),
         )

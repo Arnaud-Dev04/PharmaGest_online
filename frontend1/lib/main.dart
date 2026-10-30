@@ -23,6 +23,10 @@ import 'package:frontend1/screens/settings/settings_page.dart'; // Import Settin
 // Import REAL pages instead of placeholders
 import 'package:frontend1/screens/admin/super_admin_page.dart';
 import 'package:frontend1/screens/admin/platform_admin_page.dart';
+import 'package:frontend1/screens/platform/pharmacies_page.dart';
+import 'package:frontend1/screens/platform/licences_page.dart';
+import 'package:frontend1/screens/platform/platform_admins_page.dart';
+
 import 'package:frontend1/screens/suppliers/suppliers_page.dart';
 import 'package:frontend1/screens/users/users_page.dart';
 import 'package:frontend1/screens/stock/stock_page.dart';
@@ -121,7 +125,13 @@ class PharmacApp extends StatelessWidget {
                   '/super-admin': (context) =>
                       const MainLayout(child: SuperAdminPage()),
                   '/platform-admin': (context) =>
-                      const MainLayout(child: PlatformAdminPage()),
+                      const MainLayout(child: PharmaciesPage()),
+'/platform/pharmacies': (context) =>
+                      const MainLayout(child: PharmaciesPage()),
+                  '/platform/licences': (context) =>
+                      const MainLayout(child: PlatformLicencesPage()),
+                  '/platform/admins': (context) =>
+                      const MainLayout(child: PlatformAdminsPage()),
                   '/setup': (context) => const SetupScreen(),
                   '/change-password': (context) => const ChangePasswordScreen(),
                   '/stock-movements': (context) =>
@@ -195,7 +205,7 @@ class AuthWrapper extends StatelessWidget {
           }
 
           if (authProvider.user?.role == 'platform_admin') {
-            return const MainLayout(child: PlatformAdminPage());
+            return const MainLayout(child: PharmaciesPage());
           }
 
           // Normal : aller au dashboard

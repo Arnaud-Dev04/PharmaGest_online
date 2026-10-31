@@ -1,12 +1,14 @@
 """
 Settings Schemas.
 """
-from pydantic import BaseModel, Field, HttpUrl
-from typing import Optional, List, Any
+from pydantic import BaseModel
+from typing import Optional
 
 class SettingsUpdate(BaseModel):
     """Schema for updating settings."""
     pharmacy_name: Optional[str] = None
+    pharmacy_code: Optional[str] = None
+    pharmacy_email: Optional[str] = None
     pharmacy_address: Optional[str] = None
     pharmacy_phone: Optional[str] = None
     pharmacy_nif: Optional[str] = None
@@ -19,11 +21,11 @@ class SettingsUpdate(BaseModel):
     license_warning_message: Optional[str] = None
     license_warning_duration: Optional[int] = 30
     
-    # We could allow arbitrary keys too, but explicit is better for now
-    
 class SettingsResponse(BaseModel):
     """Schema for returning aggregated settings."""
     pharmacy_name: str = "Ma Pharmacie"
+    pharmacy_code: Optional[str] = None
+    pharmacy_email: Optional[str] = None
     pharmacy_address: str = ""
     pharmacy_phone: str = ""
     pharmacy_nif: str = ""

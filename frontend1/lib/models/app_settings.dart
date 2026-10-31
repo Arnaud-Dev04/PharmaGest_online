@@ -1,5 +1,7 @@
 class AppSettings {
   final String pharmacyName;
+  final String pharmacyCode;
+  final String pharmacyEmail;
   final String pharmacyAddress;
   final String pharmacyPhone;
   final String pharmacyNif;
@@ -11,6 +13,8 @@ class AppSettings {
 
   AppSettings({
     this.pharmacyName = '',
+    this.pharmacyCode = '',
+    this.pharmacyEmail = '',
     this.pharmacyAddress = '',
     this.pharmacyPhone = '',
     this.pharmacyNif = '',
@@ -24,6 +28,8 @@ class AppSettings {
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(
       pharmacyName: json['pharmacy_name'] ?? '',
+      pharmacyCode: json['pharmacy_code'] ?? '',
+      pharmacyEmail: json['pharmacy_email'] ?? '',
       pharmacyAddress: json['pharmacy_address'] ?? '',
       pharmacyPhone: json['pharmacy_phone'] ?? '',
       pharmacyNif: json['pharmacy_nif'] ?? '',
@@ -38,6 +44,8 @@ class AppSettings {
   Map<String, dynamic> toJson() {
     return {
       'pharmacy_name': pharmacyName,
+      'pharmacy_code': pharmacyCode,
+      'pharmacy_email': pharmacyEmail,
       'pharmacy_address': pharmacyAddress,
       'pharmacy_phone': pharmacyPhone,
       'pharmacy_nif': pharmacyNif,

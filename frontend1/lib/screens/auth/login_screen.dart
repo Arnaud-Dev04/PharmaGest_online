@@ -439,7 +439,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
             Text(
-              _isLoadingPharmacies ? 'Chargement...' : 'Sélectionnez votre officine',
+              _isLoadingPharmacies
+                  ? 'Chargement...'
+                  : 'Sélectionnez votre officine',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: isDark
                     ? AppTheme.darkSidebarText.withValues(alpha: 0.6)
@@ -453,7 +455,9 @@ class _LoginScreenState extends State<LoginScreen> {
         DropdownButtonFormField<String>(
           value: _pharmacies.any((p) => p['code'] == _selectedPharmacyCode)
               ? _selectedPharmacyCode
-              : (_pharmacies.isNotEmpty ? _pharmacies.first['code']?.toString() : null),
+              : (_pharmacies.isNotEmpty
+                    ? _pharmacies.first['code']?.toString()
+                    : null),
           items: _pharmacies.map((p) {
             final name = p['name']?.toString() ?? 'Pharmacie';
             final city = p['city']?.toString();
@@ -481,8 +485,8 @@ class _LoginScreenState extends State<LoginScreen> {
             hintText: _isLoadingPharmacies
                 ? 'Chargement des pharmacies...'
                 : (_pharmacies.isEmpty
-                    ? 'Aucune pharmacie disponible'
-                    : 'Sélectionnez votre pharmacie...'),
+                      ? 'Aucune pharmacie disponible'
+                      : 'Sélectionnez votre pharmacie...'),
             prefixIcon: Icon(
               Icons.storefront_outlined,
               color: isDark
@@ -496,7 +500,6 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             return null;
           },
-
         ),
       ],
     );
@@ -535,7 +538,6 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             return null;
           },
-
         ),
       ],
     );
@@ -588,7 +590,6 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             return null;
           },
-
         ),
       ],
     );
